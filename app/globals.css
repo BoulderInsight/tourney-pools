@@ -1,0 +1,206 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500&family=Raleway:wght@300;400;500;600;700&display=swap");
+
+/* ── Base ──────────────────────────────────────────────── */
+
+:root {
+  --masters-green: #006747;
+  --masters-green-deep: #004d34;
+  --masters-gold: #c9a84c;
+  --masters-cream: #f5f0e8;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: "Raleway", system-ui, sans-serif;
+  background-color: var(--masters-cream);
+  color: #1a1a1a;
+  min-height: 100dvh;
+}
+
+/* Subtle texture overlay on cream bg */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: radial-gradient(circle at 1px 1px, rgba(0, 103, 71, 0.03) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+/* ── Typography ────────────────────────────────────────── */
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Playfair Display", Georgia, serif;
+}
+
+/* ── Component Classes ─────────────────────────────────── */
+
+@layer components {
+  .card {
+    @apply bg-white rounded-2xl shadow-card;
+    border: 1px solid rgba(0, 103, 71, 0.06);
+  }
+
+  .card-interactive {
+    @apply card transition-all duration-150;
+  }
+
+  .card-interactive:active {
+    @apply shadow-card-hover;
+    transform: scale(0.985);
+  }
+
+  .btn-green {
+    @apply bg-masters-green text-white font-semibold rounded-xl
+           px-6 py-3.5 text-sm tracking-wide
+           active:bg-masters-green-deep transition-colors duration-150;
+    min-height: 48px;
+  }
+
+  .btn-gold {
+    @apply bg-masters-gold text-white font-semibold rounded-xl
+           px-6 py-3.5 text-sm tracking-wide
+           active:bg-masters-gold-dark transition-colors duration-150;
+    min-height: 48px;
+  }
+
+  .btn-outline {
+    @apply border-2 border-masters-green text-masters-green font-semibold rounded-xl
+           px-6 py-3.5 text-sm tracking-wide bg-transparent
+           active:bg-masters-green/5 transition-colors duration-150;
+    min-height: 48px;
+  }
+
+  .input-field {
+    @apply w-full border-2 border-masters-cream-dark bg-white rounded-xl
+           px-4 py-3.5 text-sm font-sans
+           focus:border-masters-green focus:ring-1 focus:ring-masters-green/20
+           outline-none transition-colors duration-150;
+    min-height: 48px;
+  }
+
+  .gold-rule {
+    @apply h-px w-full;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--masters-gold) 20%,
+      var(--masters-gold) 80%,
+      transparent 100%
+    );
+    opacity: 0.4;
+  }
+
+  .score-badge {
+    @apply font-mono font-bold text-lg tabular-nums;
+  }
+
+  .score-under {
+    @apply text-red-600;
+  }
+
+  .score-over {
+    @apply text-blue-700;
+  }
+
+  .score-even {
+    @apply text-gray-700;
+  }
+
+  .score-none {
+    @apply text-gray-300;
+  }
+
+  /* Filter pills */
+  .pill {
+    @apply px-4 py-2 rounded-full text-xs font-semibold tracking-wide
+           transition-all duration-150;
+    min-height: 36px;
+  }
+
+  .pill-active {
+    @apply bg-masters-green text-white;
+  }
+
+  .pill-inactive {
+    @apply bg-white text-gray-500 border border-gray-200;
+  }
+}
+
+/* ── Loading Dots ──────────────────────────────────────── */
+
+.loading-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--masters-green);
+  animation: pulseGreen 1.5s ease-in-out infinite;
+}
+
+.loading-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.loading-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes pulseGreen {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+/* ── Stagger animation delays ──────────────────────────── */
+
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+.stagger-7 { animation-delay: 0.35s; }
+.stagger-8 { animation-delay: 0.4s; }
+.stagger-9 { animation-delay: 0.45s; }
+.stagger-10 { animation-delay: 0.5s; }
+
+/* ── Bottom Nav Safe Area ──────────────────────────────── */
+
+.pb-safe {
+  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+}
+
+/* ── Scrollbar styling ─────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 103, 71, 0.15);
+  border-radius: 2px;
+}
+
+/* ── Number input spinner removal ──────────────────────── */
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
