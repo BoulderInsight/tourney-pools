@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   if (field === "madeCut") {
     golfer.madeCut = value;
   } else if (["r1", "r2", "r3", "r4"].includes(field)) {
-    (golfer as Record<string, unknown>)[field] = value === "" || value === null ? null : Number(value);
+    (golfer as unknown as Record<string, unknown>)[field] = value === "" || value === null ? null : Number(value);
   }
 
   writePool(pool);

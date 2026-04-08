@@ -1,0 +1,651 @@
+"use client";
+
+import { useState, useId } from "react";
+import { CommissionerSettings, PoolPlayer, DraftType, MissedCutRule, PurseType } from "@/lib/types";
+import { DEFAULT_SETTINGS, DEFAULT_FIELD, draftGolfers } from "@/lib/pool";
+
+const STEPS = ["Pool Info", "Rules", "Field", "Draft", "Confirm"] as const;
+
+function OptionCard({
+  selected,
+  onClick,
+  title,
+  description,
+  badge,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  title: string;
+  description: string;
+  badge?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-150
+        ${selected
+          ? "border-masters-green bg-masters-green/5 shadow-card"
+          : "border-masters-cream-dark bg-white active:border-gray-300"}`}
+      style={{ minHeight: 48 }}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className={`mt-0.5 w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center
+            ${selected ? "border-masters-green bg-masters-green" : "border-gray-300"}`}
+        >
+          {selected && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-gray-900 text-sm">{title}</span>
+            {badge && (
+              <span className="text-[9px] bg-masters-gold text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                {badge}
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{description}</p>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function Section({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-8">
+      <h3 className="text-[11px] font-bold uppercase tracking-[0.15em] text-gray-400 mb-3 font-sans">
+        {label}
+      </h3>
+      {children}
+    </div>
+  );
+}
+
+function StepDots({ current, total }: { current: number; total: number }) {
+  return (
+    <div className="flex items-center justify-center gap-2 mb-6">
+      {Array.from({ length: total }).map((_, i) => (
+        <div
+          key={i}
+          className={`rounded-full transition-all duration-300
+            ${i === current
+              ? "w-8 h-2.5 bg-masters-green"
+              : i < current
+              ? "w-2.5 h-2.5 bg-masters-gold"
+              : "w-2.5 h-2.5 bg-gray-200"
+            }`}
+        />
+      ))}
+    </div>
+  );
+}
+
+export default function SetupPage() {
+  const uid = useId();
+  const [step, setStep] = useState(0);
+  const [password, setPassword] = useState("");
+  const [authed, setAuthed] = useState(false);
+  const [authError, setAuthError] = useState("");
+
+  // Pool info
+  const [poolName, setPoolName] = useState("Masters Pool 2026");
+  const [buyIn, setBuyIn] = useState(20);
+  const [players, setPlayers] = useState<PoolPlayer[]>([
+    { id: "p0", name: "" },
+  ]);
+
+  // Commissioner settings
+  const [settings, setSettings] = useState<CommissionerSettings>(DEFAULT_SETTINGS);
+  const [customDist, setCustomDist] = useState("100");
+
+  // Golfer field
+  const [fieldText, setFieldText] = useState(DEFAULT_FIELD.join("\n"));
+
+  // Draft results
+  const [assignments, setAssignments] = useState<ReturnType<typeof draftGolfers>>([]);
+
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+
+  const set = <K extends keyof CommissionerSettings>(key: K, val: CommissionerSettings[K]) =>
+    setSettings((s) => ({ ...s, [key]: val }));
+
+  // Auth
+  async function handleAuth(e: React.FormEvent) {
+    e.preventDefault();
+    setAuthError("");
+    const res = await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    if (res.ok) {
+      setAuthed(true);
+    } else {
+      setAuthError("Incorrect password.");
+    }
+  }
+
+  // Players
+  const addPlayer = () =>
+    setPlayers((p) => [...p, { id: `p${Date.now()}`, name: "" }]);
+
+  const removePlayer = (id: string) =>
+    setPlayers((p) => p.filter((pl) => pl.id !== id));
+
+  const updatePlayer = (id: string, name: string) =>
+    setPlayers((p) => p.map((pl) => (pl.id === id ? { ...pl, name } : pl)));
+
+  // Draft
+  function runDraft() {
+    const golferNames = fieldText
+      .split("\n")
+      .map((n) => n.trim())
+      .filter(Boolean);
+
+    const golfers = golferNames.map((name, i) => ({
+      id: `g${i}`,
+      name,
+      r1: null, r2: null, r3: null, r4: null,
+      madeCut: null,
+    }));
+
+    const result = draftGolfers(players, golfers, settings.draftType);
+    setAssignments(result);
+    setStep(3);
+  }
+
+  // Save
+  async function handleSave() {
+    setSaving(true);
+    setError("");
+
+    const golferNames = fieldText.split("\n").map((n) => n.trim()).filter(Boolean);
+    const dist =
+      settings.purseType === "custom"
+        ? customDist.split(",").map((n) => Number(n.trim()))
+        : [];
+
+    const finalSettings = { ...settings, purseDistribution: dist };
+
+    const res = await fetch("/api/setup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": password },
+      body: JSON.stringify({
+        poolName,
+        players: players.filter((p) => p.name.trim()),
+        golferNames,
+        buyIn,
+        settings: finalSettings,
+      }),
+    });
+
+    if (res.ok) {
+      setSaved(true);
+    } else {
+      setError("Failed to save. Check your connection and try again.");
+    }
+    setSaving(false);
+  }
+
+  const validPlayers = players.filter((p) => p.name.trim());
+  const golferCount = fieldText.split("\n").filter((n) => n.trim()).length;
+
+  // Password gate
+  if (!authed) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="card p-8 w-full text-center">
+          <div className="w-16 h-16 rounded-full bg-masters-green/10 flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-masters-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h2 className="font-serif text-xl text-masters-green mb-1 font-bold">
+            Commissioner Access
+          </h2>
+          <p className="text-xs text-gray-500 mb-6">Enter your admin password to continue.</p>
+          <form onSubmit={handleAuth} className="space-y-4">
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="input-field text-center"
+            />
+            {authError && <p className="text-red-500 text-xs">{authError}</p>}
+            <button type="submit" className="btn-green w-full">Enter</button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // Saved state
+  if (saved) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <div className="w-20 h-20 rounded-full bg-masters-gold/15 flex items-center justify-center mb-6">
+          <svg className="w-10 h-10 text-masters-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h2 className="font-serif text-2xl text-masters-green mb-2 font-bold">Pool is Live!</h2>
+        <p className="text-gray-500 text-sm mb-8 max-w-xs">
+          Share the leaderboard link with your players. Scores can be entered as rounds are played.
+        </p>
+        <a href="/" className="btn-green inline-block">View Leaderboard</a>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="mb-2">
+        <h1 className="font-serif text-2xl font-bold text-masters-green">
+          Commissioner Setup
+        </h1>
+      </div>
+
+      {/* Step dots */}
+      <StepDots current={step} total={STEPS.length} />
+
+      <div className="card p-5">
+        {/* ── Step 0: Pool Info ── */}
+        {step === 0 && (
+          <div>
+            <h2 className="font-serif text-lg text-masters-green mb-5 font-bold">Pool Info</h2>
+
+            <Section label="Pool Name">
+              <input
+                value={poolName}
+                onChange={(e) => setPoolName(e.target.value)}
+                className="input-field"
+              />
+            </Section>
+
+            <Section label="Buy-in Per Player">
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">$</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={buyIn}
+                  onChange={(e) => setBuyIn(Number(e.target.value))}
+                  className="input-field pl-8"
+                />
+              </div>
+            </Section>
+
+            <Section label={`Players (${validPlayers.length})`}>
+              <div className="space-y-2.5">
+                {players.map((p) => (
+                  <div key={p.id} className="flex items-center gap-2">
+                    <input
+                      value={p.name}
+                      onChange={(e) => updatePlayer(p.id, e.target.value)}
+                      placeholder="Player name"
+                      className="input-field flex-1"
+                    />
+                    {players.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removePlayer(p.id)}
+                        className="w-12 h-12 flex items-center justify-center text-gray-300 active:text-red-500 transition-colors rounded-xl"
+                      >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addPlayer}
+                  className="w-full h-12 flex items-center justify-center gap-2 text-sm text-masters-green font-semibold
+                    border-2 border-dashed border-masters-green/20 rounded-xl active:bg-masters-green/5 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Add Player
+                </button>
+              </div>
+
+              {validPlayers.length > 0 && (
+                <p className="text-xs text-gray-400 mt-3">
+                  Total purse: <strong className="text-gray-600">${validPlayers.length * buyIn}</strong>
+                </p>
+              )}
+            </Section>
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                disabled={validPlayers.length < 2}
+                className="btn-green disabled:opacity-40"
+              >
+                Next: Rules
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 1: Rules ── */}
+        {step === 1 && (
+          <div>
+            <h2 className="font-serif text-lg text-masters-green mb-5 font-bold">Commissioner Rules</h2>
+
+            <Section label="Draft Type">
+              <div className="space-y-2.5">
+                <OptionCard
+                  selected={settings.draftType === "snake"}
+                  onClick={() => set("draftType", "snake")}
+                  title="Snake Draft"
+                  description="Picks reverse each round. Fair distribution across all players."
+                  badge="Recommended"
+                />
+                <OptionCard
+                  selected={settings.draftType === "random"}
+                  onClick={() => set("draftType", "random")}
+                  title="Pure Random"
+                  description="Golfers assigned sequentially. Simpler, but less balanced."
+                />
+              </div>
+            </Section>
+
+            <Section label="Missed Cut Rule">
+              <div className="space-y-2.5">
+                <OptionCard
+                  selected={settings.missedCutRule === "penalty"}
+                  onClick={() => set("missedCutRule", "penalty")}
+                  title="Fixed Penalty"
+                  description="Missed cut golfers receive a set score per remaining round."
+                  badge="Recommended"
+                />
+                <OptionCard
+                  selected={settings.missedCutRule === "zero"}
+                  onClick={() => set("missedCutRule", "zero")}
+                  title="Zero Contribution"
+                  description="Missed cut golfers stop counting. No penalty, no benefit."
+                />
+                <OptionCard
+                  selected={settings.missedCutRule === "worst-made"}
+                  onClick={() => set("missedCutRule", "worst-made")}
+                  title="Worst Made Score"
+                  description="Missed cut golfers receive the total of the worst golfer who made the cut."
+                />
+              </div>
+
+              {settings.missedCutRule === "penalty" && (
+                <div className="mt-4 flex items-center gap-3 bg-masters-cream/60 rounded-xl p-4">
+                  <label className="text-sm text-gray-600 flex-shrink-0">Penalty per round:</label>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm text-gray-400 font-mono">+</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={20}
+                      value={settings.missedCutPenalty}
+                      onChange={(e) => set("missedCutPenalty", Number(e.target.value))}
+                      className="w-16 border-2 border-masters-cream-dark bg-white rounded-lg px-2 py-2 text-sm text-center font-mono focus:border-masters-green outline-none"
+                    />
+                  </div>
+                  <span className="text-xs text-gray-400">(x2 rds = +{settings.missedCutPenalty * 2})</span>
+                </div>
+              )}
+            </Section>
+
+            <Section label="Scoring">
+              <div className="space-y-2.5">
+                <OptionCard
+                  selected={settings.scoringType === "all"}
+                  onClick={() => set("scoringType", "all")}
+                  title="Count All Golfers"
+                  description="Every golfer on your roster contributes to your total."
+                  badge="Recommended"
+                />
+                <OptionCard
+                  selected={settings.scoringType === "best-n"}
+                  onClick={() => set("scoringType", "best-n")}
+                  title="Best N Golfers"
+                  description="Only your top N performers count. Reduces impact of one bad pick."
+                />
+              </div>
+
+              {settings.scoringType === "best-n" && (
+                <div className="mt-4 flex items-center gap-3 bg-masters-cream/60 rounded-xl p-4">
+                  <label className="text-sm text-gray-600">Count best:</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={settings.bestN}
+                    onChange={(e) => set("bestN", Number(e.target.value))}
+                    className="w-16 border-2 border-masters-cream-dark bg-white rounded-lg px-2 py-2 text-sm text-center font-mono focus:border-masters-green outline-none"
+                  />
+                  <span className="text-sm text-gray-400">golfers per player</span>
+                </div>
+              )}
+            </Section>
+
+            <Section label="Purse Distribution">
+              <div className="space-y-2.5">
+                {([
+                  { value: "winner-take-all" as PurseType, title: "Winner Take All", desc: "First place takes 100%" },
+                  { value: "70-30" as PurseType, title: "70 / 30", desc: "Split between top 2" },
+                  { value: "60-30-10" as PurseType, title: "60 / 30 / 10", desc: "Split between top 3" },
+                  { value: "custom" as PurseType, title: "Custom", desc: "Set your own percentages" },
+                ] as const).map(({ value, title, desc }) => (
+                  <OptionCard
+                    key={value}
+                    selected={settings.purseType === value}
+                    onClick={() => set("purseType", value)}
+                    title={title}
+                    description={desc}
+                  />
+                ))}
+              </div>
+
+              {settings.purseType === "custom" && (
+                <div className="mt-4 bg-masters-cream/60 rounded-xl p-4">
+                  <label className="text-xs text-gray-500 block mb-2">
+                    Comma-separated percentages summing to 100 (e.g. 50,30,20)
+                  </label>
+                  <input
+                    value={customDist}
+                    onChange={(e) => setCustomDist(e.target.value)}
+                    placeholder="70,30"
+                    className="input-field"
+                  />
+                </div>
+              )}
+            </Section>
+
+            <div className="flex justify-between">
+              <button type="button" onClick={() => setStep(0)} className="text-sm text-gray-400 font-medium px-4 py-3">
+                Back
+              </button>
+              <button type="button" onClick={() => setStep(2)} className="btn-green">
+                Next: Field
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 2: Field ── */}
+        {step === 2 && (
+          <div>
+            <h2 className="font-serif text-lg text-masters-green mb-1 font-bold">Golfer Field</h2>
+            <p className="text-xs text-gray-500 mb-5">
+              Pre-populated with the 2026 Masters field. Edit as needed — one name per line.
+            </p>
+
+            <textarea
+              value={fieldText}
+              onChange={(e) => setFieldText(e.target.value)}
+              rows={16}
+              className="input-field font-mono text-xs leading-relaxed resize-none"
+              style={{ minHeight: 320 }}
+            />
+
+            <p className="text-xs text-gray-400 mt-2">
+              {golferCount} golfers · {validPlayers.length} players
+              {golferCount > 0 && validPlayers.length > 0
+                ? ` · ~${Math.ceil(golferCount / validPlayers.length)} golfers per player`
+                : ""}
+            </p>
+
+            <div className="flex justify-between mt-6">
+              <button type="button" onClick={() => setStep(1)} className="text-sm text-gray-400 font-medium px-4 py-3">
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={runDraft}
+                disabled={golferCount < validPlayers.length}
+                className="btn-green disabled:opacity-40"
+              >
+                Run Draft
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 3: Draft Results ── */}
+        {step === 3 && (
+          <div>
+            <h2 className="font-serif text-lg text-masters-green mb-1 font-bold">Draft Results</h2>
+            <p className="text-xs text-gray-500 mb-5">
+              {settings.draftType === "snake" ? "Snake draft" : "Random assignment"} complete.
+            </p>
+
+            <div className="space-y-4">
+              {validPlayers.map((player) => {
+                const myPicks = assignments
+                  .filter((a) => a.playerId === player.id)
+                  .sort((a, b) => a.pickNumber - b.pickNumber);
+                const golferNames = fieldText.split("\n").map((n) => n.trim()).filter(Boolean);
+
+                return (
+                  <div key={player.id} className="bg-masters-cream/60 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="font-serif font-bold text-masters-green">{player.name}</span>
+                      <span className="text-xs text-gray-400">{myPicks.length} picks</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {myPicks.map((a) => {
+                        const idx = parseInt(a.golferId.replace("g", ""));
+                        return (
+                          <span
+                            key={a.golferId}
+                            className="inline-flex items-center text-xs bg-white border border-masters-cream-dark rounded-full px-3 py-1.5 font-medium"
+                          >
+                            <span className="text-gray-300 mr-1 text-[10px] font-mono">#{a.pickNumber}</span>
+                            {golferNames[idx]}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-between mt-6">
+              <button
+                type="button"
+                onClick={() => { runDraft(); }}
+                className="text-sm text-masters-green font-medium active:underline px-4 py-3"
+              >
+                Re-run Draft
+              </button>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setStep(2)} className="text-sm text-gray-400 font-medium px-4 py-3">
+                  Back
+                </button>
+                <button type="button" onClick={() => setStep(4)} className="btn-green">
+                  Review
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 4: Confirm ── */}
+        {step === 4 && (
+          <div>
+            <h2 className="font-serif text-lg text-masters-green mb-5 font-bold">Confirm &amp; Launch</h2>
+
+            <div className="space-y-0">
+              {[
+                { label: "Pool Name", value: poolName },
+                { label: "Players", value: `${validPlayers.length} (${validPlayers.map(p => p.name).join(", ")})` },
+                { label: "Buy-in", value: `$${buyIn}/player · $${validPlayers.length * buyIn} total` },
+                { label: "Golfers", value: `${fieldText.split("\n").filter(n => n.trim()).length} in field` },
+                {
+                  label: "Draft",
+                  value: settings.draftType === "snake" ? "Snake Draft" : "Pure Random",
+                },
+                {
+                  label: "Missed Cut",
+                  value:
+                    settings.missedCutRule === "penalty"
+                      ? `+${settings.missedCutPenalty}/round penalty (+${settings.missedCutPenalty * 2} total)`
+                      : settings.missedCutRule === "zero"
+                      ? "No contribution"
+                      : "Worst made-cut score",
+                },
+                {
+                  label: "Scoring",
+                  value:
+                    settings.scoringType === "all"
+                      ? "All golfers count"
+                      : `Best ${settings.bestN} count`,
+                },
+                {
+                  label: "Purse",
+                  value:
+                    settings.purseType === "winner-take-all"
+                      ? "Winner take all"
+                      : settings.purseType === "70-30"
+                      ? "70/30 split (top 2)"
+                      : settings.purseType === "60-30-10"
+                      ? "60/30/10 split (top 3)"
+                      : `Custom: ${customDist}`,
+                },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex gap-3 text-sm py-3 border-b border-masters-cream-dark last:border-0">
+                  <span className="w-24 text-gray-400 flex-shrink-0 font-medium">{label}</span>
+                  <span className="text-gray-800">{value}</span>
+                </div>
+              ))}
+            </div>
+
+            {error && <p className="text-red-500 text-sm mt-4">{error}</p>}
+
+            <div className="flex justify-between mt-6">
+              <button type="button" onClick={() => setStep(3)} className="text-sm text-gray-400 font-medium px-4 py-3">
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="btn-gold disabled:opacity-60"
+              >
+                {saving ? "Saving..." : "Launch Pool"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
