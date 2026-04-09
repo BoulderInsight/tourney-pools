@@ -6,6 +6,7 @@ import { PoolConfig, PlayerStanding } from "@/lib/types";
 import { computeLeaderboard, formatScore, scoreColorClass } from "@/lib/pool";
 import Image from "next/image";
 import Link from "next/link";
+import { SponsorBanner } from "@/app/components/sponsor-banner";
 
 function LoadingState() {
   return (
@@ -219,6 +220,9 @@ export default function PoolLeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [chairmanName, setChairmanName] = useState("");
+  const [chairmanTier, setChairmanTier] = useState("free");
+  const [customAdImage, setCustomAdImage] = useState<string | null>(null);
+  const [customAdUrl, setCustomAdUrl] = useState<string | null>(null);
 
   const fetchPool = useCallback(async () => {
     try {
@@ -229,6 +233,9 @@ export default function PoolLeaderboardPage() {
         setStandings(computeLeaderboard(data));
         setLastUpdated(new Date());
         if (data.chairmanName) setChairmanName(data.chairmanName);
+        if (data.chairmanTier) setChairmanTier(data.chairmanTier);
+        if (data.customAdImage) setCustomAdImage(data.customAdImage);
+        if (data.customAdUrl) setCustomAdUrl(data.customAdUrl);
       }
     } finally {
       setLoading(false);
@@ -346,6 +353,9 @@ export default function PoolLeaderboardPage() {
         />
       </div>
 
+      {/* Sponsor banner */}
+      <SponsorBanner tier={chairmanTier} customAdImage={customAdImage} customAdUrl={customAdUrl} />
+
       {/* Refresh button */}
       <div className="flex justify-between items-center mb-4">
         <div className="gold-rule flex-1" />
@@ -388,10 +398,14 @@ export default function PoolLeaderboardPage() {
       {/* CTA for visitors */}
       <div className="text-center mt-10 mb-6">
         <div className="gold-rule mb-6" />
-        <p className="text-xs text-gray-400 mb-3">
+        <p className="text-sm font-semibold mb-3" style={{ color: "#096a52" }}>
           Want to become a Chairman and run your own pool?
         </p>
-        <Link href="/signup" className="btn-gold inline-block text-center">
+        <Link
+          href="/signup"
+          className="inline-block text-center font-semibold rounded-xl px-8 py-3.5 text-sm tracking-wide transition-colors"
+          style={{ backgroundColor: "#fed60d", color: "#096a52" }}
+        >
           Sign Up Here
         </Link>
       </div>

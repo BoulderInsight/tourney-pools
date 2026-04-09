@@ -12,7 +12,7 @@ export async function GET(
 
   const poolRows = await sql`
     SELECT p.id, p.slug, p.pool_name, p.buy_in, p.settings, p.setup_complete, p.chairman_id, p.last_sync_at,
-           c.name as chairman_name
+           c.name as chairman_name, c.tier, c.custom_ad_image, c.custom_ad_url
     FROM pools p
     JOIN chairmen c ON c.id = p.chairman_id
     WHERE p.slug = ${params.slug}
@@ -66,6 +66,9 @@ export async function GET(
     ...config,
     chairmanId: pool.chairman_id,
     chairmanName: pool.chairman_name,
+    chairmanTier: pool.tier || "free",
+    customAdImage: pool.custom_ad_image,
+    customAdUrl: pool.custom_ad_url,
     lastSyncAt: pool.last_sync_at,
   });
 }

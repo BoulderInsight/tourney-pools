@@ -12,6 +12,7 @@ interface Chairman {
   name: string;
   email_verified: boolean;
   is_super_admin: boolean;
+  tier: string;
   created_at: string;
   pool_count: number;
 }
@@ -71,7 +72,7 @@ export default function AdminPage() {
     fetchData();
   }
 
-  async function patchChairman(id: string, action: string, value?: boolean) {
+  async function patchChairman(id: string, action: string, value?: boolean | string) {
     await fetch("/api/admin", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -157,6 +158,11 @@ export default function AdminPage() {
                     <p className="text-xs text-gray-400 mt-0.5">{c.email}</p>
                   </div>
                   <div className="flex items-center gap-2">
+                    {c.tier === "paid" ? (
+                      <span className="text-[10px] bg-masters-gold/20 text-masters-gold-dark px-2 py-0.5 rounded-full font-semibold">Premium</span>
+                    ) : (
+                      <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-semibold">Free</span>
+                    )}
                     {c.email_verified ? (
                       <span className="text-[10px] bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-semibold">Verified</span>
                     ) : (
@@ -183,6 +189,13 @@ export default function AdminPage() {
                     <div className="w-px bg-masters-cream-dark" />
                   </>
                 )}
+                <button
+                  onClick={() => patchChairman(c.id, "set_tier", c.tier === "paid" ? "free" : "paid")}
+                  className="flex-1 text-center py-2.5 text-masters-gold active:bg-masters-gold/5 transition-colors"
+                >
+                  {c.tier === "paid" ? "Downgrade" : "Upgrade"}
+                </button>
+                <div className="w-px bg-masters-cream-dark" />
                 <button
                   onClick={() => patchChairman(c.id, "toggle_super_admin", !c.is_super_admin)}
                   className="flex-1 text-center py-2.5 text-purple-600 active:bg-purple-50 transition-colors"

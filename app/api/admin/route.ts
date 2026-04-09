@@ -23,7 +23,7 @@ export async function GET() {
 
   const chairmen = await sql`
     SELECT
-      c.id, c.email, c.name, c.email_verified, c.is_super_admin, c.created_at,
+      c.id, c.email, c.name, c.email_verified, c.is_super_admin, c.tier, c.created_at,
       (SELECT COUNT(*) FROM pools WHERE chairman_id = c.id) as pool_count
     FROM chairmen c
     ORDER BY c.created_at DESC
@@ -85,6 +85,8 @@ export async function PATCH(req: NextRequest) {
     await sql`UPDATE chairmen SET is_super_admin = ${value} WHERE id = ${id}`;
   } else if (action === "toggle_verified") {
     await sql`UPDATE chairmen SET email_verified = ${value} WHERE id = ${id}`;
+  } else if (action === "set_tier") {
+    await sql`UPDATE chairmen SET tier = ${value} WHERE id = ${id}`;
   } else {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   }

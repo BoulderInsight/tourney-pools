@@ -24,6 +24,10 @@ export default function DashboardPage() {
   const [newName, setNewName] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [tier, setTier] = useState("free");
+
+  const isPaid = tier === "paid";
+  const canCreatePool = isPaid || pools.length < 1;
 
   const fetchPools = useCallback(async () => {
     const [poolRes, meRes] = await Promise.all([
@@ -34,6 +38,7 @@ export default function DashboardPage() {
     if (meRes.ok) {
       const me = await meRes.json();
       if (me?.isSuperAdmin) setIsSuperAdmin(true);
+      if (me?.tier) setTier(me.tier);
     }
     setLoading(false);
   }, []);
@@ -109,14 +114,34 @@ export default function DashboardPage() {
       </div>
 
       {/* Create pool */}
-      <div className="card p-4 mb-6">
-        <div className="flex gap-2">
-          <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Pool name (e.g. Blue Rock Masters)" className="input-field flex-1" />
-          <button onClick={createPool} disabled={creating} className="btn-green flex-shrink-0 disabled:opacity-60">
-            {creating ? "..." : "Create"}
+      {canCreatePool ? (
+        <div className="card p-4 mb-6">
+          <div className="flex gap-2">
+            <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Pool name (e.g. Blue Rock Masters)" className="input-field flex-1" />
+            <button onClick={createPool} disabled={creating} className="btn-green flex-shrink-0 disabled:opacity-60">
+              {creating ? "..." : "Create"}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="card p-5 mb-6 text-center">
+          <p className="text-sm text-gray-600 mb-1 font-medium">You&apos;ve reached the free pool limit</p>
+          <p className="text-xs text-gray-400 mb-4">Upgrade to create unlimited pools, remove ads, and add custom branding.</p>
+          <button className="btn-gold w-full">
+            Upgrade to Premium — $4.99
           </button>
         </div>
-      </div>
+      )}
+
+      {/* Tier badge */}
+      {!isPaid && pools.length > 0 && (
+        <div className="flex items-center justify-between mb-4 px-1">
+          <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Free Plan — 1 pool</span>
+          <button className="text-[10px] text-masters-gold font-semibold active:underline">
+            Upgrade →
+          </button>
+        </div>
+      )}
 
       {/* Pool list */}
       {pools.length === 0 ? (
