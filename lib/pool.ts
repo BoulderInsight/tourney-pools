@@ -245,24 +245,29 @@ export function computeLeaderboard(config: PoolConfig): PlayerStanding[] {
     return a.totalScore - b.totalScore;
   });
 
-  // Assign ranks (handle ties)
-  let currentRank = 1;
-  for (let i = 0; i < standings.length; i++) {
-    if (
-      i > 0 &&
-      standings[i].totalScore !== null &&
-      standings[i].totalScore === standings[i - 1].totalScore
-    ) {
-      standings[i].rank = standings[i - 1].rank;
-    } else {
-      standings[i].rank = currentRank;
-    }
-    currentRank = i + 2;
-  }
+  // Only assign ranks/prizes if at least one player has a score
+  const anyScores = standings.some((s) => s.totalScore !== null);
 
-  // Assign prizes
-  for (let i = 0; i < prizes.length && i < standings.length; i++) {
-    standings[i].prize = prizes[i];
+  if (anyScores) {
+    // Assign ranks (handle ties)
+    let currentRank = 1;
+    for (let i = 0; i < standings.length; i++) {
+      if (
+        i > 0 &&
+        standings[i].totalScore !== null &&
+        standings[i].totalScore === standings[i - 1].totalScore
+      ) {
+        standings[i].rank = standings[i - 1].rank;
+      } else {
+        standings[i].rank = currentRank;
+      }
+      currentRank = i + 2;
+    }
+
+    // Assign prizes
+    for (let i = 0; i < prizes.length && i < standings.length; i++) {
+      standings[i].prize = prizes[i];
+    }
   }
 
   return standings;

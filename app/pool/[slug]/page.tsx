@@ -92,7 +92,8 @@ function StandingCard({ standing, expanded, onToggle, index }: {
   onToggle: () => void;
   index: number;
 }) {
-  const isLeader = standing.rank === 1;
+  const isLeader = standing.rank === 1 && standing.totalScore !== null;
+  const hasRank = standing.rank > 0;
 
   return (
     <div
@@ -111,9 +112,13 @@ function StandingCard({ standing, expanded, onToggle, index }: {
             <div className="w-12 h-12 rounded-full bg-masters-gold flex items-center justify-center shadow-gold">
               <span className="text-white font-serif font-bold text-xl">1</span>
             </div>
-          ) : (
+          ) : hasRank ? (
             <span className="font-serif font-bold text-4xl text-masters-green/80 tabular-nums">
               {standing.rank}
+            </span>
+          ) : (
+            <span className="font-serif font-bold text-2xl text-gray-300 tabular-nums">
+              —
             </span>
           )}
         </div>

@@ -1,14 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useParams } from "next/navigation";
+import Image from "next/image";
+import { usePathname, useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function PoolLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const params = useParams();
+  const router = useRouter();
   const slug = params.slug as string;
   const [isOwner, setIsOwner] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     async function check() {
@@ -16,16 +19,26 @@ export default function PoolLayout({ children }: { children: React.ReactNode }) 
         fetch("/api/auth/me"),
         fetch(`/api/pool/${slug}`),
       ]);
-      if (meRes.ok && poolRes.ok) {
+      if (meRes.ok) {
         const me = await meRes.json();
-        const pool = await poolRes.json();
-        if (me && pool && me.chairmanId === pool.chairmanId) {
-          setIsOwner(true);
+        if (me) {
+          setIsLoggedIn(true);
+          if (poolRes.ok) {
+            const pool = await poolRes.json();
+            if (pool && me.chairmanId === pool.chairmanId) {
+              setIsOwner(true);
+            }
+          }
         }
       }
     }
     check();
   }, [slug]);
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/");
+  }
 
   const tabs = [
     { href: `/pool/${slug}`, label: "Leaderboard", alwaysShow: true,
@@ -40,6 +53,22 @@ export default function PoolLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <>
+      {/* Top bar with logo + nav */}
+      <div className="flex items-center justify-between mb-2 -mt-1">
+        <Image src="/Masters_Logo.png.webp" alt="The Masters" width={80} height={53} />
+        <div className="flex items-center gap-3">
+          {isLoggedIn && (
+            <>
+              <Link href="/dashboard" className="text-xs text-masters-green font-semibold active:underline">
+                My Pools
+              </Link>
+              <button onClick={handleLogout} className="text-xs text-gray-400 active:text-red-500 transition-colors">
+                Sign out
+              </button>
+            </>
+          )}
+        </div>
+      </div>
       {children}
       <nav className="fixed bottom-0 inset-x-0 z-50 bg-white/95 backdrop-blur-md border-t border-masters-cream-dark">
         <div className="flex items-stretch" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>

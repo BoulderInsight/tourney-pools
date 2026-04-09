@@ -38,3 +38,25 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ slug });
 }
+
+export async function DELETE(req: NextRequest) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { poolId } = await req.json();
+  const sql = getDb();
+
+  // Verify ownership before deleting (CASCADE handles children)
+  const result = await sql`
+    DELETE FROM pools WHERE id = ${poolId} AND chairman_id = ${session.chairmanId}
+    RETURNING id
+  `;
+
+  if (result.length === 0) {
+    return NextResponse.json({ error: "Pool not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({ ok: true });
+}
