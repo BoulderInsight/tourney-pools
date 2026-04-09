@@ -327,6 +327,23 @@ export default function PoolLeaderboardPage() {
             : "Golfers who miss the cut get assigned the same total as the worst golfer who DID make the cut."
           }
         />
+        <SettingsPill
+          label={
+            config.settings.purseType === "winner-take-all" ? "Winner Take All"
+            : config.settings.purseType === "70-30" ? "70/30 Split"
+            : config.settings.purseType === "60-30-10" ? "60/30/10 Split"
+            : "Custom Purse"
+          }
+          info={
+            config.settings.purseType === "winner-take-all"
+              ? "The entire prize pool goes to first place. High stakes, one winner."
+              : config.settings.purseType === "70-30"
+              ? "First place takes 70% of the purse, second place takes 30%."
+              : config.settings.purseType === "60-30-10"
+              ? "First place takes 60%, second place 30%, third place 10%."
+              : "Custom payout percentages set by the chairman."
+          }
+        />
       </div>
 
       {/* Refresh button */}
