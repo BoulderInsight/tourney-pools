@@ -31,9 +31,11 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     "/dashboard/:path*",
+    "/admin/:path*",
     "/pool/:slug/setup/:path*",
     "/pool/:slug/scores/:path*",
     "/api/pools/:path*",
+    "/api/admin/:path*",
     "/api/pool/:slug/setup/:path*",
     "/api/pool/:slug/scores/:path*",
     "/api/pool/:slug/sync/:path*",

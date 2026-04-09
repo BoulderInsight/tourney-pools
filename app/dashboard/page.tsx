@@ -22,11 +22,17 @@ export default function DashboardPage() {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   const fetchPools = useCallback(async () => {
-    const res = await fetch("/api/pools");
-    if (res.ok) {
-      setPools(await res.json());
+    const [poolRes, meRes] = await Promise.all([
+      fetch("/api/pools"),
+      fetch("/api/auth/me"),
+    ]);
+    if (poolRes.ok) setPools(await poolRes.json());
+    if (meRes.ok) {
+      const me = await meRes.json();
+      if (me?.isSuperAdmin) setIsSuperAdmin(true);
     }
     setLoading(false);
   }, []);
@@ -86,9 +92,16 @@ export default function DashboardPage() {
           <Image src="/Masters_Logo.png.webp" alt="The Masters" width={80} height={53} />
           <h1 className="font-serif text-2xl font-bold text-masters-green">My Pools</h1>
         </div>
-        <button onClick={handleLogout} className="text-xs text-gray-400 active:text-red-500 transition-colors">
-          Sign out
-        </button>
+        <div className="flex items-center gap-3">
+          {isSuperAdmin && (
+            <Link href="/admin" className="text-xs text-purple-600 font-semibold">
+              Admin
+            </Link>
+          )}
+          <button onClick={handleLogout} className="text-xs text-gray-400 active:text-red-500 transition-colors">
+            Sign out
+          </button>
+        </div>
       </div>
 
       {/* Create pool */}

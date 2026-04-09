@@ -1,13 +1,16 @@
 import nodemailer from "nodemailer";
 
-const transporter = nodemailer.createTransport({
-  host: "mail.smtp2go.com",
-  port: 2525,
-  auth: {
-    user: process.env.SMTP_USER || "mymasterspool",
-    pass: process.env.SMTP_PASS || "",
-  },
-});
+function getTransporter() {
+  return nodemailer.createTransport({
+    host: "mail.smtp2go.com",
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.SMTP_USER || "",
+      pass: process.env.SMTP_PASS || "",
+    },
+  });
+}
 
 const FROM = "Masters Pool <noreply@mymasterspool.com>";
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://mymasterspool.com";
@@ -15,7 +18,9 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://mymasterspool.com"
 export async function sendVerificationEmail(email: string, token: string) {
   const verifyUrl = `${BASE_URL}/verify?token=${token}`;
 
-  await transporter.sendMail({
+  const transporter = getTransporter();
+
+  const result = await transporter.sendMail({
     from: FROM,
     to: email,
     subject: "Verify your Masters Pool account",
@@ -39,4 +44,6 @@ export async function sendVerificationEmail(email: string, token: string) {
       </div>
     `,
   });
+
+  return result;
 }

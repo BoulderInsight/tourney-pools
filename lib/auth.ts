@@ -9,6 +9,7 @@ export interface SessionPayload {
   chairmanId: string;
   email: string;
   name: string;
+  isSuperAdmin?: boolean;
 }
 
 export async function hashPassword(password: string): Promise<string> {

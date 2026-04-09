@@ -1,0 +1,260 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+
+interface Chairman {
+  id: string;
+  email: string;
+  name: string;
+  email_verified: boolean;
+  is_super_admin: boolean;
+  created_at: string;
+  pool_count: number;
+}
+
+interface Pool {
+  id: string;
+  slug: string;
+  pool_name: string;
+  buy_in: number;
+  setup_complete: boolean;
+  created_at: string;
+  chairman_id: string;
+  chairman_name: string;
+  chairman_email: string;
+  player_count: number;
+  golfer_count: number;
+}
+
+export default function AdminPage() {
+  const router = useRouter();
+  const [chairmen, setChairmen] = useState<Chairman[]>([]);
+  const [pools, setPools] = useState<Pool[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [tab, setTab] = useState<"chairmen" | "pools">("chairmen");
+
+  const fetchData = useCallback(async () => {
+    const res = await fetch("/api/admin");
+    if (res.status === 403) {
+      router.push("/dashboard");
+      return;
+    }
+    if (res.ok) {
+      const data = await res.json();
+      setChairmen(data.chairmen);
+      setPools(data.pools);
+    } else {
+      setError("Failed to load admin data");
+    }
+    setLoading(false);
+  }, [router]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  async function deleteItem(type: "chairman" | "pool", id: string, label: string) {
+    if (!confirm(`Delete ${type} "${label}"? This cannot be undone.`)) return;
+    await fetch("/api/admin", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, id }),
+    });
+    fetchData();
+  }
+
+  async function patchChairman(id: string, action: string, value?: boolean) {
+    await fetch("/api/admin", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, action, value }),
+    });
+    fetchData();
+  }
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-6">
+        <div className="flex gap-3">
+          <div className="loading-dot" /><div className="loading-dot" /><div className="loading-dot" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <Image src="/Masters_Logo.png.webp" alt="The Masters" width={60} height={40} />
+          <div>
+            <h1 className="font-serif text-xl font-bold text-masters-green">Super Admin</h1>
+            <p className="text-[10px] text-gray-400">System management</p>
+          </div>
+        </div>
+        <Link href="/dashboard" className="text-xs text-masters-green font-semibold">
+          Dashboard
+        </Link>
+      </div>
+
+      {/* Stats */}
+      <div className="flex gap-3 mb-5">
+        <div className="card p-3 flex-1 text-center">
+          <div className="text-2xl font-serif font-bold text-masters-green">{chairmen.length}</div>
+          <div className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Chairmen</div>
+        </div>
+        <div className="card p-3 flex-1 text-center">
+          <div className="text-2xl font-serif font-bold text-masters-green">{pools.length}</div>
+          <div className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Pools</div>
+        </div>
+        <div className="card p-3 flex-1 text-center">
+          <div className="text-2xl font-serif font-bold text-masters-green">{pools.filter(p => p.setup_complete).length}</div>
+          <div className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Live</div>
+        </div>
+      </div>
+
+      {error && <p className="text-red-500 text-xs mb-4">{error}</p>}
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setTab("chairmen")}
+          className={`pill ${tab === "chairmen" ? "pill-active" : "pill-inactive"}`}
+        >
+          Chairmen ({chairmen.length})
+        </button>
+        <button
+          onClick={() => setTab("pools")}
+          className={`pill ${tab === "pools" ? "pill-active" : "pill-inactive"}`}
+        >
+          Pools ({pools.length})
+        </button>
+      </div>
+
+      {/* Chairmen Tab */}
+      {tab === "chairmen" && (
+        <div className="space-y-3">
+          {chairmen.map((c) => (
+            <div key={c.id} className="card overflow-hidden">
+              <div className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-serif font-bold text-gray-900">{c.name}</span>
+                      {c.is_super_admin && (
+                        <span className="text-[9px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold uppercase">Admin</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">{c.email}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {c.email_verified ? (
+                      <span className="text-[10px] bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-semibold">Verified</span>
+                    ) : (
+                      <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-semibold">Unverified</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
+                  <span>{c.pool_count} pool{c.pool_count !== 1 ? "s" : ""}</span>
+                  <span className="text-gray-200">|</span>
+                  <span>Joined {new Date(c.created_at).toLocaleDateString()}</span>
+                </div>
+              </div>
+              {/* Actions */}
+              <div className="flex border-t border-masters-cream-dark text-xs font-semibold">
+                {!c.email_verified && (
+                  <>
+                    <button
+                      onClick={() => patchChairman(c.id, "verify_email")}
+                      className="flex-1 text-center py-2.5 text-masters-green active:bg-masters-green/5 transition-colors"
+                    >
+                      Verify Email
+                    </button>
+                    <div className="w-px bg-masters-cream-dark" />
+                  </>
+                )}
+                <button
+                  onClick={() => patchChairman(c.id, "toggle_super_admin", !c.is_super_admin)}
+                  className="flex-1 text-center py-2.5 text-purple-600 active:bg-purple-50 transition-colors"
+                >
+                  {c.is_super_admin ? "Remove Admin" : "Make Admin"}
+                </button>
+                <div className="w-px bg-masters-cream-dark" />
+                <button
+                  onClick={() => deleteItem("chairman", c.id, c.name)}
+                  className="flex-1 text-center py-2.5 text-red-400 active:bg-red-50 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Pools Tab */}
+      {tab === "pools" && (
+        <div className="space-y-3">
+          {pools.map((p) => (
+            <div key={p.id} className="card overflow-hidden">
+              <div className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-serif font-bold text-gray-900">{p.pool_name}</span>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+                      <span>{p.player_count} players</span>
+                      <span className="text-gray-200">|</span>
+                      <span>{p.golfer_count} golfers</span>
+                      <span className="text-gray-200">|</span>
+                      <span>${p.buy_in}</span>
+                    </div>
+                  </div>
+                  {p.setup_complete ? (
+                    <span className="text-[10px] bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-semibold">Live</span>
+                  ) : (
+                    <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-semibold">Draft</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
+                  <span>Chairman: {p.chairman_name}</span>
+                  <span className="text-gray-200">|</span>
+                  <span>{p.chairman_email}</span>
+                </div>
+              </div>
+              <div className="flex border-t border-masters-cream-dark text-xs font-semibold">
+                <Link
+                  href={`/pool/${p.slug}`}
+                  className="flex-1 text-center py-2.5 text-masters-green active:bg-masters-green/5 transition-colors"
+                >
+                  View
+                </Link>
+                <div className="w-px bg-masters-cream-dark" />
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`https://mymasterspool.com/pool/${p.slug}`);
+                  }}
+                  className="flex-1 text-center py-2.5 text-masters-gold active:bg-masters-gold/5 transition-colors"
+                >
+                  Copy Link
+                </button>
+                <div className="w-px bg-masters-cream-dark" />
+                <button
+                  onClick={() => deleteItem("pool", p.id, p.pool_name)}
+                  className="flex-1 text-center py-2.5 text-red-400 active:bg-red-50 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

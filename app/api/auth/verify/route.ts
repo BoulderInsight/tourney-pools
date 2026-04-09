@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     UPDATE chairmen
     SET email_verified = true, verification_token = NULL
     WHERE verification_token = ${token} AND email_verified = false
-    RETURNING id, email, name
+    RETURNING id, email, name, is_super_admin
   `;
 
   if (result.length === 0) {
@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
     chairmanId: chairman.id,
     email: chairman.email,
     name: chairman.name,
+    isSuperAdmin: chairman.is_super_admin || false,
   });
 
   setSessionCookie(sessionToken);

@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
 
   const sql = getDb();
   const result = await sql`
-    SELECT id, email, password, name, email_verified FROM chairmen WHERE email = ${email.toLowerCase()}
+    SELECT id, email, password, name, email_verified, is_super_admin FROM chairmen WHERE email = ${email.toLowerCase()}
   `;
 
   if (result.length === 0) {
@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
     chairmanId: chairman.id,
     email: chairman.email,
     name: chairman.name,
+    isSuperAdmin: chairman.is_super_admin || false,
   });
 
   setSessionCookie(token);
