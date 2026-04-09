@@ -39,25 +39,21 @@ export async function fetchTournamentScores(): Promise<ESPNGolferScore[]> {
       const status = c.status?.type?.name || "";
 
       // ESPN linescore.displayValue has the relative-to-par score (e.g. "-5", "+2", "E")
-      // linescore.value is running stroke total through holes played (unreliable for in-progress rounds)
-      // A completed round has displayValue AND value that looks like a full 18-hole score (62-85)
-      function parseRound(ls: { value?: number; displayValue?: string } | undefined): number | null {
-        if (!ls) return null;
-        const dv = ls.displayValue;
-        if (!dv) return null;
-        // Only count completed rounds — value should be a reasonable 18-hole score
+      // linescore.value is running stroke total through holes played (unreliable mid-round)
+      // Only count completed rounds where value is a valid 18-hole score (55-85)
+      const rounds = rawLinescores.map((ls: { value?: number; displayValue?: string }) => {
+        if (!ls?.displayValue) return null;
         const strokes = ls.value ?? 0;
-        if (strokes < 55 || strokes > 85) return null; // Still on course
-        if (dv === "E") return 0;
-        const num = parseInt(dv);
-        if (isNaN(num)) return null;
-        return num;
-      }
+        if (strokes < 55 || strokes > 85) return null;
+        if (ls.displayValue === "E") return 0;
+        const num = parseInt(ls.displayValue);
+        return isNaN(num) ? null : num;
+      });
 
-      const r1 = parseRound(rawLinescores[0]);
-      const r2 = parseRound(rawLinescores[1]);
-      const r3 = parseRound(rawLinescores[2]);
-      const r4 = parseRound(rawLinescores[3]);
+      const r1 = rounds[0] ?? null;
+      const r2 = rounds[1] ?? null;
+      const r3 = rounds[2] ?? null;
+      const r4 = rounds[3] ?? null;
 
       // Determine cut status
       let madeCut: boolean | null = null;
