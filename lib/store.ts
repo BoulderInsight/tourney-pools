@@ -1,8 +1,11 @@
-import { readFileSync, writeFileSync, existsSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
 import { PoolConfig } from "./types";
 
-const DATA_PATH = join(process.cwd(), "data", "pool.json");
+// On Vercel, only /tmp is writable. Locally, use project data/ dir.
+const isVercel = !!process.env.VERCEL;
+const DATA_DIR = isVercel ? "/tmp" : join(process.cwd(), "data");
+const DATA_PATH = join(DATA_DIR, "pool.json");
 
 export function readPool(): PoolConfig | null {
   try {
@@ -15,10 +18,8 @@ export function readPool(): PoolConfig | null {
 }
 
 export function writePool(config: PoolConfig): void {
-  const { mkdirSync } = require("fs");
-  const dir = join(process.cwd(), "data");
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
+  if (!existsSync(DATA_DIR)) {
+    mkdirSync(DATA_DIR, { recursive: true });
   }
   writeFileSync(DATA_PATH, JSON.stringify(config, null, 2));
 }
