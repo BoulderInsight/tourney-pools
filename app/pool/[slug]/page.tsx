@@ -170,7 +170,12 @@ function StandingCard({ standing, expanded, onToggle, index }: {
         <div className="px-4 pb-4 animate-expand">
           <div className="gold-rule mb-3" />
           <div className="space-y-2">
-            {standing.golfers.map((gs) => (
+            {[...standing.golfers].sort((a, b) => {
+              if (a.totalScore === null && b.totalScore === null) return 0;
+              if (a.totalScore === null) return 1;
+              if (b.totalScore === null) return -1;
+              return a.totalScore - b.totalScore;
+            }).map((gs) => (
               <GolferDetail
                 key={gs.golfer.id}
                 golfer={gs.golfer}
