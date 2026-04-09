@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useId } from "react";
+import { useState, useId, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { CommissionerSettings, PoolPlayer, DraftType, MissedCutRule, PurseType } from "@/lib/types";
 import { DEFAULT_SETTINGS, DEFAULT_FIELD, draftGolfers } from "@/lib/pool";
@@ -109,6 +109,19 @@ export default function PoolSetupPage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
 
+  // Load existing pool data (pool name was set during create)
+  useEffect(() => {
+    async function loadPool() {
+      const res = await fetch(`/api/pool/${slug}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.poolName) setPoolName(data.poolName);
+        if (data?.buyIn) setBuyIn(data.buyIn);
+      }
+    }
+    loadPool();
+  }, [slug]);
+
   const set = <K extends keyof CommissionerSettings>(key: K, val: CommissionerSettings[K]) =>
     setSettings((s) => ({ ...s, [key]: val }));
 
@@ -200,7 +213,7 @@ export default function PoolSetupPage() {
       {/* Header */}
       <div className="mb-2">
         <h1 className="font-serif text-2xl font-bold text-masters-green">
-          Chairman Setup
+          Chairman - Pool Set Up
         </h1>
       </div>
 
