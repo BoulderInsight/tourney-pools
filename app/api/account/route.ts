@@ -12,7 +12,8 @@ export async function GET() {
 
   const sql = getDb();
   const rows = await sql`
-    SELECT tier, custom_ad_image, custom_ad_url FROM chairmen WHERE id = ${session.chairmanId}
+    SELECT tier, custom_ad_image, custom_ad_url, custom_ad_headline, custom_ad_description, ad_removed
+    FROM chairmen WHERE id = ${session.chairmanId}
   `;
 
   return NextResponse.json(rows[0] || {});
@@ -24,14 +25,24 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { customAdImage, customAdUrl } = await req.json();
+  const body = await req.json();
   const sql = getDb();
 
-  await sql`
-    UPDATE chairmen
-    SET custom_ad_image = ${customAdImage || null}, custom_ad_url = ${customAdUrl || null}
-    WHERE id = ${session.chairmanId}
-  `;
+  if (body.action === "remove_ad") {
+    await sql`UPDATE chairmen SET ad_removed = true, custom_ad_image = null, custom_ad_url = null, custom_ad_headline = null, custom_ad_description = null WHERE id = ${session.chairmanId}`;
+  } else if (body.action === "restore_default") {
+    await sql`UPDATE chairmen SET ad_removed = false, custom_ad_image = null, custom_ad_url = null, custom_ad_headline = null, custom_ad_description = null WHERE id = ${session.chairmanId}`;
+  } else if (body.action === "save_custom") {
+    await sql`
+      UPDATE chairmen SET
+        ad_removed = false,
+        custom_ad_image = ${body.customAdImage || null},
+        custom_ad_url = ${body.customAdUrl || null},
+        custom_ad_headline = ${body.customAdHeadline || null},
+        custom_ad_description = ${body.customAdDescription || null}
+      WHERE id = ${session.chairmanId}
+    `;
+  }
 
   return NextResponse.json({ ok: true });
 }

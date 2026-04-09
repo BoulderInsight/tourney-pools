@@ -36,10 +36,34 @@ export function BoulderInsightAd() {
   );
 }
 
-export function CustomAd({ imageUrl, linkUrl }: { imageUrl: string; linkUrl?: string }) {
+export function CustomAd({ imageUrl, linkUrl, headline, description }: {
+  imageUrl?: string | null;
+  linkUrl?: string | null;
+  headline?: string | null;
+  description?: string | null;
+}) {
+  const hasText = headline || description;
+  const hasImage = imageUrl;
+
   const content = (
-    <div className="rounded-xl overflow-hidden my-4">
-      <Image src={imageUrl} alt="Sponsor" width={600} height={100} className="w-full h-auto" />
+    <div className="rounded-xl overflow-hidden my-4 bg-white border border-masters-cream-dark">
+      {hasImage && (
+        <div className="flex justify-center p-3 pb-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={imageUrl!} alt="Sponsor" className="max-w-full h-auto max-h-24 object-contain" />
+        </div>
+      )}
+      {hasText && (
+        <div className="px-4 py-3">
+          {headline && <p className="text-sm font-medium text-gray-800 leading-snug">{headline}</p>}
+          {description && <p className="text-xs text-gray-500 mt-1 leading-relaxed">{description}</p>}
+        </div>
+      )}
+      {!hasImage && !hasText && (
+        <div className="px-4 py-3 text-center">
+          <p className="text-xs text-gray-400 italic">Custom ad</p>
+        </div>
+      )}
     </div>
   );
 
@@ -56,18 +80,29 @@ export function CustomAd({ imageUrl, linkUrl }: { imageUrl: string; linkUrl?: st
 
 export function SponsorBanner({
   tier,
+  adRemoved,
   customAdImage,
   customAdUrl,
+  customAdHeadline,
+  customAdDescription,
 }: {
   tier: string;
+  adRemoved?: boolean;
   customAdImage?: string | null;
   customAdUrl?: string | null;
+  customAdHeadline?: string | null;
+  customAdDescription?: string | null;
 }) {
-  // Paid users with custom ad — show their ad instead
-  if (tier === "paid" && customAdImage) {
-    return <CustomAd imageUrl={customAdImage} linkUrl={customAdUrl || undefined} />;
+  // Premium user chose to remove ad entirely
+  if (tier === "paid" && adRemoved) {
+    return null;
   }
 
-  // Everyone else (free OR paid without custom ad) — Boulder Insight ad
+  // Premium user with custom ad
+  if (tier === "paid" && (customAdImage || customAdHeadline)) {
+    return <CustomAd imageUrl={customAdImage} linkUrl={customAdUrl} headline={customAdHeadline} description={customAdDescription} />;
+  }
+
+  // Everyone else — Boulder Insight ad
   return <BoulderInsightAd />;
 }

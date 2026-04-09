@@ -223,6 +223,9 @@ export default function PoolLeaderboardPage() {
   const [chairmanTier, setChairmanTier] = useState("free");
   const [customAdImage, setCustomAdImage] = useState<string | null>(null);
   const [customAdUrl, setCustomAdUrl] = useState<string | null>(null);
+  const [customAdHeadline, setCustomAdHeadline] = useState<string | null>(null);
+  const [customAdDescription, setCustomAdDescription] = useState<string | null>(null);
+  const [adRemoved, setAdRemoved] = useState(false);
 
   const fetchPool = useCallback(async () => {
     try {
@@ -236,6 +239,9 @@ export default function PoolLeaderboardPage() {
         if (data.chairmanTier) setChairmanTier(data.chairmanTier);
         if (data.customAdImage) setCustomAdImage(data.customAdImage);
         if (data.customAdUrl) setCustomAdUrl(data.customAdUrl);
+        if (data.customAdHeadline) setCustomAdHeadline(data.customAdHeadline);
+        if (data.customAdDescription) setCustomAdDescription(data.customAdDescription);
+        if (data.adRemoved) setAdRemoved(data.adRemoved);
       }
     } finally {
       setLoading(false);
@@ -354,7 +360,7 @@ export default function PoolLeaderboardPage() {
       </div>
 
       {/* Sponsor banner */}
-      <SponsorBanner tier={chairmanTier} customAdImage={customAdImage} customAdUrl={customAdUrl} />
+      <SponsorBanner tier={chairmanTier} adRemoved={adRemoved} customAdImage={customAdImage} customAdUrl={customAdUrl} customAdHeadline={customAdHeadline} customAdDescription={customAdDescription} />
 
       {/* Refresh button */}
       <div className="flex justify-between items-center mb-4">
