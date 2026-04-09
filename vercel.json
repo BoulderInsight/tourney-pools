@@ -1,3 +1,9 @@
 {
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/cron/sync-scores",
+      "schedule": "*/15 6-23 * 4 4-7"
+    }
+  ]
 }
