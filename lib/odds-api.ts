@@ -35,21 +35,35 @@ export async function fetchTournamentScores(): Promise<ESPNGolferScore[]> {
   for (const comp of mastersEvent.competitions || []) {
     for (const c of comp.competitors || []) {
       const athlete = c.athlete || {};
-      const linescores = (c.linescores || []).map((ls: { value?: number }) => ls.value ?? null);
+      const rawLinescores = c.linescores || [];
       const status = c.status?.type?.name || "";
 
-      // ESPN gives actual strokes (67, 72, etc.) — convert to relative-to-par
-      const PAR = 72; // Augusta National par
-      const r1 = linescores[0] != null ? Math.round(linescores[0]) - PAR : null;
-      const r2 = linescores[1] != null ? Math.round(linescores[1]) - PAR : null;
-      const r3 = linescores[2] != null ? Math.round(linescores[2]) - PAR : null;
-      const r4 = linescores[3] != null ? Math.round(linescores[3]) - PAR : null;
+      // ESPN linescore.displayValue has the relative-to-par score (e.g. "-5", "+2", "E")
+      // linescore.value is running stroke total through holes played (unreliable for in-progress rounds)
+      // A completed round has displayValue AND value that looks like a full 18-hole score (62-85)
+      function parseRound(ls: { value?: number; displayValue?: string } | undefined): number | null {
+        if (!ls) return null;
+        const dv = ls.displayValue;
+        if (!dv) return null;
+        // Only count completed rounds — value should be a reasonable 18-hole score
+        const strokes = ls.value ?? 0;
+        if (strokes < 55 || strokes > 85) return null; // Still on course
+        if (dv === "E") return 0;
+        const num = parseInt(dv);
+        if (isNaN(num)) return null;
+        return num;
+      }
+
+      const r1 = parseRound(rawLinescores[0]);
+      const r2 = parseRound(rawLinescores[1]);
+      const r3 = parseRound(rawLinescores[2]);
+      const r4 = parseRound(rawLinescores[3]);
 
       // Determine cut status
       let madeCut: boolean | null = null;
       if (status === "STATUS_CUT") {
         madeCut = false;
-      } else if (linescores.length >= 3 && linescores[2] != null) {
+      } else if (r3 != null) {
         madeCut = true;
       }
 
