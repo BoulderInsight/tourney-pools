@@ -21,6 +21,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
+  const [copied, setCopied] = useState<string | null>(null);
 
   const fetchPools = useCallback(async () => {
     const res = await fetch("/api/pools");
@@ -131,6 +132,23 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </Link>
+              {/* Share link */}
+              {pool.setup_complete && (
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`https://mymasterspool.com/pool/${pool.slug}`);
+                    setCopied(pool.id);
+                    setTimeout(() => setCopied(null), 2000);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-masters-gold border-t border-masters-cream-dark active:bg-masters-gold/5 transition-colors"
+                >
+                  {copied === pool.id ? (
+                    <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Link Copied!</>
+                  ) : (
+                    <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg> Copy Invite Link</>
+                  )}
+                </button>
+              )}
               {/* Pool actions */}
               <div className="flex border-t border-masters-cream-dark">
                 <Link

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { hashPassword, createToken, setSessionCookie } from "@/lib/auth";
+import { hashPassword } from "@/lib/auth";
+import { sendVerificationEmail } from "@/lib/email";
+import { nanoid } from "nanoid";
 
 export async function POST(req: NextRequest) {
   const { email, password, name } = await req.json();
@@ -10,25 +12,35 @@ export async function POST(req: NextRequest) {
   }
 
   const sql = getDb();
-  const existing = await sql`SELECT id FROM chairmen WHERE email = ${email.toLowerCase()}`;
+  const existing = await sql`SELECT id, email_verified FROM chairmen WHERE email = ${email.toLowerCase()}`;
   if (existing.length > 0) {
+    if (!existing[0].email_verified) {
+      // Resend verification email
+      const token = nanoid(32);
+      await sql`UPDATE chairmen SET verification_token = ${token} WHERE id = ${existing[0].id}`;
+      try {
+        await sendVerificationEmail(email.toLowerCase(), token);
+      } catch {
+        // Continue even if email fails
+      }
+      return NextResponse.json({ needsVerification: true });
+    }
     return NextResponse.json({ error: "Email already registered" }, { status: 409 });
   }
 
   const hashed = await hashPassword(password);
-  const result = await sql`
-    INSERT INTO chairmen (email, password, name)
-    VALUES (${email.toLowerCase()}, ${hashed}, ${name})
-    RETURNING id, email, name
+  const verificationToken = nanoid(32);
+
+  await sql`
+    INSERT INTO chairmen (email, password, name, email_verified, verification_token)
+    VALUES (${email.toLowerCase()}, ${hashed}, ${name}, false, ${verificationToken})
   `;
 
-  const chairman = result[0];
-  const token = await createToken({
-    chairmanId: chairman.id,
-    email: chairman.email,
-    name: chairman.name,
-  });
+  try {
+    await sendVerificationEmail(email.toLowerCase(), verificationToken);
+  } catch {
+    // Continue even if email fails — they can resend later
+  }
 
-  setSessionCookie(token);
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ needsVerification: true });
 }

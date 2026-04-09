@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
 
   const sql = getDb();
   const result = await sql`
-    SELECT id, email, password, name FROM chairmen WHERE email = ${email.toLowerCase()}
+    SELECT id, email, password, name, email_verified FROM chairmen WHERE email = ${email.toLowerCase()}
   `;
 
   if (result.length === 0) {
@@ -22,6 +22,10 @@ export async function POST(req: NextRequest) {
   const valid = await verifyPassword(password, chairman.password);
   if (!valid) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+  }
+
+  if (!chairman.email_verified) {
+    return NextResponse.json({ error: "Please verify your email first. Check your inbox for the verification link." }, { status: 403 });
   }
 
   const token = await createToken({

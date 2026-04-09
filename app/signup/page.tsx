@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function SignupPage() {
-  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -23,13 +23,37 @@ export default function SignupPage() {
       body: JSON.stringify({ name, email, password }),
     });
 
-    if (res.ok) {
-      router.push("/dashboard");
-    } else {
-      const data = await res.json();
+    const data = await res.json();
+
+    if (data.needsVerification) {
+      setEmailSent(true);
+    } else if (!res.ok) {
       setError(data.error || "Signup failed");
     }
     setLoading(false);
+  }
+
+  if (emailSent) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[75vh] text-center">
+        <Image src="/Masters_Logo.png.webp" alt="The Masters" width={120} height={80} className="mb-6" />
+        <div className="card p-8 w-full">
+          <div className="w-16 h-16 rounded-full bg-masters-green/10 flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-masters-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h1 className="font-serif text-2xl text-masters-green font-bold mb-2">Check Your Email</h1>
+          <p className="text-sm text-gray-500 mb-2">
+            We sent a verification link to:
+          </p>
+          <p className="text-sm font-semibold text-gray-800 mb-6">{email}</p>
+          <p className="text-xs text-gray-400">
+            Click the link in the email to activate your account. Check your spam folder if you don&apos;t see it.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
