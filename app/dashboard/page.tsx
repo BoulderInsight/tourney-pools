@@ -1,0 +1,119 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+interface Pool {
+  id: string;
+  slug: string;
+  pool_name: string;
+  buy_in: number;
+  setup_complete: boolean;
+  player_count: number;
+  created_at: string;
+}
+
+export default function DashboardPage() {
+  const router = useRouter();
+  const [pools, setPools] = useState<Pool[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+
+  const fetchPools = useCallback(async () => {
+    const res = await fetch("/api/pools");
+    if (res.ok) {
+      setPools(await res.json());
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchPools();
+  }, [fetchPools]);
+
+  async function createPool() {
+    setCreating(true);
+    const res = await fetch("/api/pools", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ poolName: newName || "My Masters Pool" }),
+    });
+    if (res.ok) {
+      const { slug } = await res.json();
+      router.push(`/pool/${slug}/setup`);
+    }
+    setCreating(false);
+  }
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/");
+  }
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-6">
+        <div className="flex gap-3">
+          <div className="loading-dot" />
+          <div className="loading-dot" />
+          <div className="loading-dot" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="font-serif text-2xl font-bold text-masters-green">My Pools</h1>
+        <button onClick={handleLogout} className="text-xs text-gray-400 active:text-red-500 transition-colors">
+          Sign out
+        </button>
+      </div>
+
+      <div className="card p-4 mb-6">
+        <div className="flex gap-2">
+          <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Pool name (e.g. Blue Rock Masters)" className="input-field flex-1" />
+          <button onClick={createPool} disabled={creating} className="btn-green flex-shrink-0 disabled:opacity-60">
+            {creating ? "..." : "Create"}
+          </button>
+        </div>
+      </div>
+
+      {pools.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="font-serif italic text-gray-400 text-sm">No pools yet. Create your first one above.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {pools.map((pool) => (
+            <Link key={pool.id} href={pool.setup_complete ? `/pool/${pool.slug}` : `/pool/${pool.slug}/setup`} className="card-interactive block p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-serif font-bold text-gray-900">{pool.pool_name}</span>
+                  <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+                    <span>{pool.player_count} players</span>
+                    <span className="text-gray-200">|</span>
+                    <span>${pool.buy_in} buy-in</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {pool.setup_complete ? (
+                    <span className="text-[10px] bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-semibold">Live</span>
+                  ) : (
+                    <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-semibold">Draft</span>
+                  )}
+                  <svg className="w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
