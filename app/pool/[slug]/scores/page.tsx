@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useParams } from "next/navigation";
 import { PoolConfig } from "@/lib/types";
 import { formatScore, scoreColorClass } from "@/lib/pool";
 import Link from "next/link";
@@ -25,14 +26,14 @@ function ScoreCell({
   value,
   golferId,
   field,
-  password,
+  slug,
   onUpdate,
 }: {
   label: string;
   value: number | null;
   golferId: string;
   field: string;
-  password: string;
+  slug: string;
   onUpdate: () => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -40,9 +41,9 @@ function ScoreCell({
 
   async function save() {
     const val = input.trim() === "" ? null : Number(input);
-    await fetch("/api/scores", {
+    await fetch(`/api/pool/${slug}/scores`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-admin-password": password },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ golferId, field, value: val }),
     });
     setEditing(false);
@@ -92,12 +93,12 @@ function ScoreCell({
 
 function GolferCard({
   golfer,
-  password,
+  slug,
   onUpdate,
   index,
 }: {
   golfer: PoolConfig["golfers"][0];
-  password: string;
+  slug: string;
   onUpdate: () => void;
   index: number;
 }) {
@@ -107,9 +108,9 @@ function GolferCard({
   async function toggleCut() {
     const next =
       golfer.madeCut === null ? true : golfer.madeCut === true ? false : null;
-    await fetch("/api/scores", {
+    await fetch(`/api/pool/${slug}/scores`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-admin-password": password },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ golferId: golfer.id, field: "madeCut", value: next }),
     });
     onUpdate();
@@ -147,10 +148,10 @@ function GolferCard({
       {/* Round scores */}
       <div className="px-4 pb-3">
         <div className="flex justify-between gap-2">
-          <ScoreCell label="R1" value={golfer.r1} golferId={golfer.id} field="r1" password={password} onUpdate={onUpdate} />
-          <ScoreCell label="R2" value={golfer.r2} golferId={golfer.id} field="r2" password={password} onUpdate={onUpdate} />
-          <ScoreCell label="R3" value={golfer.r3} golferId={golfer.id} field="r3" password={password} onUpdate={onUpdate} />
-          <ScoreCell label="R4" value={golfer.r4} golferId={golfer.id} field="r4" password={password} onUpdate={onUpdate} />
+          <ScoreCell label="R1" value={golfer.r1} golferId={golfer.id} field="r1" slug={slug} onUpdate={onUpdate} />
+          <ScoreCell label="R2" value={golfer.r2} golferId={golfer.id} field="r2" slug={slug} onUpdate={onUpdate} />
+          <ScoreCell label="R3" value={golfer.r3} golferId={golfer.id} field="r3" slug={slug} onUpdate={onUpdate} />
+          <ScoreCell label="R4" value={golfer.r4} golferId={golfer.id} field="r4" slug={slug} onUpdate={onUpdate} />
         </div>
       </div>
 
@@ -172,41 +173,45 @@ function GolferCard({
   );
 }
 
-export default function ScoresPage() {
+export default function PoolScoresPage() {
+  const { slug } = useParams() as { slug: string };
   const [config, setConfig] = useState<PoolConfig | null>(null);
   const [loading, setLoading] = useState(true);
-  const [password, setPassword] = useState("");
-  const [authed, setAuthed] = useState(false);
-  const [authError, setAuthError] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState("");
 
   const fetchPool = useCallback(async () => {
     try {
-      const res = await fetch("/api/pool");
+      const res = await fetch(`/api/pool/${slug}`);
       const data = await res.json();
       if (data) setConfig(data);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [slug]);
 
   useEffect(() => {
     fetchPool();
   }, [fetchPool]);
 
-  async function handleAuth(e: React.FormEvent) {
-    e.preventDefault();
-    setAuthError("");
-    const res = await fetch("/api/auth", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
-    });
-    if (res.ok) {
-      setAuthed(true);
-    } else {
-      setAuthError("Incorrect password.");
+  async function handleSync() {
+    setSyncing(true);
+    setSyncMsg("");
+    try {
+      const res = await fetch(`/api/pool/${slug}/sync`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setSyncMsg(data.message || "Sync complete");
+        fetchPool();
+      } else {
+        setSyncMsg(data.error || "Sync failed");
+      }
+    } catch {
+      setSyncMsg("Network error");
+    } finally {
+      setSyncing(false);
     }
   }
 
@@ -222,34 +227,7 @@ export default function ScoresPage() {
         </div>
         <h1 className="font-serif text-2xl font-bold text-masters-green mb-2">No Pool Yet</h1>
         <p className="text-gray-500 text-sm mb-8">Set up the pool first before entering scores.</p>
-        <Link href="/setup" className="btn-green">Go to Setup</Link>
-      </div>
-    );
-  }
-
-  if (!authed) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <div className="card p-8 w-full text-center">
-          <div className="w-16 h-16 rounded-full bg-masters-green/10 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-masters-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-          </div>
-          <h2 className="font-serif text-xl text-masters-green mb-1 font-bold">Score Entry</h2>
-          <p className="text-xs text-gray-500 mb-6">Commissioner password required to edit scores.</p>
-          <form onSubmit={handleAuth} className="space-y-4">
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              className="input-field text-center"
-            />
-            {authError && <p className="text-red-500 text-xs">{authError}</p>}
-            <button type="submit" className="btn-green w-full">Enter</button>
-          </form>
-        </div>
+        <Link href={`/pool/${slug}/setup`} className="btn-green">Go to Setup</Link>
       </div>
     );
   }
@@ -274,9 +252,28 @@ export default function ScoresPage() {
     <div>
       {/* Sticky search + filters */}
       <div className="sticky top-0 z-40 -mx-4 px-4 pt-2 pb-3 bg-masters-cream/95 backdrop-blur-sm space-y-3">
-        <h1 className="font-serif text-2xl font-bold text-masters-green">
-          Score Entry
-        </h1>
+        <div className="flex items-center justify-between">
+          <h1 className="font-serif text-2xl font-bold text-masters-green">
+            Score Entry
+          </h1>
+          <button
+            type="button"
+            onClick={handleSync}
+            disabled={syncing}
+            className="flex items-center gap-1.5 text-xs font-semibold text-masters-green bg-masters-green/10 px-3 py-2 rounded-full active:bg-masters-green/20 transition-colors disabled:opacity-50"
+          >
+            <svg className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {syncing ? "Syncing..." : "Refresh from API"}
+          </button>
+        </div>
+
+        {syncMsg && (
+          <p className={`text-xs font-medium px-1 ${syncMsg.includes("fail") || syncMsg.includes("error") ? "text-red-500" : "text-masters-green"}`}>
+            {syncMsg}
+          </p>
+        )}
 
         {/* Search */}
         <div className="relative">
@@ -321,7 +318,7 @@ export default function ScoresPage() {
           <GolferCard
             key={golfer.id}
             golfer={golfer}
-            password={password}
+            slug={slug}
             onUpdate={fetchPool}
             index={i}
           />
