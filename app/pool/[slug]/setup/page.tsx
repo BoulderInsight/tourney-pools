@@ -95,7 +95,7 @@ export default function PoolSetupPage() {
     { id: "p0", name: "" },
   ]);
 
-  // Commissioner settings
+  // Chairman settings
   const [settings, setSettings] = useState<CommissionerSettings>(DEFAULT_SETTINGS);
   const [customDist, setCustomDist] = useState("100");
 
@@ -200,7 +200,7 @@ export default function PoolSetupPage() {
       {/* Header */}
       <div className="mb-2">
         <h1 className="font-serif text-2xl font-bold text-masters-green">
-          Commissioner Setup
+          Chairman Setup
         </h1>
       </div>
 
@@ -293,7 +293,7 @@ export default function PoolSetupPage() {
         {/* -- Step 1: Rules -- */}
         {step === 1 && (
           <div>
-            <h2 className="font-serif text-lg text-masters-green mb-5 font-bold">Commissioner Rules</h2>
+            <h2 className="font-serif text-lg text-masters-green mb-5 font-bold">Chairman Rules</h2>
 
             <Section label="Draft Type">
               <div className="space-y-2.5">

@@ -5,3 +5,4 @@ data/
 *.tsbuildinfo
 .env
 .env.local
+.vercel

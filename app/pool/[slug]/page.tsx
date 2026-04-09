@@ -225,7 +225,7 @@ export default function PoolLeaderboardPage() {
           No Pool Yet
         </h1>
         <p className="text-gray-500 text-sm mb-8 max-w-xs leading-relaxed">
-          The commissioner hasn&apos;t set things up yet. Check back soon.
+          The chairman hasn&apos;t set things up yet. Check back soon.
         </p>
       </div>
     );
