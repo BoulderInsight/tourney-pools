@@ -147,6 +147,13 @@ export default function DashboardPage() {
                   Scores
                 </Link>
                 <div className="w-px bg-masters-cream-dark" />
+                <Link
+                  href={`/pool/${pool.slug}/setup`}
+                  className="flex-1 text-center py-2.5 text-xs font-semibold text-masters-green active:bg-masters-green/5 transition-colors"
+                >
+                  Edit
+                </Link>
+                <div className="w-px bg-masters-cream-dark" />
                 <button
                   onClick={() => deletePool(pool.id, pool.pool_name)}
                   className="flex-1 text-center py-2.5 text-xs font-semibold text-red-400 active:bg-red-50 transition-colors"

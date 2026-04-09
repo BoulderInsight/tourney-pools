@@ -13,43 +13,70 @@ function OptionCard({
   title,
   description,
   badge,
+  info,
 }: {
   selected: boolean;
   onClick: () => void;
   title: string;
   description: string;
   badge?: string;
+  info?: string;
 }) {
+  const [showInfo, setShowInfo] = useState(false);
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-150
-        ${selected
-          ? "border-masters-green bg-masters-green/5 shadow-card"
-          : "border-masters-cream-dark bg-white active:border-gray-300"}`}
-      style={{ minHeight: 48 }}
+    <div className={`w-full rounded-xl border-2 transition-all duration-150 overflow-hidden
+      ${selected
+        ? "border-masters-green bg-masters-green/5 shadow-card"
+        : "border-masters-cream-dark bg-white"}`}
     >
-      <div className="flex items-start gap-3">
-        <div
-          className={`mt-0.5 w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center
-            ${selected ? "border-masters-green bg-masters-green" : "border-gray-300"}`}
-        >
-          {selected && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-gray-900 text-sm">{title}</span>
-            {badge && (
-              <span className="text-[9px] bg-masters-gold text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                {badge}
-              </span>
-            )}
+      <button
+        type="button"
+        onClick={onClick}
+        className="w-full text-left p-4"
+        style={{ minHeight: 48 }}
+      >
+        <div className="flex items-start gap-3">
+          <div
+            className={`mt-0.5 w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center
+              ${selected ? "border-masters-green bg-masters-green" : "border-gray-300"}`}
+          >
+            {selected && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
           </div>
-          <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{description}</p>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-gray-900 text-sm">{title}</span>
+              {badge && (
+                <span className="text-[9px] bg-masters-gold text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                  {badge}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{description}</p>
+          </div>
         </div>
-      </div>
-    </button>
+      </button>
+      {info && (
+        <>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setShowInfo(!showInfo); }}
+            className="w-full text-left px-4 pb-1 -mt-1"
+          >
+            <span className="text-[11px] text-masters-green font-semibold">
+              {showInfo ? "Hide details" : "Learn more"}
+            </span>
+          </button>
+          {showInfo && (
+            <div className="px-4 pb-4 pt-1 animate-fade-in">
+              <div className="bg-masters-cream/60 rounded-lg p-3 text-xs text-gray-600 leading-relaxed">
+                {info}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
   );
 }
 
@@ -316,12 +343,14 @@ export default function PoolSetupPage() {
                   title="Snake Draft"
                   description="Picks reverse each round. Fair distribution across all players."
                   badge="Recommended"
+                  info="In a snake draft, the pick order reverses each round. Example with 4 players: Round 1 picks 1-2-3-4, Round 2 picks 4-3-2-1, Round 3 picks 1-2-3-4, and so on. This ensures the person who picks last in one round picks first in the next, creating the fairest possible distribution of golfer talent across all teams."
                 />
                 <OptionCard
                   selected={settings.draftType === "random"}
                   onClick={() => set("draftType", "random")}
                   title="Pure Random"
                   description="Golfers assigned sequentially. Simpler, but less balanced."
+                  info="All golfers are shuffled randomly and then dealt out one at a time to each player in order (1-2-3-4-1-2-3-4...). This is the simplest method but can be less fair since later picks in each round always go to the same players. Best for casual pools where simplicity is preferred over perfect balance."
                 />
               </div>
             </Section>
@@ -334,18 +363,21 @@ export default function PoolSetupPage() {
                   title="Fixed Penalty"
                   description="Missed cut golfers receive a set score per remaining round."
                   badge="Recommended"
+                  info="When a golfer misses the cut (eliminated after Round 2), they receive a fixed penalty score for each remaining round they don't play. For example, with a +5 penalty: if a golfer shot +3 through 2 rounds then missed the cut, they'd get +5 added for Round 3 and +5 for Round 4, making their total +13. This discourages picking longshots who might miss the cut."
                 />
                 <OptionCard
                   selected={settings.missedCutRule === "zero"}
                   onClick={() => set("missedCutRule", "zero")}
                   title="Zero Contribution"
                   description="Missed cut golfers stop counting. No penalty, no benefit."
+                  info="If a golfer misses the cut, their score simply stops accumulating. They keep whatever score they had through the rounds they played, but add nothing for the remaining rounds. This is the most forgiving option — a missed cut doesn't actively hurt your team, it just means you lose that golfer's potential for weekend improvement."
                 />
                 <OptionCard
                   selected={settings.missedCutRule === "worst-made"}
                   onClick={() => set("missedCutRule", "worst-made")}
                   title="Worst Made Score"
                   description="Missed cut golfers receive the total of the worst golfer who made the cut."
+                  info="Missed cut golfers are assigned the same total score as the worst-performing golfer who DID make the cut. This creates a realistic penalty — your missed-cut golfer essentially performs as badly as the worst weekend player. It's a middle ground between the harsh fixed penalty and the forgiving zero contribution."
                 />
               </div>
 
@@ -376,12 +408,14 @@ export default function PoolSetupPage() {
                   title="Count All Golfers"
                   description="Every golfer on your roster contributes to your total."
                   badge="Recommended"
+                  info="Every golfer drafted to your team counts toward your total score. If you have 10 golfers, all 10 scores are added together. This rewards consistent drafting across your entire roster and makes every pick matter equally. It's the most common format for Masters pools."
                 />
                 <OptionCard
                   selected={settings.scoringType === "best-n"}
                   onClick={() => set("scoringType", "best-n")}
                   title="Best N Golfers"
                   description="Only your top N performers count. Reduces impact of one bad pick."
+                  info="Only your best-performing golfers count toward your total. For example, if set to 'Best 3', only your 3 lowest-scoring golfers are counted — the rest are benched. This reduces the pain of one bad pick and rewards players who draft a few elite golfers rather than a deep balanced roster."
                 />
               </div>
 
@@ -404,17 +438,18 @@ export default function PoolSetupPage() {
             <Section label="Purse Distribution">
               <div className="space-y-2.5">
                 {([
-                  { value: "winner-take-all" as PurseType, title: "Winner Take All", desc: "First place takes 100%" },
-                  { value: "70-30" as PurseType, title: "70 / 30", desc: "Split between top 2" },
-                  { value: "60-30-10" as PurseType, title: "60 / 30 / 10", desc: "Split between top 3" },
-                  { value: "custom" as PurseType, title: "Custom", desc: "Set your own percentages" },
-                ] as const).map(({ value, title, desc }) => (
+                  { value: "winner-take-all" as PurseType, title: "Winner Take All", desc: "First place takes 100%", info: "The entire prize pool goes to the player with the lowest total score. Simple, high-stakes, and the most exciting finish — but only one person walks away with money." },
+                  { value: "70-30" as PurseType, title: "70 / 30", desc: "Split between top 2", info: "First place takes 70% of the total purse, second place takes 30%. This rewards the winner heavily while still giving the runner-up something to play for through the final round." },
+                  { value: "60-30-10" as PurseType, title: "60 / 30 / 10", desc: "Split between top 3", info: "First place takes 60%, second takes 30%, third takes 10%. This keeps more players in contention deeper into the tournament and softens the all-or-nothing pressure." },
+                  { value: "custom" as PurseType, title: "Custom", desc: "Set your own percentages", info: "Define your own payout structure. Enter comma-separated percentages that sum to 100. For example: 50,25,15,10 would pay the top 4 finishers. You can split it however you like." },
+                ] as const).map(({ value, title, desc, info }) => (
                   <OptionCard
                     key={value}
                     selected={settings.purseType === value}
                     onClick={() => set("purseType", value)}
                     title={title}
                     description={desc}
+                    info={info}
                   />
                 ))}
               </div>
