@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useId } from "react";
+import { useParams } from "next/navigation";
 import { CommissionerSettings, PoolPlayer, DraftType, MissedCutRule, PurseType } from "@/lib/types";
 import { DEFAULT_SETTINGS, DEFAULT_FIELD, draftGolfers } from "@/lib/pool";
 
@@ -82,12 +83,10 @@ function StepDots({ current, total }: { current: number; total: number }) {
   );
 }
 
-export default function SetupPage() {
+export default function PoolSetupPage() {
+  const { slug } = useParams() as { slug: string };
   const uid = useId();
   const [step, setStep] = useState(0);
-  const [password, setPassword] = useState("");
-  const [authed, setAuthed] = useState(false);
-  const [authError, setAuthError] = useState("");
 
   // Pool info
   const [poolName, setPoolName] = useState("Masters Pool 2026");
@@ -112,22 +111,6 @@ export default function SetupPage() {
 
   const set = <K extends keyof CommissionerSettings>(key: K, val: CommissionerSettings[K]) =>
     setSettings((s) => ({ ...s, [key]: val }));
-
-  // Auth
-  async function handleAuth(e: React.FormEvent) {
-    e.preventDefault();
-    setAuthError("");
-    const res = await fetch("/api/auth", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
-    });
-    if (res.ok) {
-      setAuthed(true);
-    } else {
-      setAuthError("Incorrect password.");
-    }
-  }
 
   // Players
   const addPlayer = () =>
@@ -171,9 +154,9 @@ export default function SetupPage() {
 
     const finalSettings = { ...settings, purseDistribution: dist };
 
-    const res = await fetch("/api/setup", {
+    const res = await fetch(`/api/pool/${slug}/setup`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-admin-password": password },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         poolName,
         players: players.filter((p) => p.name.trim()),
@@ -194,36 +177,6 @@ export default function SetupPage() {
   const validPlayers = players.filter((p) => p.name.trim());
   const golferCount = fieldText.split("\n").filter((n) => n.trim()).length;
 
-  // Password gate
-  if (!authed) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <div className="card p-8 w-full text-center">
-          <div className="w-16 h-16 rounded-full bg-masters-green/10 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-masters-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </div>
-          <h2 className="font-serif text-xl text-masters-green mb-1 font-bold">
-            Commissioner Access
-          </h2>
-          <p className="text-xs text-gray-500 mb-6">Enter your admin password to continue.</p>
-          <form onSubmit={handleAuth} className="space-y-4">
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              className="input-field text-center"
-            />
-            {authError && <p className="text-red-500 text-xs">{authError}</p>}
-            <button type="submit" className="btn-green w-full">Enter</button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
   // Saved state
   if (saved) {
     return (
@@ -237,7 +190,7 @@ export default function SetupPage() {
         <p className="text-gray-500 text-sm mb-8 max-w-xs">
           Share the leaderboard link with your players. Scores can be entered as rounds are played.
         </p>
-        <a href="/" className="btn-green inline-block">View Leaderboard</a>
+        <a href={"/pool/" + slug} className="btn-green inline-block">View Leaderboard</a>
       </div>
     );
   }
@@ -255,7 +208,7 @@ export default function SetupPage() {
       <StepDots current={step} total={STEPS.length} />
 
       <div className="card p-5">
-        {/* ── Step 0: Pool Info ── */}
+        {/* -- Step 0: Pool Info -- */}
         {step === 0 && (
           <div>
             <h2 className="font-serif text-lg text-masters-green mb-5 font-bold">Pool Info</h2>
@@ -337,7 +290,7 @@ export default function SetupPage() {
           </div>
         )}
 
-        {/* ── Step 1: Rules ── */}
+        {/* -- Step 1: Rules -- */}
         {step === 1 && (
           <div>
             <h2 className="font-serif text-lg text-masters-green mb-5 font-bold">Commissioner Rules</h2>
@@ -479,7 +432,7 @@ export default function SetupPage() {
           </div>
         )}
 
-        {/* ── Step 2: Field ── */}
+        {/* -- Step 2: Field -- */}
         {step === 2 && (
           <div>
             <h2 className="font-serif text-lg text-masters-green mb-1 font-bold">Golfer Field</h2>
@@ -518,7 +471,7 @@ export default function SetupPage() {
           </div>
         )}
 
-        {/* ── Step 3: Draft Results ── */}
+        {/* -- Step 3: Draft Results -- */}
         {step === 3 && (
           <div>
             <h2 className="font-serif text-lg text-masters-green mb-1 font-bold">Draft Results</h2>
@@ -578,7 +531,7 @@ export default function SetupPage() {
           </div>
         )}
 
-        {/* ── Step 4: Confirm ── */}
+        {/* -- Step 4: Confirm -- */}
         {step === 4 && (
           <div>
             <h2 className="font-serif text-lg text-masters-green mb-5 font-bold">Confirm &amp; Launch</h2>
