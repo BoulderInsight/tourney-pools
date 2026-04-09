@@ -26,6 +26,8 @@ export interface Golfer {
   r3: number | null;
   r4: number | null;
   madeCut: boolean | null;
+  oddsApiId?: string | null;
+  manualOverride?: boolean;
 }
 
 export interface DraftAssignment {
