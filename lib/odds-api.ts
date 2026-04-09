@@ -1,8 +1,8 @@
 import { getDb } from "./db";
 
-const ESPN_GOLF_URL = "https://site.web.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard";
+const MASTERS_SCORES_URL = "https://www.masters.com/en_US/scores/feeds/2026/scores.json";
 
-interface ESPNGolferScore {
+interface MastersGolferScore {
   name: string;
   r1: number | null;
   r2: number | null;
@@ -11,67 +11,50 @@ interface ESPNGolferScore {
   madeCut: boolean | null;
 }
 
-export async function fetchTournamentScores(): Promise<ESPNGolferScore[]> {
-  const res = await fetch(ESPN_GOLF_URL, { cache: "no-store" });
+export async function fetchTournamentScores(): Promise<MastersGolferScore[]> {
+  const res = await fetch(MASTERS_SCORES_URL, {
+    cache: "no-store",
+    headers: { "User-Agent": "Mozilla/5.0" },
+  });
 
   if (!res.ok) {
-    throw new Error(`ESPN API error: ${res.status}`);
+    throw new Error(`Masters API error: ${res.status}`);
   }
 
   const data = await res.json();
-  const events = data.events || [];
+  const players = data?.data?.player || [];
+  const PAR = 72;
 
-  // Find the Masters (or current active tournament)
-  const mastersEvent = events.find((e: { name?: string }) =>
-    e.name?.toLowerCase().includes("masters")
-  ) || events[0];
+  const golfers: MastersGolferScore[] = [];
 
-  if (!mastersEvent) {
-    throw new Error("No active golf tournament found");
-  }
+  for (const p of players) {
+    const r1Total = p.round1?.total;
+    const r2Total = p.round2?.total;
+    const r3Total = p.round3?.total;
+    const r4Total = p.round4?.total;
 
-  const golfers: ESPNGolferScore[] = [];
+    // Only count rounds that are finished (have a total score)
+    const r1 = r1Total != null ? r1Total - PAR : null;
+    const r2 = r2Total != null ? r2Total - PAR : null;
+    const r3 = r3Total != null ? r3Total - PAR : null;
+    const r4 = r4Total != null ? r4Total - PAR : null;
 
-  for (const comp of mastersEvent.competitions || []) {
-    for (const c of comp.competitors || []) {
-      const athlete = c.athlete || {};
-      const rawLinescores = c.linescores || [];
-      const status = c.status?.type?.name || "";
-
-      // ESPN linescore.displayValue has the relative-to-par score (e.g. "-5", "+2", "E")
-      // linescore.value is running stroke total through holes played (unreliable mid-round)
-      // Only count completed rounds where value is a valid 18-hole score (55-85)
-      const rounds = rawLinescores.map((ls: { value?: number; displayValue?: string }) => {
-        if (!ls?.displayValue) return null;
-        const strokes = ls.value ?? 0;
-        if (strokes < 55 || strokes > 85) return null;
-        if (ls.displayValue === "E") return 0;
-        const num = parseInt(ls.displayValue);
-        return isNaN(num) ? null : num;
-      });
-
-      const r1 = rounds[0] ?? null;
-      const r2 = rounds[1] ?? null;
-      const r3 = rounds[2] ?? null;
-      const r4 = rounds[3] ?? null;
-
-      // Determine cut status
-      let madeCut: boolean | null = null;
-      if (status === "STATUS_CUT") {
-        madeCut = false;
-      } else if (r3 != null) {
-        madeCut = true;
-      }
-
-      golfers.push({
-        name: athlete.displayName || "",
-        r1,
-        r2,
-        r3,
-        r4,
-        madeCut,
-      });
+    // Cut status: status "C" = cut, "F" or similar = finished/active
+    let madeCut: boolean | null = null;
+    if (p.status === "C") {
+      madeCut = false;
+    } else if (r3 != null) {
+      madeCut = true;
     }
+
+    golfers.push({
+      name: p.full_name || `${p.first_name} ${p.last_name}`,
+      r1,
+      r2,
+      r3,
+      r4,
+      madeCut,
+    });
   }
 
   return golfers;
