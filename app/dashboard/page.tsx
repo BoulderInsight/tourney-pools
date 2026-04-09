@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import ConfirmModal from "@/app/components/confirm-modal";
+import { BoulderInsightAd, CustomAd } from "@/app/components/sponsor-banner";
 
 interface Pool {
   id: string;
@@ -27,20 +28,32 @@ function DashboardContent() {
   const [copied, setCopied] = useState<string | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [tier, setTier] = useState("free");
+  const [customAdImage, setCustomAdImage] = useState<string | null>(null);
+  const [customAdUrl, setCustomAdUrl] = useState<string | null>(null);
+  const [showAdEditor, setShowAdEditor] = useState(false);
+  const [adImageInput, setAdImageInput] = useState("");
+  const [adUrlInput, setAdUrlInput] = useState("");
+  const [savingAd, setSavingAd] = useState(false);
 
   const isPaid = tier === "paid";
   const canCreatePool = isPaid || pools.length < 1;
 
   const fetchPools = useCallback(async () => {
-    const [poolRes, meRes] = await Promise.all([
+    const [poolRes, meRes, acctRes] = await Promise.all([
       fetch("/api/pools"),
       fetch("/api/auth/me"),
+      fetch("/api/account"),
     ]);
     if (poolRes.ok) setPools(await poolRes.json());
     if (meRes.ok) {
       const me = await meRes.json();
       if (me?.isSuperAdmin) setIsSuperAdmin(true);
       if (me?.tier) setTier(me.tier);
+    }
+    if (acctRes.ok) {
+      const acct = await acctRes.json();
+      setCustomAdImage(acct.custom_ad_image || null);
+      setCustomAdUrl(acct.custom_ad_url || null);
     }
     setLoading(false);
   }, []);
@@ -76,6 +89,32 @@ function DashboardContent() {
       setPools((p) => p.filter((pool) => pool.id !== deleteModal.id));
     }
     setDeleteModal(null);
+  }
+
+  async function saveAd() {
+    setSavingAd(true);
+    await fetch("/api/account", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ customAdImage: adImageInput || null, customAdUrl: adUrlInput || null }),
+    });
+    setCustomAdImage(adImageInput || null);
+    setCustomAdUrl(adUrlInput || null);
+    setShowAdEditor(false);
+    setSavingAd(false);
+  }
+
+  async function removeAd() {
+    setSavingAd(true);
+    await fetch("/api/account", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ customAdImage: null, customAdUrl: null }),
+    });
+    setCustomAdImage(null);
+    setCustomAdUrl(null);
+    setShowAdEditor(false);
+    setSavingAd(false);
   }
 
   async function handleUpgrade() {
@@ -241,6 +280,89 @@ function DashboardContent() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Ad Preview */}
+      {pools.length > 0 && (
+        <div className="mt-8">
+          <div className="gold-rule mb-4" />
+          <div className="flex items-center justify-between mb-3 px-1">
+            <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">
+              Ad showing on your pools
+            </span>
+            {isPaid && (
+              <button
+                onClick={() => {
+                  setAdImageInput(customAdImage || "");
+                  setAdUrlInput(customAdUrl || "");
+                  setShowAdEditor(!showAdEditor);
+                }}
+                className="text-[10px] text-masters-gold font-semibold active:underline"
+              >
+                {showAdEditor ? "Cancel" : "Remove / Replace Ad"}
+              </button>
+            )}
+          </div>
+
+          {/* Current ad preview */}
+          <div className="pointer-events-none">
+            {customAdImage ? (
+              <CustomAd imageUrl={customAdImage} />
+            ) : (
+              <BoulderInsightAd />
+            )}
+          </div>
+
+          {/* Ad editor (premium only) */}
+          {showAdEditor && isPaid && (
+            <div className="card p-5 mt-3 animate-slide-up">
+              <h3 className="font-serif text-sm font-bold text-masters-green mb-4">Replace Ad</h3>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-[0.15em] text-gray-400 mb-1 block">
+                    Ad Image URL
+                  </label>
+                  <input
+                    value={adImageInput}
+                    onChange={(e) => setAdImageInput(e.target.value)}
+                    placeholder="https://example.com/your-banner.png"
+                    className="input-field text-xs"
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1">Recommended: 600x100px PNG or JPG</p>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-[0.15em] text-gray-400 mb-1 block">
+                    Link URL (optional)
+                  </label>
+                  <input
+                    value={adUrlInput}
+                    onChange={(e) => setAdUrlInput(e.target.value)}
+                    placeholder="https://your-website.com"
+                    className="input-field text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <button onClick={removeAd} disabled={savingAd} className="btn-outline flex-1 text-xs disabled:opacity-60">
+                  {!customAdImage ? "Already default" : "Use Default Ad"}
+                </button>
+                <button onClick={saveAd} disabled={savingAd || !adImageInput} className="btn-green flex-1 text-xs disabled:opacity-60">
+                  {savingAd ? "Saving..." : "Save Custom Ad"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!isPaid && (
+            <p className="text-[10px] text-gray-400 text-center mt-2">
+              <button onClick={handleUpgrade} className="text-masters-gold font-semibold">Upgrade to Premium</button>
+              {" "}to replace this ad with your own.
+            </p>
+          )}
         </div>
       )}
 
