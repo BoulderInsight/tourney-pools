@@ -127,7 +127,9 @@ export default function PoolSetupPage() {
   const [customDist, setCustomDist] = useState("100");
 
   // Golfer field
-  const [fieldText, setFieldText] = useState(DEFAULT_FIELD.join("\n"));
+  const [fieldText, setFieldText] = useState(
+    DEFAULT_FIELD.map(e => e.ranking ? `${e.name} (#${e.ranking})` : e.name).join("\n")
+  );
 
   // Draft results
   const [assignments, setAssignments] = useState<ReturnType<typeof draftGolfers>>([]);
@@ -162,16 +164,23 @@ export default function PoolSetupPage() {
   const updatePlayer = (id: string, name: string) =>
     setPlayers((p) => p.map((pl) => (pl.id === id ? { ...pl, name } : pl)));
 
+  function parseFieldEntries() {
+    return fieldText.split("\n").map((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return null;
+      const match = trimmed.match(/^(.+?)\s*\(#(\d+)\)$/);
+      if (match) return { name: match[1].trim(), ranking: parseInt(match[2]) };
+      return { name: trimmed, ranking: null };
+    }).filter(Boolean) as { name: string; ranking: number | null }[];
+  }
+
   // Draft
   function runDraft() {
-    const golferNames = fieldText
-      .split("\n")
-      .map((n) => n.trim())
-      .filter(Boolean);
+    const entries = parseFieldEntries();
 
-    const golfers = golferNames.map((name, i) => ({
+    const golfers = entries.map((e, i) => ({
       id: `g${i}`,
-      name,
+      name: e.name,
       r1: null, r2: null, r3: null, r4: null,
       madeCut: null,
     }));
@@ -186,7 +195,14 @@ export default function PoolSetupPage() {
     setSaving(true);
     setError("");
 
-    const golferNames = fieldText.split("\n").map((n) => n.trim()).filter(Boolean);
+    const golferEntries = fieldText.split("\n").map((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return null;
+      const match = trimmed.match(/^(.+?)\s*\(#(\d+)\)$/);
+      if (match) return { name: match[1].trim(), ranking: parseInt(match[2]) };
+      return { name: trimmed, ranking: null };
+    }).filter(Boolean) as { name: string; ranking: number | null }[];
+
     const dist =
       settings.purseType === "custom"
         ? customDist.split(",").map((n) => Number(n.trim()))
@@ -200,7 +216,7 @@ export default function PoolSetupPage() {
       body: JSON.stringify({
         poolName,
         players: players.filter((p) => p.name.trim()),
-        golferNames,
+        golferEntries,
         buyIn,
         settings: finalSettings,
       }),
@@ -215,7 +231,7 @@ export default function PoolSetupPage() {
   }
 
   const validPlayers = players.filter((p) => p.name.trim());
-  const golferCount = fieldText.split("\n").filter((n) => n.trim()).length;
+  const golferCount = parseFieldEntries().length;
 
   // Saved state
   if (saved) {
@@ -532,7 +548,7 @@ export default function PoolSetupPage() {
                 const myPicks = assignments
                   .filter((a) => a.playerId === player.id)
                   .sort((a, b) => a.pickNumber - b.pickNumber);
-                const golferNames = fieldText.split("\n").map((n) => n.trim()).filter(Boolean);
+                const entries = parseFieldEntries();
 
                 return (
                   <div key={player.id} className="bg-masters-cream/60 rounded-xl p-4">
@@ -549,7 +565,7 @@ export default function PoolSetupPage() {
                             className="inline-flex items-center text-xs bg-white border border-masters-cream-dark rounded-full px-3 py-1.5 font-medium"
                           >
                             <span className="text-gray-300 mr-1 text-[10px] font-mono">#{a.pickNumber}</span>
-                            {golferNames[idx]}
+                            {entries[idx]?.name}
                           </span>
                         );
                       })}
@@ -589,7 +605,7 @@ export default function PoolSetupPage() {
                 { label: "Pool Name", value: poolName },
                 { label: "Players", value: `${validPlayers.length} (${validPlayers.map(p => p.name).join(", ")})` },
                 { label: "Buy-in", value: `$${buyIn}/player · $${validPlayers.length * buyIn} total` },
-                { label: "Golfers", value: `${fieldText.split("\n").filter(n => n.trim()).length} in field` },
+                { label: "Golfers", value: `${golferCount} in field` },
                 {
                   label: "Draft",
                   value: settings.draftType === "snake" ? "Snake Draft" : "Pure Random",

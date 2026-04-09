@@ -25,7 +25,7 @@ export async function GET(
   `;
 
   const golfers = await sql`
-    SELECT id, name, r1, r2, r3, r4, made_cut, odds_api_id, manual_override
+    SELECT id, name, r1, r2, r3, r4, made_cut, odds_api_id, manual_override, world_ranking
     FROM golfers WHERE pool_id = ${pool.id} ORDER BY name
   `;
 
@@ -47,6 +47,7 @@ export async function GET(
       madeCut: g.made_cut,
       oddsApiId: g.odds_api_id,
       manualOverride: g.manual_override,
+      worldRanking: g.world_ranking,
     })),
     buyIn: pool.buy_in,
     settings: pool.settings as CommissionerSettings,

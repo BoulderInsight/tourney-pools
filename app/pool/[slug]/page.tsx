@@ -57,6 +57,9 @@ function GolferDetail({ golfer, counted, totalScore, penaltyScore }: {
     >
       <div className="flex items-center gap-2.5 min-w-0 flex-1">
         <RoundDots golfer={golfer} />
+        {golfer.worldRanking && (
+          <span className="text-[10px] text-gray-400 font-mono flex-shrink-0">#{golfer.worldRanking}</span>
+        )}
         <span className="truncate font-medium text-gray-800">{golfer.name}</span>
         {golfer.madeCut === false && (
           <span className="text-[10px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0">

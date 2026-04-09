@@ -24,7 +24,11 @@ export async function POST(
   const poolId = poolRows[0].id;
 
   const body = await req.json();
-  const { poolName, players, golferNames, buyIn, settings } = body;
+  const { poolName, players, golferEntries, golferNames, buyIn, settings } = body;
+
+  // Support both new format (golferEntries with rankings) and legacy (golferNames)
+  const entries: { name: string; ranking: number | null }[] = golferEntries
+    || (golferNames || []).map((n: string) => ({ name: n, ranking: null }));
 
   // Clear existing data for re-setup
   await sql`DELETE FROM assignments WHERE pool_id = ${poolId}`;
@@ -53,12 +57,12 @@ export async function POST(
     insertedPlayers.push({ id: result[0].id, name: result[0].name });
   }
 
-  // Insert golfers
+  // Insert golfers with rankings
   const insertedGolfers = [];
-  for (let i = 0; i < golferNames.length; i++) {
+  for (let i = 0; i < entries.length; i++) {
     const result = await sql`
-      INSERT INTO golfers (pool_id, name)
-      VALUES (${poolId}, ${golferNames[i]})
+      INSERT INTO golfers (pool_id, name, world_ranking)
+      VALUES (${poolId}, ${entries[i].name}, ${entries[i].ranking})
       RETURNING id, name
     `;
     insertedGolfers.push({
