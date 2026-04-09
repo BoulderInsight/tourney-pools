@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import ConfirmModal from "@/app/components/confirm-modal";
@@ -16,8 +16,10 @@ interface Pool {
   created_at: string;
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const justUpgraded = searchParams.get("upgraded") === "1";
   const [pools, setPools] = useState<Pool[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -76,6 +78,14 @@ export default function DashboardPage() {
     setDeleteModal(null);
   }
 
+  async function handleUpgrade() {
+    const res = await fetch("/api/stripe/checkout", { method: "POST" });
+    if (res.ok) {
+      const { url } = await res.json();
+      window.location.href = url;
+    }
+  }
+
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/");
@@ -113,6 +123,14 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Upgrade success */}
+      {justUpgraded && (
+        <div className="card p-4 mb-4 bg-masters-gold/10 border-masters-gold/30 text-center">
+          <p className="text-sm font-semibold text-masters-gold-dark">Welcome to Premium!</p>
+          <p className="text-xs text-gray-500 mt-1">Unlimited pools, no ads, and custom branding are now unlocked.</p>
+        </div>
+      )}
+
       {/* Create pool */}
       {canCreatePool ? (
         <div className="card p-4 mb-6">
@@ -127,7 +145,7 @@ export default function DashboardPage() {
         <div className="card p-5 mb-6 text-center">
           <p className="text-sm text-gray-600 mb-1 font-medium">You&apos;ve reached the free pool limit</p>
           <p className="text-xs text-gray-400 mb-4">Upgrade to create unlimited pools, remove ads, and add custom branding.</p>
-          <button className="btn-gold w-full">
+          <button onClick={handleUpgrade} className="btn-gold w-full">
             Upgrade to Premium — $4.99
           </button>
         </div>
@@ -137,7 +155,7 @@ export default function DashboardPage() {
       {!isPaid && pools.length > 0 && (
         <div className="flex items-center justify-between mb-4 px-1">
           <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Free Plan — 1 pool</span>
-          <button className="text-[10px] text-masters-gold font-semibold active:underline">
+          <button onClick={handleUpgrade} className="text-[10px] text-masters-gold font-semibold active:underline">
             Upgrade →
           </button>
         </div>
@@ -236,5 +254,17 @@ export default function DashboardPage() {
         onCancel={() => setDeleteModal(null)}
       />
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center py-24 gap-6">
+        <div className="flex gap-3"><div className="loading-dot" /><div className="loading-dot" /><div className="loading-dot" /></div>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   );
 }
