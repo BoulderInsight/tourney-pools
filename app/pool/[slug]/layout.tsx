@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname, useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -55,7 +54,6 @@ export default function PoolLayout({ children }: { children: React.ReactNode }) 
     <>
       {/* Top bar with logo + nav */}
       <div className="flex items-center justify-between mb-2 -mt-1">
-        <Image src="/Masters_Logo.png.webp" alt="The Masters" width={80} height={53} />
         <div className="flex items-center gap-3">
           {isLoggedIn && (
             <>
