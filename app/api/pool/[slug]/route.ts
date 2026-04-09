@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { PoolConfig, CommissionerSettings } from "@/lib/types";
+import { syncPoolScores } from "@/lib/odds-api";
 
 export const dynamic = "force-dynamic";
+
+const SYNC_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
 
 export async function GET(
   req: NextRequest,
@@ -22,6 +25,19 @@ export async function GET(
   }
 
   const pool = poolRows[0];
+
+  // Auto-sync scores if stale (>15 min since last sync) and pool is set up
+  if (pool.setup_complete) {
+    const lastSync = pool.last_sync_at ? new Date(pool.last_sync_at).getTime() : 0;
+    const now = Date.now();
+    if (now - lastSync > SYNC_INTERVAL_MS) {
+      try {
+        await syncPoolScores(pool.id);
+      } catch {
+        // Sync failure shouldn't block page load
+      }
+    }
+  }
 
   const players = await sql`
     SELECT id, name FROM players WHERE pool_id = ${pool.id} ORDER BY pick_order
