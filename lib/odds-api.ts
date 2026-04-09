@@ -1,16 +1,8 @@
 import { getDb } from "./db";
 
-const ODDS_API_BASE = "https://api.the-odds-api.com/v4";
+const ESPN_GOLF_URL = "https://site.web.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard";
 
-interface OddsApiScore {
-  id: string;
-  commence_time: string;
-  home_team: string;
-  away_team: string;
-  scores: { name: string; score: string }[] | null;
-}
-
-interface GolferScoreData {
+interface ESPNGolferScore {
   name: string;
   r1: number | null;
   r2: number | null;
@@ -19,41 +11,60 @@ interface GolferScoreData {
   madeCut: boolean | null;
 }
 
-export async function fetchTournamentScores(): Promise<GolferScoreData[]> {
-  const apiKey = process.env.THE_ODDS_API_KEY;
-  if (!apiKey) throw new Error("THE_ODDS_API_KEY not set");
-
-  const res = await fetch(
-    `${ODDS_API_BASE}/sports/golf_pga/scores/?apiKey=${apiKey}&daysFrom=3`,
-    { cache: "no-store" }
-  );
+export async function fetchTournamentScores(): Promise<ESPNGolferScore[]> {
+  const res = await fetch(ESPN_GOLF_URL, { cache: "no-store" });
 
   if (!res.ok) {
-    throw new Error(`Odds API error: ${res.status} ${await res.text()}`);
+    throw new Error(`ESPN API error: ${res.status}`);
   }
 
-  const data: OddsApiScore[] = await res.json();
+  const data = await res.json();
+  const events = data.events || [];
 
-  const golferMap = new Map<string, GolferScoreData>();
+  // Find the Masters (or current active tournament)
+  const mastersEvent = events.find((e: { name?: string }) =>
+    e.name?.toLowerCase().includes("masters")
+  ) || events[0];
 
-  for (const event of data) {
-    if (event.scores) {
-      for (const s of event.scores) {
-        if (!golferMap.has(s.name)) {
-          golferMap.set(s.name, {
-            name: s.name,
-            r1: null,
-            r2: null,
-            r3: null,
-            r4: null,
-            madeCut: null,
-          });
-        }
+  if (!mastersEvent) {
+    throw new Error("No active golf tournament found");
+  }
+
+  const golfers: ESPNGolferScore[] = [];
+
+  for (const comp of mastersEvent.competitions || []) {
+    for (const c of comp.competitors || []) {
+      const athlete = c.athlete || {};
+      const linescores = (c.linescores || []).map((ls: { value?: number }) => ls.value ?? null);
+      const status = c.status?.type?.name || "";
+
+      // ESPN gives actual strokes (67, 72, etc.) — convert to relative-to-par
+      const PAR = 72; // Augusta National par
+      const r1 = linescores[0] != null ? Math.round(linescores[0]) - PAR : null;
+      const r2 = linescores[1] != null ? Math.round(linescores[1]) - PAR : null;
+      const r3 = linescores[2] != null ? Math.round(linescores[2]) - PAR : null;
+      const r4 = linescores[3] != null ? Math.round(linescores[3]) - PAR : null;
+
+      // Determine cut status
+      let madeCut: boolean | null = null;
+      if (status === "STATUS_CUT") {
+        madeCut = false;
+      } else if (linescores.length >= 3 && linescores[2] != null) {
+        madeCut = true;
       }
+
+      golfers.push({
+        name: athlete.displayName || "",
+        r1,
+        r2,
+        r3,
+        r4,
+        madeCut,
+      });
     }
   }
 
-  return Array.from(golferMap.values());
+  return golfers;
 }
 
 function normalizedName(name: string): string {
@@ -73,6 +84,8 @@ export async function syncPoolScores(poolId: string): Promise<{ updated: number;
   const unmatched: string[] = [];
 
   for (const score of scores) {
+    if (!score.name) continue;
+
     let golfer = golfers.find((g) => g.odds_api_id && g.odds_api_id === score.name);
     if (!golfer) {
       const normalized = normalizedName(score.name);
