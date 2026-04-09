@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import ConfirmModal from "@/app/components/confirm-modal";
 
 interface Pool {
   id: string;
@@ -55,16 +56,19 @@ export default function DashboardPage() {
     setCreating(false);
   }
 
-  async function deletePool(poolId: string, poolName: string) {
-    if (!confirm(`Delete "${poolName}"? This cannot be undone.`)) return;
+  const [deleteModal, setDeleteModal] = useState<{ id: string; name: string } | null>(null);
+
+  async function confirmDeletePool() {
+    if (!deleteModal) return;
     const res = await fetch("/api/pools", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ poolId }),
+      body: JSON.stringify({ poolId: deleteModal.id }),
     });
     if (res.ok) {
-      setPools((p) => p.filter((pool) => pool.id !== poolId));
+      setPools((p) => p.filter((pool) => pool.id !== deleteModal.id));
     }
+    setDeleteModal(null);
   }
 
   async function handleLogout() {
@@ -186,7 +190,7 @@ export default function DashboardPage() {
                 </Link>
                 <div className="w-px bg-masters-cream-dark" />
                 <button
-                  onClick={() => deletePool(pool.id, pool.pool_name)}
+                  onClick={() => setDeleteModal({ id: pool.id, name: pool.pool_name })}
                   className="flex-1 text-center py-2.5 text-xs font-semibold text-red-400 active:bg-red-50 transition-colors"
                 >
                   Delete
@@ -196,6 +200,16 @@ export default function DashboardPage() {
           ))}
         </div>
       )}
+
+      <ConfirmModal
+        open={!!deleteModal}
+        title="Delete Pool"
+        message={deleteModal ? `Are you sure you want to delete "${deleteModal.name}"? All players, golfers, and draft data will be permanently removed.` : ""}
+        confirmLabel="Delete Pool"
+        danger
+        onConfirm={confirmDeletePool}
+        onCancel={() => setDeleteModal(null)}
+      />
     </div>
   );
 }

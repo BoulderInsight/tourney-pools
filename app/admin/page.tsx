@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import ConfirmModal from "@/app/components/confirm-modal";
 
 interface Chairman {
   id: string;
@@ -57,13 +58,16 @@ export default function AdminPage() {
     fetchData();
   }, [fetchData]);
 
-  async function deleteItem(type: "chairman" | "pool", id: string, label: string) {
-    if (!confirm(`Delete ${type} "${label}"? This cannot be undone.`)) return;
+  const [modal, setModal] = useState<{ type: "chairman" | "pool"; id: string; label: string } | null>(null);
+
+  async function confirmDelete() {
+    if (!modal) return;
     await fetch("/api/admin", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type, id }),
+      body: JSON.stringify({ type: modal.type, id: modal.id }),
     });
+    setModal(null);
     fetchData();
   }
 
@@ -187,7 +191,7 @@ export default function AdminPage() {
                 </button>
                 <div className="w-px bg-masters-cream-dark" />
                 <button
-                  onClick={() => deleteItem("chairman", c.id, c.name)}
+                  onClick={() => setModal({ type: "chairman", id: c.id, label: c.name })}
                   className="flex-1 text-center py-2.5 text-red-400 active:bg-red-50 transition-colors"
                 >
                   Delete
@@ -245,7 +249,7 @@ export default function AdminPage() {
                 </button>
                 <div className="w-px bg-masters-cream-dark" />
                 <button
-                  onClick={() => deleteItem("pool", p.id, p.pool_name)}
+                  onClick={() => setModal({ type: "pool", id: p.id, label: p.pool_name })}
                   className="flex-1 text-center py-2.5 text-red-400 active:bg-red-50 transition-colors"
                 >
                   Delete
@@ -255,6 +259,16 @@ export default function AdminPage() {
           ))}
         </div>
       )}
+
+      <ConfirmModal
+        open={!!modal}
+        title={modal ? `Delete ${modal.type === "chairman" ? "Chairman" : "Pool"}` : ""}
+        message={modal ? `Are you sure you want to delete "${modal.label}"? This action cannot be undone and all associated data will be permanently removed.` : ""}
+        confirmLabel="Delete"
+        danger
+        onConfirm={confirmDelete}
+        onCancel={() => setModal(null)}
+      />
     </div>
   );
 }
