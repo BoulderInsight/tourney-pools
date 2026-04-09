@@ -63,16 +63,11 @@ export function SponsorBanner({
   customAdImage?: string | null;
   customAdUrl?: string | null;
 }) {
-  // Paid users with custom ad
+  // Paid users with custom ad — show their ad instead
   if (tier === "paid" && customAdImage) {
     return <CustomAd imageUrl={customAdImage} linkUrl={customAdUrl || undefined} />;
   }
 
-  // Paid users without custom ad — no ad shown
-  if (tier === "paid") {
-    return null;
-  }
-
-  // Free users — Boulder Insight ad
+  // Everyone else (free OR paid without custom ad) — Boulder Insight ad
   return <BoulderInsightAd />;
 }
