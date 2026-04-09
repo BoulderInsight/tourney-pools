@@ -115,6 +115,7 @@ export const DEFAULT_FIELD: FieldEntry[] = [
   { name: "Mateo Pulcini", ranking: null },
   { name: "Mason Howell", ranking: null },
   { name: "Sam Stevens", ranking: null },
+  { name: "Sungjae Im", ranking: 71 },
 ];
 
 export function formatScore(score: number | null): string {
