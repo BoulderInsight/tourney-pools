@@ -388,11 +388,11 @@ export default function PoolLeaderboardPage() {
       {/* CTA for visitors */}
       <div className="text-center mt-10 mb-6">
         <div className="gold-rule mb-6" />
-        <p className="text-xs text-gray-400 mb-2">
+        <p className="text-xs text-gray-400 mb-3">
           Want to become a Chairman and run your own pool?
         </p>
-        <Link href="/signup" className="text-xs text-masters-green font-semibold active:underline">
-          Sign up here
+        <Link href="/signup" className="btn-gold inline-block text-center">
+          Sign Up Here
         </Link>
       </div>
     </div>
