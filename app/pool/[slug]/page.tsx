@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { PoolConfig, PlayerStanding } from "@/lib/types";
 import { computeLeaderboard, formatScore, scoreColorClass } from "@/lib/pool";
+import Image from "next/image";
+import Link from "next/link";
 
 function LoadingState() {
   return (
@@ -183,11 +185,29 @@ function StandingCard({ standing, expanded, onToggle, index }: {
   );
 }
 
-function SettingsPill({ label }: { label: string }) {
+function SettingsPill({ label, info }: { label: string; info: string }) {
+  const [showInfo, setShowInfo] = useState(false);
   return (
-    <span className="inline-flex items-center bg-masters-green/8 text-masters-green px-3 py-1.5 rounded-full text-xs font-semibold">
-      {label}
-    </span>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setShowInfo(!showInfo)}
+        className="inline-flex items-center gap-1 bg-masters-green/8 text-masters-green px-3 py-1.5 rounded-full text-xs font-semibold active:bg-masters-green/15 transition-colors"
+      >
+        {label}
+        <svg className="w-3 h-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </button>
+      {showInfo && (
+        <div className="absolute top-full left-0 mt-1 z-30 min-w-[260px]">
+          <div className="bg-white rounded-xl shadow-card-lg p-3 text-xs text-gray-600 leading-relaxed border border-masters-cream-dark">
+            {info}
+            <button onClick={() => setShowInfo(false)} className="block mt-2 text-masters-green font-semibold">Got it</button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -198,6 +218,7 @@ export default function PoolLeaderboardPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [chairmanName, setChairmanName] = useState("");
 
   const fetchPool = useCallback(async () => {
     try {
@@ -207,6 +228,7 @@ export default function PoolLeaderboardPage() {
         setConfig(data);
         setStandings(computeLeaderboard(data));
         setLastUpdated(new Date());
+        if (data.chairmanName) setChairmanName(data.chairmanName);
       }
     } finally {
       setLoading(false);
@@ -249,16 +271,25 @@ export default function PoolLeaderboardPage() {
     <div>
       {/* Sticky Header */}
       <div className="sticky top-0 z-40 -mx-4 px-4 pt-2 pb-3 bg-masters-cream/95 backdrop-blur-sm">
-        <h1 className="font-serif text-2xl font-bold text-masters-green leading-tight">
+        <div className="flex items-center justify-center mb-2">
+          <Image src="/Masters_Logo_Horiz.png" alt="The Masters" width={200} height={40} className="opacity-90" />
+        </div>
+        <h1 className="font-serif text-2xl font-bold text-masters-green leading-tight text-center">
           {config.poolName || "Masters Pool 2026"}
         </h1>
-        <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
+        <div className="flex items-center justify-center gap-3 mt-1.5 text-xs text-gray-500">
           <span className="flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-masters-gold" />
             <strong className="text-gray-700">${totalPurse}</strong> purse
           </span>
           <span className="text-gray-300">|</span>
           <span>{config.players.length} players</span>
+          {chairmanName && (
+            <>
+              <span className="text-gray-300">|</span>
+              <span>Chairman: <strong className="text-gray-700">{chairmanName}</strong></span>
+            </>
+          )}
           {currentRound > 0 && (
             <>
               <span className="text-gray-300">|</span>
@@ -271,21 +302,31 @@ export default function PoolLeaderboardPage() {
         </div>
       </div>
 
-      {/* Settings pills */}
+      {/* Settings pills — tap for explanation */}
       <div className="flex flex-wrap gap-1.5 mt-3 mb-5">
-        <SettingsPill label={config.settings.draftType === "snake" ? "Snake Draft" : "Random Draft"} />
-        <SettingsPill label={
-          config.settings.scoringType === "all"
-            ? "All Golfers Count"
-            : `Best ${config.settings.bestN} Count`
-        } />
-        <SettingsPill label={
-          config.settings.missedCutRule === "penalty"
-            ? `MC +${config.settings.missedCutPenalty}/rd`
+        <SettingsPill
+          label={config.settings.draftType === "snake" ? "Snake Draft" : "Random Draft"}
+          info={config.settings.draftType === "snake"
+            ? "Pick order reverses each round (1-2-3-4, then 4-3-2-1) so everyone gets a fair mix of early and late picks."
+            : "Golfers are shuffled randomly and dealt out in order. Simpler but less balanced than snake."
+          }
+        />
+        <SettingsPill
+          label={config.settings.scoringType === "all" ? "All Golfers Count" : `Best ${config.settings.bestN} Count`}
+          info={config.settings.scoringType === "all"
+            ? "Every golfer on your roster counts toward your total. All picks matter equally."
+            : `Only your ${config.settings.bestN} lowest-scoring golfers count. The rest are benched, reducing the impact of one bad pick.`
+          }
+        />
+        <SettingsPill
+          label={config.settings.missedCutRule === "penalty" ? `MC +${config.settings.missedCutPenalty}/rd` : config.settings.missedCutRule === "zero" ? "MC = Zero" : "MC = Worst"}
+          info={config.settings.missedCutRule === "penalty"
+            ? `Golfers who miss the cut get +${config.settings.missedCutPenalty} added per remaining round they don't play. This penalizes risky picks who get eliminated early.`
             : config.settings.missedCutRule === "zero"
-            ? "MC = Zero"
-            : "MC = Worst"
-        } />
+            ? "Golfers who miss the cut simply stop scoring. No penalty, no benefit — their score freezes where it was."
+            : "Golfers who miss the cut get assigned the same total as the worst golfer who DID make the cut."
+          }
+        />
       </div>
 
       {/* Refresh button */}
@@ -326,6 +367,17 @@ export default function PoolLeaderboardPage() {
           </p>
         </div>
       )}
+
+      {/* CTA for visitors */}
+      <div className="text-center mt-10 mb-6">
+        <div className="gold-rule mb-6" />
+        <p className="text-xs text-gray-400 mb-2">
+          Want to become a Chairman and run your own pool?
+        </p>
+        <Link href="/signup" className="text-xs text-masters-green font-semibold active:underline">
+          Sign up here
+        </Link>
+      </div>
     </div>
   );
 }

@@ -11,8 +11,11 @@ export async function GET(
   const sql = getDb();
 
   const poolRows = await sql`
-    SELECT id, slug, pool_name, buy_in, settings, setup_complete, chairman_id, last_sync_at
-    FROM pools WHERE slug = ${params.slug}
+    SELECT p.id, p.slug, p.pool_name, p.buy_in, p.settings, p.setup_complete, p.chairman_id, p.last_sync_at,
+           c.name as chairman_name
+    FROM pools p
+    JOIN chairmen c ON c.id = p.chairman_id
+    WHERE p.slug = ${params.slug}
   `;
   if (poolRows.length === 0) {
     return NextResponse.json(null, { status: 404 });
@@ -62,6 +65,7 @@ export async function GET(
   return NextResponse.json({
     ...config,
     chairmanId: pool.chairman_id,
+    chairmanName: pool.chairman_name,
     lastSyncAt: pool.last_sync_at,
   });
 }
