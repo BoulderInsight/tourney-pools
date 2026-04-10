@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { PoolConfig, CommissionerSettings } from "@/lib/types";
-import { syncPoolScores } from "@/lib/odds-api";
+import { syncTournamentScores } from "@/lib/odds-api";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +32,7 @@ export async function GET(
     const now = Date.now();
     if (now - lastSync > SYNC_INTERVAL_MS) {
       try {
-        await syncPoolScores(pool.id);
+        await syncTournamentScores();
       } catch {
         // Sync failure shouldn't block page load
       }
@@ -44,8 +44,19 @@ export async function GET(
   `;
 
   const golfers = await sql`
-    SELECT id, name, r1, r2, r3, r4, made_cut, odds_api_id, manual_override, world_ranking
-    FROM golfers WHERE pool_id = ${pool.id} ORDER BY name
+    SELECT g.id, g.name,
+      COALESCE(tg.r1, g.r1) as r1,
+      COALESCE(tg.r2, g.r2) as r2,
+      COALESCE(tg.r3, g.r3) as r3,
+      COALESCE(tg.r4, g.r4) as r4,
+      COALESCE(tg.made_cut, g.made_cut) as made_cut,
+      COALESCE(tg.odds_api_id, g.odds_api_id) as odds_api_id,
+      g.manual_override,
+      COALESCE(tg.world_ranking, g.world_ranking) as world_ranking
+    FROM golfers g
+    LEFT JOIN tournament_golfers tg ON g.tournament_golfer_id = tg.id
+    WHERE g.pool_id = ${pool.id}
+    ORDER BY g.name
   `;
 
   const assignments = await sql`

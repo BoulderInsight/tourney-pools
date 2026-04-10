@@ -57,12 +57,23 @@ export async function POST(
     insertedPlayers.push({ id: result[0].id, name: result[0].name });
   }
 
-  // Insert golfers with rankings
+  // Insert golfers with rankings, linked to shared tournament_golfers
   const insertedGolfers = [];
   for (let i = 0; i < entries.length; i++) {
+    // Find or create tournament golfer
+    let tgRows = await sql`SELECT id FROM tournament_golfers WHERE name = ${entries[i].name}`;
+    if (tgRows.length === 0) {
+      tgRows = await sql`
+        INSERT INTO tournament_golfers (name, world_ranking)
+        VALUES (${entries[i].name}, ${entries[i].ranking})
+        RETURNING id
+      `;
+    }
+    const tgId = tgRows[0].id;
+
     const result = await sql`
-      INSERT INTO golfers (pool_id, name, world_ranking)
-      VALUES (${poolId}, ${entries[i].name}, ${entries[i].ranking})
+      INSERT INTO golfers (pool_id, name, world_ranking, tournament_golfer_id)
+      VALUES (${poolId}, ${entries[i].name}, ${entries[i].ranking}, ${tgId})
       RETURNING id, name
     `;
     insertedGolfers.push({

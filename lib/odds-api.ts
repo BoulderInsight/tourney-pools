@@ -73,13 +73,13 @@ function normalizedLastName(name: string): string {
   return normalizedName(parts[parts.length - 1]);
 }
 
-export async function syncPoolScores(poolId: string): Promise<{ updated: number; unmatched: string[] }> {
+// Sync scores to the shared tournament_golfers table (affects ALL pools)
+export async function syncTournamentScores(): Promise<{ updated: number; unmatched: string[] }> {
   const scores = await fetchTournamentScores();
   const sql = getDb();
 
-  const golfers = await sql`
-    SELECT id, name, odds_api_id, manual_override
-    FROM golfers WHERE pool_id = ${poolId}
+  const tGolfers = await sql`
+    SELECT id, name, odds_api_id FROM tournament_golfers
   `;
 
   let updated = 0;
@@ -89,42 +89,49 @@ export async function syncPoolScores(poolId: string): Promise<{ updated: number;
     if (!score.name) continue;
 
     // Match by stored API name first
-    let golfer = golfers.find((g) => g.odds_api_id && g.odds_api_id === score.name);
+    let tg = tGolfers.find((g) => g.odds_api_id && g.odds_api_id === score.name);
     // Then exact normalized name
-    if (!golfer) {
+    if (!tg) {
       const normalized = normalizedName(score.name);
-      golfer = golfers.find((g) => normalizedName(g.name) === normalized);
+      tg = tGolfers.find((g) => normalizedName(g.name) === normalized);
     }
-    // Then last name match (handles Sam/Samuel, Johnny/John, Nico/Nicolas, etc.)
-    if (!golfer) {
+    // Then last name match
+    if (!tg) {
       const scoreLast = normalizedLastName(score.name);
-      const lastNameMatches = golfers.filter((g) => normalizedLastName(g.name) === scoreLast);
+      const lastNameMatches = tGolfers.filter((g) => normalizedLastName(g.name) === scoreLast);
       if (lastNameMatches.length === 1) {
-        golfer = lastNameMatches[0]; // Unique last name match
+        tg = lastNameMatches[0];
       }
     }
 
-    if (!golfer) {
+    if (!tg) {
       unmatched.push(score.name);
       continue;
     }
 
-    if (golfer.manual_override) continue;
-
     await sql`
-      UPDATE golfers SET
+      UPDATE tournament_golfers SET
         r1 = COALESCE(${score.r1}, r1),
         r2 = COALESCE(${score.r2}, r2),
         r3 = COALESCE(${score.r3}, r3),
         r4 = COALESCE(${score.r4}, r4),
         made_cut = COALESCE(${score.madeCut}, made_cut),
         odds_api_id = COALESCE(odds_api_id, ${score.name})
-      WHERE id = ${golfer.id}
+      WHERE id = ${tg.id}
     `;
     updated++;
   }
 
-  await sql`UPDATE pools SET last_sync_at = now() WHERE id = ${poolId}`;
+  // Update last_sync_at on all active pools
+  await sql`UPDATE pools SET last_sync_at = now() WHERE setup_complete = true`;
 
   return { updated, unmatched };
+}
+
+// Legacy wrapper for per-pool sync calls
+export async function syncPoolScores(poolId: string): Promise<{ updated: number; unmatched: string[] }> {
+  const result = await syncTournamentScores();
+  const sql = getDb();
+  await sql`UPDATE pools SET last_sync_at = now() WHERE id = ${poolId}`;
+  return result;
 }
