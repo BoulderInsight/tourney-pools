@@ -680,9 +680,6 @@ export default function PoolLeaderboardPage() {
     <div>
       {/* Sticky Header */}
       <div className="sticky top-0 z-40 -mx-4 px-4 pt-2 pb-3 bg-masters-cream/95 backdrop-blur-sm">
-        <div className="flex items-center justify-center mb-2">
-          <Image src="/mymasterspool2.png" alt="My Masters Pool" width={280} height={140} />
-        </div>
         <h1 className="font-serif text-2xl font-bold text-masters-green leading-tight text-center">
           {config.poolName || "Masters Pool 2026"}
         </h1>
