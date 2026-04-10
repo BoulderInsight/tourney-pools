@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { PoolConfig } from "@/lib/types";
 import { formatScore, scoreColorClass } from "@/lib/pool";
 import Link from "next/link";
+import Image from "next/image";
 
 type Filter = "all" | "made" | "missed" | "tbd";
 
@@ -289,6 +290,9 @@ export default function PoolScoresPage() {
     <div>
       {/* Sticky search + filters */}
       <div className="sticky top-0 z-40 -mx-4 px-4 pt-2 pb-3 bg-masters-cream/95 backdrop-blur-sm space-y-3">
+        <div className="flex items-center justify-center mb-2">
+          <Image src="/mymasterspool2.png" alt="My Masters Pool" width={200} height={100} />
+        </div>
         <div className="flex items-center justify-between">
           <h1 className="font-serif text-2xl font-bold text-masters-green">
             {isSuperAdmin ? "Score Entry" : "Scores"}

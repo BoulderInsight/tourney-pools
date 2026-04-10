@@ -94,17 +94,17 @@ export default function AdminPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <Image src="/MyMastersPoolstacked.png" alt="My Masters Pool" width={130} height={72} />
-          <div>
-            <h1 className="font-serif text-xl font-bold text-masters-green">Super Admin</h1>
-            <p className="text-[10px] text-gray-400">System management</p>
-          </div>
-        </div>
+      <div className="flex items-center justify-end gap-3 mb-2">
         <Link href="/dashboard" className="text-xs text-masters-green font-semibold">
           Dashboard
         </Link>
+      </div>
+      <div className="flex items-center justify-center mb-2">
+        <Image src="/mymasterspool2.png" alt="My Masters Pool" width={200} height={100} />
+      </div>
+      <div className="mb-4">
+        <h1 className="font-serif text-xl font-bold text-masters-green">Super Admin</h1>
+        <p className="text-[10px] text-gray-400">System management</p>
       </div>
 
       {/* Stats */}

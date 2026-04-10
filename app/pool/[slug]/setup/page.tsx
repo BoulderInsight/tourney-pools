@@ -2,6 +2,7 @@
 
 import { useState, useId, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Image from "next/image";
 import { CommissionerSettings, PoolPlayer, DraftType, MissedCutRule, PurseType, PayoutMethod } from "@/lib/types";
 import { DEFAULT_SETTINGS, DEFAULT_FIELD, draftGolfers } from "@/lib/pool";
 
@@ -255,6 +256,9 @@ export default function PoolSetupPage() {
   return (
     <div>
       {/* Header */}
+      <div className="flex items-center justify-center mb-2">
+        <Image src="/mymasterspool2.png" alt="My Masters Pool" width={200} height={100} />
+      </div>
       <div className="mb-2">
         <h1 className="font-serif text-2xl font-bold text-masters-green">
           Chairman - Pool Set Up

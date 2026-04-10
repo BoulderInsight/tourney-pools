@@ -52,20 +52,18 @@ export default function PoolLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <>
-      {/* Top bar with logo + nav */}
-      <div className="flex items-center justify-between mb-2 -mt-1">
-        <div className="flex items-center gap-3">
-          {isLoggedIn && (
-            <>
-              <Link href="/dashboard" className="text-xs text-masters-green font-semibold active:underline">
-                My Pools
-              </Link>
-              <button onClick={handleLogout} className="text-xs text-gray-400 active:text-red-500 transition-colors">
-                Sign out
-              </button>
-            </>
-          )}
-        </div>
+      {/* Top bar with nav */}
+      <div className="flex items-center justify-end mb-2 -mt-1">
+        {isLoggedIn && (
+          <div className="flex items-center gap-3">
+            <Link href="/dashboard" className="text-xs text-masters-green font-semibold active:underline">
+              My Pools
+            </Link>
+            <button onClick={handleLogout} className="text-xs text-gray-400 active:text-red-500 transition-colors">
+              Sign out
+            </button>
+          </div>
+        )}
       </div>
       {children}
       <nav className="fixed bottom-0 inset-x-0 z-50 bg-white/95 backdrop-blur-md border-t border-masters-cream-dark">
