@@ -812,8 +812,8 @@ export default function PoolLeaderboardPage() {
         </div>
       )}
 
-      {/* CTA for visitors */}
-      <div className="text-center mt-10 mb-6">
+      {/* CTA for visitors (not shown to logged-in users) */}
+      {!isOwner && <div className="text-center mt-10 mb-6">
         <div className="gold-rule mb-6" />
         <p className="text-sm font-semibold mb-3" style={{ color: "#096a52" }}>
           Want to become a Chairman and run your own pool?
@@ -825,7 +825,7 @@ export default function PoolLeaderboardPage() {
         >
           Sign Up Here
         </Link>
-      </div>
+      </div>}
         </>
       )}
     </div>
