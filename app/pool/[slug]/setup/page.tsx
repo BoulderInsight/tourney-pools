@@ -523,16 +523,16 @@ export default function PoolSetupPage() {
           <div>
             <h2 className="font-serif text-lg text-masters-green mb-1 font-bold">Golfer Field</h2>
             <p className="text-xs text-gray-500 mb-5">
-              Pre-populated with the 2026 Masters field. Edit as needed — one name per line.
+              2026 Masters field — {golferCount} golfers sorted by world ranking.
             </p>
 
-            <textarea
-              value={fieldText}
-              onChange={(e) => setFieldText(e.target.value)}
-              rows={16}
-              className="input-field font-mono text-xs leading-relaxed resize-none"
-              style={{ minHeight: 320 }}
-            />
+            <div className="rounded-xl border-2 border-masters-cream-dark bg-masters-cream/30 p-3 font-mono text-xs leading-relaxed overflow-y-auto" style={{ maxHeight: 320 }}>
+              {parseFieldEntries().map((e, i) => (
+                <div key={i} className="py-0.5 text-gray-700">
+                  {e.ranking ? <span className="text-gray-400">#{e.ranking} </span> : null}{e.name}
+                </div>
+              ))}
+            </div>
 
             <p className="text-xs text-gray-400 mt-2">
               {golferCount} golfers · {validPlayers.length} players
@@ -578,9 +578,9 @@ export default function PoolSetupPage() {
                     }
                   }}
                   disabled={golferCount < validPlayers.length || saving}
-                  className="btn-gold disabled:opacity-40"
+                  className="btn-green disabled:opacity-40"
                 >
-                  {saving ? "Saving..." : "Start Live Draft"}
+                  {saving ? "Saving..." : "Next: Draft"}
                 </button>
               ) : (
                 <button
