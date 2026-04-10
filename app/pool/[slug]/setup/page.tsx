@@ -139,7 +139,7 @@ export default function PoolSetupPage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
 
-  // Load existing pool data (pool name was set during create)
+  // Load existing pool data to resume where you left off
   useEffect(() => {
     async function loadPool() {
       const res = await fetch(`/api/pool/${slug}`);
@@ -147,6 +147,10 @@ export default function PoolSetupPage() {
         const data = await res.json();
         if (data?.poolName) setPoolName(data.poolName);
         if (data?.buyIn) setBuyIn(data.buyIn);
+        if (data?.players?.length > 0) {
+          setPlayers(data.players.map((p: { id: string; name: string }) => ({ id: p.id, name: p.name })));
+        }
+        if (data?.settings) setSettings(data.settings);
       }
     }
     loadPool();

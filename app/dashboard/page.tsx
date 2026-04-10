@@ -205,6 +205,11 @@ function DashboardContent() {
                 Admin
               </Link>
             )}
+            {pools.length > 0 && (
+              <Link href={`/pool/${pools[0].slug}/scores`} className="text-xs text-masters-green font-semibold">
+                Scores
+              </Link>
+            )}
             <button onClick={handleLogout} className="text-xs text-gray-400 active:text-red-500 transition-colors">
               Sign out
             </button>
@@ -315,12 +320,18 @@ function DashboardContent() {
                   Scores
                 </Link>
                 <div className="w-px bg-masters-cream-dark" />
-                <Link
-                  href={`/pool/${pool.slug}/setup`}
-                  className="flex-1 text-center py-2.5 text-xs font-semibold text-masters-green active:bg-masters-green/5 transition-colors"
-                >
-                  Edit
-                </Link>
+                {pool.setup_complete ? (
+                  <span className="flex-1 text-center py-2.5 text-xs font-semibold text-gray-300 cursor-not-allowed">
+                    Edit
+                  </span>
+                ) : (
+                  <Link
+                    href={`/pool/${pool.slug}/setup`}
+                    className="flex-1 text-center py-2.5 text-xs font-semibold text-masters-green active:bg-masters-green/5 transition-colors"
+                  >
+                    Edit
+                  </Link>
+                )}
                 <div className="w-px bg-masters-cream-dark" />
                 <button
                   onClick={() => setDeleteModal({ id: pool.id, name: pool.pool_name })}

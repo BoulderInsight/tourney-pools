@@ -33,11 +33,29 @@ export async function fetchTournamentScores(): Promise<MastersGolferScore[]> {
     const r3Total = p.round3?.total;
     const r4Total = p.round4?.total;
 
-    // Only count rounds that are finished (have a total score)
+    // Completed rounds (have a total score)
     const r1 = r1Total != null ? r1Total - PAR : null;
     const r2 = r2Total != null ? r2Total - PAR : null;
     const r3 = r3Total != null ? r3Total - PAR : null;
     const r4 = r4Total != null ? r4Total - PAR : null;
+
+    let finalR1 = r1, finalR2 = r2, finalR3 = r3, finalR4 = r4;
+
+    // For in-progress rounds, use the "today" field (e.g. -2, 1, "E" for even)
+    const today = p.today;
+    const thru = p.thru;
+    const isOnCourse = thru && thru !== "" && thru !== "F" && thru !== "--";
+
+    if (isOnCourse && today != null && today !== "") {
+      const todayScore = today === "E" ? 0 : Number(today);
+      if (!isNaN(todayScore)) {
+        const completedRounds = [r1, r2, r3, r4].filter(r => r !== null).length;
+        if (completedRounds === 0) finalR1 = todayScore;
+        else if (completedRounds === 1) finalR2 = todayScore;
+        else if (completedRounds === 2) finalR3 = todayScore;
+        else if (completedRounds === 3) finalR4 = todayScore;
+      }
+    }
 
     // Cut status: status "C" = cut, "F" or similar = finished/active
     let madeCut: boolean | null = null;
@@ -49,10 +67,10 @@ export async function fetchTournamentScores(): Promise<MastersGolferScore[]> {
 
     golfers.push({
       name: p.full_name || `${p.first_name} ${p.last_name}`,
-      r1,
-      r2,
-      r3,
-      r4,
+      r1: finalR1,
+      r2: finalR2,
+      r3: finalR3,
+      r4: finalR4,
       madeCut,
     });
   }
