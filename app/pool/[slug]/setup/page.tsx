@@ -257,7 +257,7 @@ export default function PoolSetupPage() {
       {/* Header */}
       <div className="mb-2 text-right">
         <h1 className="font-serif text-2xl font-bold text-masters-green">
-          Chairman - Pool Set Up
+          Pool Set Up
         </h1>
       </div>
 
