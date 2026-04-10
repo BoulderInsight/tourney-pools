@@ -8,14 +8,13 @@ export async function POST(
   { params }: { params: { slug: string } }
 ) {
   const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.isSuperAdmin) {
+    return NextResponse.json({ error: "Super admin required" }, { status: 403 });
   }
 
   const sql = getDb();
   const poolRows = await sql`
-    SELECT id FROM pools
-    WHERE slug = ${params.slug} AND chairman_id = ${session.chairmanId}
+    SELECT id FROM pools WHERE slug = ${params.slug}
   `;
   if (poolRows.length === 0) {
     return NextResponse.json({ error: "Pool not found" }, { status: 404 });
