@@ -92,11 +92,55 @@ function GolferDetail({ golfer, counted, totalScore, penaltyScore }: {
   );
 }
 
-function StandingCard({ standing, expanded, onToggle, index }: {
+function PayoutInfo({ standing, buyIn, allStandings }: {
+  standing: PlayerStanding;
+  buyIn: number;
+  allStandings: PlayerStanding[];
+}) {
+  const winners = allStandings.filter(s => s.prize > 0);
+  const isWinner = standing.prize > 0;
+  const netWin = standing.prize - buyIn;
+
+  if (isWinner && netWin > 0) {
+    return (
+      <div className="mt-3 bg-green-50 rounded-xl p-3">
+        <p className="text-xs font-semibold text-green-700">
+          Collects ${netWin} net (${standing.prize} prize - ${buyIn} buy-in)
+        </p>
+      </div>
+    );
+  }
+
+  if (!isWinner && winners.length > 0) {
+    const totalPrize = winners.reduce((s, w) => s + w.prize, 0);
+    const payments = winners.map(w => ({
+      name: w.player.name,
+      amount: Math.round((w.prize / totalPrize) * buyIn * 100) / 100,
+    }));
+
+    return (
+      <div className="mt-3 bg-red-50 rounded-xl p-3">
+        <p className="text-[10px] text-red-400 uppercase tracking-wider font-semibold mb-1.5">Owes</p>
+        {payments.map(p => (
+          <p key={p.name} className="text-xs font-medium text-red-700">
+            Pay {p.name} <strong>${p.amount.toFixed(2)}</strong>
+          </p>
+        ))}
+      </div>
+    );
+  }
+
+  return null;
+}
+
+function StandingCard({ standing, expanded, onToggle, index, buyIn, allStandings, tournamentOver }: {
   standing: PlayerStanding;
   expanded: boolean;
   onToggle: () => void;
   index: number;
+  buyIn: number;
+  allStandings: PlayerStanding[];
+  tournamentOver: boolean;
 }) {
   const isLeader = standing.rank === 1 && standing.totalScore !== null;
   const hasRank = standing.rank > 0;
@@ -185,6 +229,9 @@ function StandingCard({ standing, expanded, onToggle, index }: {
               />
             ))}
           </div>
+
+          {/* Payout info when tournament is over */}
+          {tournamentOver && <PayoutInfo standing={standing} buyIn={buyIn} allStandings={allStandings} />}
         </div>
       )}
     </div>
@@ -392,6 +439,9 @@ export default function PoolLeaderboardPage() {
               setExpandedId(expandedId === standing.player.id ? null : standing.player.id)
             }
             index={i}
+            buyIn={config.buyIn}
+            allStandings={standings}
+            tournamentOver={currentRound >= 4}
           />
         ))}
       </div>
