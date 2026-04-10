@@ -511,9 +511,44 @@ export default function PoolSetupPage() {
               <button type="button" onClick={() => setStep(0)} className="text-sm text-gray-400 font-medium px-4 py-3">
                 Back
               </button>
-              <button type="button" onClick={() => setStep(2)} className="btn-green">
-                Next: Field
-              </button>
+              {settings.draftType === "snake" ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setSaving(true);
+                    setError("");
+                    const golferEntries = parseFieldEntries();
+                    const dist = settings.purseType === "custom"
+                      ? customDist.split(",").map((n) => Number(n.trim())) : [];
+                    const finalSettings = { ...settings, purseDistribution: dist };
+                    const res = await fetch(`/api/pool/${slug}/setup`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        poolName,
+                        players: players.filter((p) => p.name.trim()),
+                        golferEntries,
+                        buyIn,
+                        settings: finalSettings,
+                      }),
+                    });
+                    setSaving(false);
+                    if (res.ok) {
+                      router.push(`/pool/${slug}`);
+                    } else {
+                      setError("Failed to save. Try again.");
+                    }
+                  }}
+                  disabled={saving}
+                  className="btn-green disabled:opacity-40"
+                >
+                  {saving ? "Saving..." : "Launch Live Draft"}
+                </button>
+              ) : (
+                <button type="button" onClick={() => setStep(2)} className="btn-green">
+                  Next: Field
+                </button>
+              )}
             </div>
           </div>
         )}
