@@ -254,13 +254,6 @@ export default function PoolSetupPage() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="-mt-4 mb-2 text-right">
-        <h1 className="font-serif text-2xl font-bold text-masters-green">
-          Pool Set Up
-        </h1>
-      </div>
-
       {/* Step dots */}
       <StepDots current={step} total={STEPS.length} />
 

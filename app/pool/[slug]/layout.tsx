@@ -53,17 +53,25 @@ export default function PoolLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <>
-      {/* Top bar with logo + nav */}
+      {/* Top bar with logo + nav + page title */}
       {isLoggedIn && (
-        <div className="flex items-center justify-between mb-2 -mt-1">
+        <div className="flex items-start justify-between mb-4 -mt-1">
           <Image src="/mymasterspool2.png" alt="My Masters Pool" width={200} height={100} />
-          <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="text-xs text-masters-green font-semibold active:underline">
-              My Pools
-            </Link>
-            <button onClick={handleLogout} className="text-xs text-gray-400 active:text-red-500 transition-colors">
-              Sign out
-            </button>
+          <div className="flex flex-col items-end gap-0.5">
+            <div className="flex items-center gap-3">
+              <Link href="/dashboard" className="text-xs text-masters-green font-semibold active:underline">
+                My Pools
+              </Link>
+              <button onClick={handleLogout} className="text-xs text-gray-400 active:text-red-500 transition-colors">
+                Sign out
+              </button>
+            </div>
+            {pathname.endsWith("/scores") && (
+              <h1 className="font-serif text-2xl font-bold text-masters-green">Score Entry</h1>
+            )}
+            {pathname.endsWith("/setup") && (
+              <h1 className="font-serif text-2xl font-bold text-masters-green">Pool Set Up</h1>
+            )}
           </div>
         </div>
       )}
