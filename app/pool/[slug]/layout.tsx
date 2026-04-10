@@ -56,7 +56,7 @@ export default function PoolLayout({ children }: { children: React.ReactNode }) 
       {/* Top bar with logo + nav */}
       {isLoggedIn && (
         <div className="flex items-center justify-between mb-2 -mt-1">
-          <Image src="/mymasterspool2.png" alt="My Masters Pool" width={140} height={70} />
+          <Image src="/mymasterspool2.png" alt="My Masters Pool" width={200} height={100} />
           <div className="flex items-center gap-3">
             <Link href="/dashboard" className="text-xs text-masters-green font-semibold active:underline">
               My Pools
