@@ -619,19 +619,39 @@ export default function PoolLeaderboardPage() {
 
   if (loading) return <LoadingState />;
 
-  if (!config || !config.setupComplete) {
+  if (!config) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div className="w-20 h-20 rounded-full bg-masters-green/10 flex items-center justify-center mb-6">
-          <svg className="w-10 h-10 text-masters-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
-          </svg>
-        </div>
+        <Image src="/Masters_Logo.png.webp" alt="The Masters" width={100} height={67} className="mb-6" />
         <h1 className="font-serif text-2xl font-bold text-masters-green mb-2">
-          No Pool Yet
+          Pool Not Found
         </h1>
         <p className="text-gray-500 text-sm mb-8 max-w-xs leading-relaxed">
-          The chairman hasn&apos;t set things up yet. Check back soon.
+          This pool is no longer active or the link may be incorrect.
+        </p>
+        <p className="text-sm font-semibold mb-3" style={{ color: "#096a52" }}>
+          Want to become a Chairman and run your own pool?
+        </p>
+        <Link
+          href="/signup"
+          className="inline-block text-center font-semibold rounded-xl px-8 py-3.5 text-sm tracking-wide transition-colors"
+          style={{ backgroundColor: "#fed60d", color: "#096a52" }}
+        >
+          Sign Up Here
+        </Link>
+      </div>
+    );
+  }
+
+  if (!config.setupComplete) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <Image src="/Masters_Logo.png.webp" alt="The Masters" width={100} height={67} className="mb-6" />
+        <h1 className="font-serif text-2xl font-bold text-masters-green mb-2">
+          Pool Coming Soon
+        </h1>
+        <p className="text-gray-500 text-sm mb-8 max-w-xs leading-relaxed">
+          The chairman is still setting things up. Check back soon!
         </p>
       </div>
     );
