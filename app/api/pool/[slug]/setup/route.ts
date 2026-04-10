@@ -41,7 +41,7 @@ export async function POST(
       pool_name = ${poolName},
       buy_in = ${buyIn},
       settings = ${JSON.stringify(settings)},
-      setup_complete = true
+      setup_complete = ${settings.draftType === "random"}
     WHERE id = ${poolId}
   `;
 
@@ -84,16 +84,18 @@ export async function POST(
     });
   }
 
-  // Run draft
-  const draftResult = draftGolfers(insertedPlayers, insertedGolfers, settings.draftType);
+  // Only auto-draft for random. Snake draft is handled interactively on the draft page.
+  if (settings.draftType === "random") {
+    const draftResult = draftGolfers(insertedPlayers, insertedGolfers, settings.draftType);
 
-  // Insert assignments
-  for (const a of draftResult) {
-    await sql`
-      INSERT INTO assignments (pool_id, player_id, golfer_id, pick_number)
-      VALUES (${poolId}, ${a.playerId}, ${a.golferId}, ${a.pickNumber})
-    `;
+    for (const a of draftResult) {
+      await sql`
+        INSERT INTO assignments (pool_id, player_id, golfer_id, pick_number)
+        VALUES (${poolId}, ${a.playerId}, ${a.golferId}, ${a.pickNumber})
+      `;
+    }
   }
+  // For snake draft, assignments are created pick-by-pick on /pool/[slug]/draft
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, draftType: settings.draftType });
 }
