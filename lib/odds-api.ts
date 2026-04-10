@@ -61,7 +61,16 @@ export async function fetchTournamentScores(): Promise<MastersGolferScore[]> {
 }
 
 function normalizedName(name: string): string {
-  return name.toLowerCase().replace(/[^a-z]/g, "");
+  // Decompose accented chars (é→e, ø→o, á→a, etc.) then strip non-alpha
+  const decomposed = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  // Handle ø/Ø specifically (not decomposed by NFD)
+  const fixed = decomposed.replace(/ø/gi, "o");
+  return fixed.toLowerCase().replace(/[^a-z]/g, "");
+}
+
+function normalizedLastName(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return normalizedName(parts[parts.length - 1]);
 }
 
 export async function syncPoolScores(poolId: string): Promise<{ updated: number; unmatched: string[] }> {
@@ -79,10 +88,20 @@ export async function syncPoolScores(poolId: string): Promise<{ updated: number;
   for (const score of scores) {
     if (!score.name) continue;
 
+    // Match by stored API name first
     let golfer = golfers.find((g) => g.odds_api_id && g.odds_api_id === score.name);
+    // Then exact normalized name
     if (!golfer) {
       const normalized = normalizedName(score.name);
       golfer = golfers.find((g) => normalizedName(g.name) === normalized);
+    }
+    // Then last name match (handles Sam/Samuel, Johnny/John, Nico/Nicolas, etc.)
+    if (!golfer) {
+      const scoreLast = normalizedLastName(score.name);
+      const lastNameMatches = golfers.filter((g) => normalizedLastName(g.name) === scoreLast);
+      if (lastNameMatches.length === 1) {
+        golfer = lastNameMatches[0]; // Unique last name match
+      }
     }
 
     if (!golfer) {
