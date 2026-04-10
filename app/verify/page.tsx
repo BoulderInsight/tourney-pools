@@ -41,7 +41,7 @@ function VerifyContent() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[75vh] text-center">
-      <Image src="/Masters_Logo.png.webp" alt="The Masters" width={120} height={80} className="mb-6" />
+      <Image src="/MyMastersPool.jpg" alt="My Masters Pool" width={260} height={87} className="mb-6 rounded-xl shadow-card" />
 
       {status === "verifying" && (
         <>

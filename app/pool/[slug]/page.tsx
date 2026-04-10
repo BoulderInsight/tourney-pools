@@ -635,7 +635,7 @@ export default function PoolLeaderboardPage() {
   if (!config) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <Image src="/Masters_Logo.png.webp" alt="The Masters" width={100} height={67} className="mb-6" />
+        <Image src="/MyMastersPool.jpg" alt="My Masters Pool" width={220} height={73} className="mb-6 rounded-xl shadow-card" />
         <h1 className="font-serif text-2xl font-bold text-masters-green mb-2">
           Pool Not Found
         </h1>
@@ -659,7 +659,7 @@ export default function PoolLeaderboardPage() {
   if (!config.setupComplete) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <Image src="/Masters_Logo.png.webp" alt="The Masters" width={100} height={67} className="mb-6" />
+        <Image src="/MyMastersPool.jpg" alt="My Masters Pool" width={220} height={73} className="mb-6 rounded-xl shadow-card" />
         <h1 className="font-serif text-2xl font-bold text-masters-green mb-2">
           Pool Coming Soon
         </h1>
@@ -681,7 +681,7 @@ export default function PoolLeaderboardPage() {
       {/* Sticky Header */}
       <div className="sticky top-0 z-40 -mx-4 px-4 pt-2 pb-3 bg-masters-cream/95 backdrop-blur-sm">
         <div className="flex items-center justify-center mb-2">
-          <Image src="/Masters_Logo_Horiz.png" alt="The Masters" width={200} height={40} className="opacity-90" />
+          <Image src="/MyMastersPool.jpg" alt="My Masters Pool" width={220} height={73} className="rounded-xl" />
         </div>
         <h1 className="font-serif text-2xl font-bold text-masters-green leading-tight text-center">
           {config.poolName || "Masters Pool 2026"}

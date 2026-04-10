@@ -119,7 +119,7 @@ export default function DraftPage() {
     <div className="pb-safe">
       {/* Header */}
       <div className="flex items-center justify-center mb-3">
-        <Image src="/Masters_Logo_Horiz.png" alt="The Masters" width={180} height={36} className="opacity-90" />
+        <Image src="/MyMastersPool.jpg" alt="My Masters Pool" width={240} height={80} className="rounded-xl shadow-card" />
       </div>
       <h1 className="font-serif text-2xl font-bold text-masters-green text-center mb-4">Live Snake Draft</h1>
 

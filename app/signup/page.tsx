@@ -36,7 +36,7 @@ export default function SignupPage() {
   if (emailSent) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[75vh] text-center">
-        <Image src="/Masters_Logo.png.webp" alt="The Masters" width={120} height={80} className="mb-6" />
+        <Image src="/MyMastersPool.jpg" alt="My Masters Pool" width={260} height={87} className="mb-6 rounded-xl shadow-card" />
         <div className="card p-8 w-full">
           <div className="w-16 h-16 rounded-full bg-masters-green/10 flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-masters-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">

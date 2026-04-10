@@ -5,11 +5,11 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[80vh] text-center">
       <Image
-        src="/Masters_Logo.png.webp"
-        alt="The Masters"
-        width={180}
-        height={120}
-        className="mb-8"
+        src="/MyMastersPool.jpg"
+        alt="My Masters Pool"
+        width={320}
+        height={107}
+        className="mb-8 rounded-xl shadow-card"
         priority
       />
 
