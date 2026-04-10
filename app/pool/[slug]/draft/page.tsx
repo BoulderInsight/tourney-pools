@@ -25,8 +25,9 @@ export default function DraftPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [orderDrawn, setOrderDrawn] = useState(false);
-  const [search, setSearch] = useState("");
+  const [selectedGolfer, setSelectedGolfer] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
 
   const fetchDraft = useCallback(async () => {
     const res = await fetch(`/api/pool/${slug}/draft`);
@@ -35,7 +36,6 @@ export default function DraftPage() {
       setPlayers(data.players.sort((a: Player, b: Player) => a.pick_order - b.pick_order));
       setGolfers(data.golfers);
       setAssignments(data.assignments);
-      // If players have distinct pick_orders (not all 0), order was drawn
       const orders = data.players.map((p: Player) => p.pick_order);
       setOrderDrawn(new Set(orders).size === orders.length && orders.length > 1);
     }
@@ -51,24 +51,24 @@ export default function DraftPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "draw_order" }),
     });
-    // Clear existing assignments when redrawing
     await fetchDraft();
     setSaving(false);
   }
 
-  async function makePick(golferId: string) {
+  async function confirmPick() {
+    if (!selectedGolfer || !currentPicker) return;
     setSaving(true);
-    const currentPicker = getSnakeOrder(players, assignments.length);
     await fetch(`/api/pool/${slug}/draft`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "pick",
         playerId: currentPicker.id,
-        golferId,
+        golferId: selectedGolfer,
         pickNumber: assignments.length + 1,
       }),
     });
+    setSelectedGolfer(null);
     await fetchDraft();
     setSaving(false);
   }
@@ -80,6 +80,7 @@ export default function DraftPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "undo" }),
     });
+    setSelectedGolfer(null);
     await fetchDraft();
     setSaving(false);
   }
@@ -102,85 +103,89 @@ export default function DraftPage() {
     );
   }
 
-  const draftedGolferIds = new Set(assignments.map(a => a.golfer_id));
-  const availableGolfers = golfers.filter(g =>
-    !draftedGolferIds.has(g.id) &&
-    g.name.toLowerCase().includes(search.toLowerCase())
-  );
-
-  // Count picks per player
+  const draftedIds = new Set(assignments.map(a => a.golfer_id));
   const picksPerPlayer: Record<string, number> = {};
   for (const p of players) picksPerPlayer[p.id] = 0;
   for (const a of assignments) picksPerPlayer[a.player_id] = (picksPerPlayer[a.player_id] || 0) + 1;
-
-  // Check if all players have equal picks and at least 1
   const pickCounts = Object.values(picksPerPlayer);
   const allEqual = pickCounts.length > 0 && pickCounts.every(c => c === pickCounts[0]) && pickCounts[0] > 0;
 
-  const currentPicker = players.length > 0 && assignments.length < golfers.length
-    ? getSnakeOrder(players, assignments.length)
-    : null;
-
-  // Current round info
+  const currentPicker = players.length > 0 ? getSnakeOrder(players, assignments.length) : null;
   const currentRound = players.length > 0 ? Math.floor(assignments.length / players.length) + 1 : 0;
+
+  const selectedGolferName = golfers.find(g => g.id === selectedGolfer)?.name;
 
   return (
     <div className="pb-safe">
       {/* Header */}
-      <div className="flex items-center justify-center mb-2">
-        <Image src="/Masters_Logo_Horiz.png" alt="The Masters" width={160} height={32} className="opacity-90" />
+      <div className="flex items-center justify-center mb-3">
+        <Image src="/Masters_Logo_Horiz.png" alt="The Masters" width={180} height={36} className="opacity-90" />
       </div>
-      <h1 className="font-serif text-2xl font-bold text-masters-green text-center mb-1">Live Snake Draft</h1>
+      <h1 className="font-serif text-2xl font-bold text-masters-green text-center mb-4">Live Snake Draft</h1>
 
       {/* Step 1: Draw for order */}
       {!orderDrawn ? (
-        <div className="card p-6 text-center mt-4">
-          <div className="w-16 h-16 rounded-full bg-masters-gold/15 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-masters-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.678 48.678 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3l-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 003.7 3.7 48.656 48.656 0 007.324 0 4.006 4.006 0 003.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3l-3 3" />
-            </svg>
-          </div>
+        <div className="card p-6 text-center">
           <h2 className="font-serif text-lg font-bold text-masters-green mb-2">Draw for Pick Order</h2>
           <p className="text-xs text-gray-500 mb-6">
             Randomly assign who picks first, second, third, and so on.
           </p>
+          <div className="space-y-2 mb-6">
+            {players.map((p) => (
+              <div key={p.id} className="flex items-center gap-3 bg-masters-cream/60 rounded-xl px-4 py-3">
+                <span className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-400">?</span>
+                <span className="font-medium text-gray-800">{p.name}</span>
+              </div>
+            ))}
+          </div>
           <button onClick={drawOrder} disabled={saving} className="btn-gold w-full disabled:opacity-60">
             {saving ? "Drawing..." : "Draw Straws"}
           </button>
         </div>
       ) : (
         <>
-          {/* Pick order display */}
-          <div className="flex items-center gap-2 justify-center mt-3 mb-4">
+          {/* Pick order */}
+          <div className="flex items-center gap-2 justify-center mb-4 flex-wrap">
             {players.map((p, i) => (
               <div
                 key={p.id}
-                className={`flex flex-col items-center px-2 py-1.5 rounded-lg text-center min-w-[50px]
-                  ${currentPicker?.id === p.id ? "bg-masters-green text-white" : "bg-masters-cream-dark text-gray-600"}`}
+                className={`flex flex-col items-center px-3 py-2 rounded-xl text-center
+                  ${currentPicker?.id === p.id ? "bg-masters-green text-white shadow-card" : "bg-white border border-masters-cream-dark text-gray-600"}`}
               >
                 <span className="text-[9px] font-bold uppercase tracking-wider opacity-70">#{i + 1}</span>
-                <span className="text-xs font-semibold truncate max-w-[60px]">{p.name}</span>
+                <span className="text-xs font-bold truncate max-w-[70px]">{p.name}</span>
                 <span className="text-[9px] opacity-60">{picksPerPlayer[p.id]} picks</span>
               </div>
             ))}
           </div>
 
-          {/* Current picker banner */}
+          {/* Current picker */}
           {currentPicker && (
-            <div className="bg-masters-green text-white rounded-xl px-4 py-3 mb-3 text-center">
-              <p className="text-[10px] uppercase tracking-wider opacity-70">Round {currentRound} · Pick #{assignments.length + 1}</p>
-              <p className="font-serif text-lg font-bold">{currentPicker.name}&apos;s Pick</p>
+            <div className="bg-masters-green text-white rounded-xl px-4 py-3 mb-4 text-center">
+              <p className="text-[10px] uppercase tracking-wider opacity-70 mb-0.5">Round {currentRound} · Pick #{assignments.length + 1}</p>
+              <p className="font-serif text-xl font-bold">{currentPicker.name}&apos;s Pick</p>
             </div>
           )}
 
-          {/* Undo + redraw */}
-          <div className="flex gap-2 mb-3">
-            {assignments.length > 0 && (
-              <button onClick={undoPick} disabled={saving} className="text-xs text-red-400 font-semibold px-3 py-2 active:underline disabled:opacity-50">
+          {/* Confirm pick button (shows when a golfer is selected) */}
+          {selectedGolfer && currentPicker && (
+            <button
+              onClick={confirmPick}
+              disabled={saving}
+              className="w-full btn-gold mb-3 disabled:opacity-60"
+            >
+              {saving ? "Adding..." : `Add ${selectedGolferName} to ${currentPicker.name}'s Team`}
+            </button>
+          )}
+
+          {/* Actions */}
+          <div className="flex justify-between mb-3 px-1">
+            {assignments.length > 0 ? (
+              <button onClick={undoPick} disabled={saving} className="text-xs text-red-400 font-semibold active:underline disabled:opacity-50">
                 Undo Last Pick
               </button>
-            )}
-            <button onClick={drawOrder} disabled={saving} className="text-xs text-gray-400 font-semibold px-3 py-2 active:underline disabled:opacity-50 ml-auto">
+            ) : <div />}
+            <button onClick={drawOrder} disabled={saving} className="text-xs text-gray-400 font-semibold active:underline disabled:opacity-50">
               Redraw Order
             </button>
           </div>
@@ -198,33 +203,60 @@ export default function DraftPage() {
             />
           </div>
 
-          {/* Available golfers */}
-          <div className="space-y-1.5 mb-4">
-            {availableGolfers.map((g) => {
-              const rank = g.tg_ranking || g.world_ranking;
-              return (
-                <button
-                  key={g.id}
-                  type="button"
-                  onClick={() => makePick(g.id)}
-                  disabled={saving || !currentPicker}
-                  className="w-full flex items-center justify-between p-3 rounded-xl bg-white border border-masters-cream-dark active:bg-masters-green/5 active:border-masters-green transition-colors disabled:opacity-50 text-left"
-                >
-                  <div className="flex items-center gap-2">
-                    {rank && <span className="text-[10px] text-gray-400 font-mono w-6">#{rank}</span>}
-                    <span className="text-sm font-medium text-gray-900">{g.name}</span>
-                  </div>
-                  <svg className="w-4 h-4 text-masters-green opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                </button>
-              );
-            })}
+          {/* Golfer list with checkboxes / owner labels */}
+          <div className="card overflow-hidden mb-4">
+            <div className="divide-y divide-masters-cream-dark max-h-[400px] overflow-y-auto">
+              {golfers
+                .filter(g => g.name.toLowerCase().includes(search.toLowerCase()))
+                .map((g) => {
+                  const rank = g.tg_ranking || g.world_ranking;
+                  const isDrafted = draftedIds.has(g.id);
+                  const owner = isDrafted
+                    ? players.find(p => assignments.find(a => a.golfer_id === g.id && a.player_id === p.id))
+                    : null;
+                  const isSelected = selectedGolfer === g.id;
+
+                  if (isDrafted) {
+                    return (
+                      <div key={g.id} className="flex items-center gap-3 px-4 py-3 opacity-50">
+                        <div className="w-5 h-5 flex-shrink-0" />
+                        {rank && <span className="text-[10px] text-gray-400 font-mono w-6 flex-shrink-0">#{rank}</span>}
+                        <span className="text-sm text-gray-500 line-through flex-1">{g.name}</span>
+                        <span className="text-[10px] bg-masters-green/10 text-masters-green px-2 py-0.5 rounded-full font-semibold flex-shrink-0">
+                          {owner?.name}
+                        </span>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <button
+                      key={g.id}
+                      type="button"
+                      onClick={() => setSelectedGolfer(isSelected ? null : g.id)}
+                      disabled={!currentPicker}
+                      className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors
+                        ${isSelected ? "bg-masters-green/10" : "active:bg-masters-cream/60"}`}
+                    >
+                      <div className={`w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors
+                        ${isSelected ? "border-masters-green bg-masters-green" : "border-gray-300"}`}>
+                        {isSelected && (
+                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </div>
+                      {rank && <span className="text-[10px] text-gray-400 font-mono w-6 flex-shrink-0">#{rank}</span>}
+                      <span className="text-sm font-medium text-gray-900">{g.name}</span>
+                    </button>
+                  );
+                })}
+            </div>
           </div>
 
-          {/* Teams summary */}
+          {/* Teams */}
           <div className="gold-rule mb-4" />
-          <h3 className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-3">Teams</h3>
+          <h3 className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-3 px-1">Teams</h3>
           <div className="space-y-3 mb-6">
             {players.map((p) => {
               const myPicks = assignments
@@ -255,11 +287,11 @@ export default function DraftPage() {
             })}
           </div>
 
-          {/* Lock pool button */}
+          {/* Lock pool */}
           <button
             onClick={lockPool}
             disabled={!allEqual || saving}
-            className={`w-full py-4 rounded-xl font-semibold text-sm transition-colors ${
+            className={`w-full py-4 rounded-xl font-semibold text-sm transition-colors mb-4 ${
               allEqual
                 ? "bg-masters-gold text-white active:bg-masters-gold-dark"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
@@ -267,7 +299,7 @@ export default function DraftPage() {
           >
             {allEqual
               ? `Lock Pool — ${pickCounts[0]} golfers each`
-              : `Each player must have the same number of picks`
+              : "Each player must have equal picks to lock"
             }
           </button>
         </>

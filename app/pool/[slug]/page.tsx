@@ -258,6 +258,252 @@ function StandingCard({ standing, expanded, onToggle, index, buyIn, allStandings
   );
 }
 
+function LiveDraft({ slug, config, isOwner, onComplete }: {
+  slug: string;
+  config: PoolConfig & { assignments: { playerId: string; golferId: string; pickNumber: number }[] };
+  isOwner: boolean;
+  onComplete: () => void;
+}) {
+  const [players, setPlayers] = useState<{ id: string; name: string; pick_order: number }[]>([]);
+  const [draftAssignments, setDraftAssignments] = useState<{ player_id: string; golfer_id: string; pick_number: number }[]>([]);
+  const [orderDrawn, setOrderDrawn] = useState(false);
+  const [selectedGolfer, setSelectedGolfer] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const fetchDraft = useCallback(async () => {
+    const res = await fetch(`/api/pool/${slug}/draft`);
+    if (res.ok) {
+      const data = await res.json();
+      const sorted = data.players.sort((a: { pick_order: number }, b: { pick_order: number }) => a.pick_order - b.pick_order);
+      setPlayers(sorted);
+      setDraftAssignments(data.assignments);
+      const orders = sorted.map((p: { pick_order: number }) => p.pick_order);
+      setOrderDrawn(new Set(orders).size === orders.length && orders.length > 1);
+    }
+  }, [slug]);
+
+  useEffect(() => {
+    fetchDraft();
+    const interval = setInterval(fetchDraft, 5000); // Refresh every 5s for spectators
+    return () => clearInterval(interval);
+  }, [fetchDraft]);
+
+  function getSnakeOrder(pickNum: number) {
+    const n = players.length;
+    if (n === 0) return null;
+    const round = Math.floor(pickNum / n);
+    const pos = pickNum % n;
+    const idx = round % 2 === 0 ? pos : n - 1 - pos;
+    return players[idx];
+  }
+
+  async function drawOrder() {
+    setSaving(true);
+    await fetch(`/api/pool/${slug}/draft`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "draw_order" }),
+    });
+    await fetchDraft();
+    setSaving(false);
+  }
+
+  async function confirmPick() {
+    if (!selectedGolfer) return;
+    setSaving(true);
+    const picker = getSnakeOrder(draftAssignments.length);
+    await fetch(`/api/pool/${slug}/draft`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "pick", playerId: picker?.id, golferId: selectedGolfer, pickNumber: draftAssignments.length + 1 }),
+    });
+    setSelectedGolfer(null);
+    await fetchDraft();
+    setSaving(false);
+  }
+
+  async function undoPick() {
+    setSaving(true);
+    await fetch(`/api/pool/${slug}/draft`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "undo" }),
+    });
+    setSelectedGolfer(null);
+    await fetchDraft();
+    setSaving(false);
+  }
+
+  async function lockDraft() {
+    setSaving(true);
+    await fetch(`/api/pool/${slug}/draft`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "lock" }),
+    });
+    onComplete();
+  }
+
+  const draftedIds = new Set(draftAssignments.map(a => a.golfer_id));
+  const picksPerPlayer: Record<string, number> = {};
+  for (const p of players) picksPerPlayer[p.id] = 0;
+  for (const a of draftAssignments) picksPerPlayer[a.player_id] = (picksPerPlayer[a.player_id] || 0) + 1;
+  const pickCounts = Object.values(picksPerPlayer);
+  const allEqual = pickCounts.length > 0 && pickCounts.every(c => c === pickCounts[0]) && pickCounts[0] > 0;
+  const currentPicker = getSnakeOrder(draftAssignments.length);
+  const currentRound = players.length > 0 ? Math.floor(draftAssignments.length / players.length) + 1 : 0;
+  const selectedName = config.golfers.find(g => g.id === selectedGolfer)?.name;
+
+  // Draw order step
+  if (!orderDrawn) {
+    return (
+      <div className="card p-6 text-center mt-4">
+        <h2 className="font-serif text-lg font-bold text-masters-green mb-2">
+          {isOwner ? "Draw for Pick Order" : "Waiting for Chairman to Draw Order..."}
+        </h2>
+        <div className="space-y-2 mb-6">
+          {players.map(p => (
+            <div key={p.id} className="flex items-center gap-3 bg-masters-cream/60 rounded-xl px-4 py-3">
+              <span className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-400">?</span>
+              <span className="font-medium text-gray-800">{p.name}</span>
+            </div>
+          ))}
+        </div>
+        {isOwner && (
+          <button onClick={drawOrder} disabled={saving} className="btn-gold w-full disabled:opacity-60">
+            {saving ? "Drawing..." : "Draw Straws"}
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4">
+      {/* Pick order bar */}
+      <div className="flex items-center gap-2 justify-center mb-4 flex-wrap">
+        {players.map((p, i) => (
+          <div key={p.id} className={`flex flex-col items-center px-3 py-2 rounded-xl text-center
+            ${currentPicker?.id === p.id ? "bg-masters-green text-white shadow-card" : "bg-white border border-masters-cream-dark text-gray-600"}`}>
+            <span className="text-[9px] font-bold uppercase tracking-wider opacity-70">#{i + 1}</span>
+            <span className="text-xs font-bold truncate max-w-[70px]">{p.name}</span>
+            <span className="text-[9px] opacity-60">{picksPerPlayer[p.id]} picks</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Current picker banner */}
+      {currentPicker && (
+        <div className="bg-masters-green text-white rounded-xl px-4 py-3 mb-3 text-center">
+          <p className="text-[10px] uppercase tracking-wider opacity-70 mb-0.5">Round {currentRound} · Pick #{draftAssignments.length + 1}</p>
+          <p className="font-serif text-xl font-bold">{currentPicker.name}&apos;s Pick</p>
+        </div>
+      )}
+
+      {/* Confirm button (chairman only, when golfer selected) */}
+      {isOwner && selectedGolfer && currentPicker && (
+        <button onClick={confirmPick} disabled={saving} className="w-full btn-gold mb-3 disabled:opacity-60">
+          {saving ? "Adding..." : `Add ${selectedName} to ${currentPicker.name}'s Team`}
+        </button>
+      )}
+
+      {/* Chairman actions */}
+      {isOwner && (
+        <div className="flex justify-between mb-3 px-1">
+          {draftAssignments.length > 0 ? (
+            <button onClick={undoPick} disabled={saving} className="text-xs text-red-400 font-semibold active:underline disabled:opacity-50">Undo Last Pick</button>
+          ) : <div />}
+          <button onClick={drawOrder} disabled={saving} className="text-xs text-gray-400 font-semibold active:underline disabled:opacity-50">Redraw Order</button>
+        </div>
+      )}
+
+      {/* Search */}
+      <div className="relative mb-3">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search golfers..." className="input-field pl-10 text-sm" />
+      </div>
+
+      {/* Golfer list */}
+      <div className="card overflow-hidden mb-4">
+        <div className="divide-y divide-masters-cream-dark max-h-[400px] overflow-y-auto">
+          {config.golfers
+            .filter(g => g.name.toLowerCase().includes(search.toLowerCase()))
+            .sort((a, b) => (a.worldRanking || 999) - (b.worldRanking || 999))
+            .map(g => {
+              const isDrafted = draftedIds.has(g.id);
+              const owner = isDrafted ? players.find(p => draftAssignments.find(a => a.golfer_id === g.id && a.player_id === p.id)) : null;
+              const isSelected = selectedGolfer === g.id;
+
+              if (isDrafted) {
+                return (
+                  <div key={g.id} className="flex items-center gap-3 px-4 py-3 opacity-50">
+                    <div className="w-5 h-5 flex-shrink-0" />
+                    {g.worldRanking && <span className="text-[10px] text-gray-400 font-mono w-6 flex-shrink-0">#{g.worldRanking}</span>}
+                    <span className="text-sm text-gray-500 line-through flex-1">{g.name}</span>
+                    <span className="text-[10px] bg-masters-green/10 text-masters-green px-2 py-0.5 rounded-full font-semibold flex-shrink-0">{owner?.name}</span>
+                  </div>
+                );
+              }
+
+              if (!isOwner) {
+                return (
+                  <div key={g.id} className="flex items-center gap-3 px-4 py-3">
+                    <div className="w-5 h-5 flex-shrink-0" />
+                    {g.worldRanking && <span className="text-[10px] text-gray-400 font-mono w-6 flex-shrink-0">#{g.worldRanking}</span>}
+                    <span className="text-sm font-medium text-gray-900">{g.name}</span>
+                  </div>
+                );
+              }
+
+              return (
+                <button key={g.id} type="button" onClick={() => setSelectedGolfer(isSelected ? null : g.id)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${isSelected ? "bg-masters-green/10" : "active:bg-masters-cream/60"}`}>
+                  <div className={`w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors ${isSelected ? "border-masters-green bg-masters-green" : "border-gray-300"}`}>
+                    {isSelected && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                  </div>
+                  {g.worldRanking && <span className="text-[10px] text-gray-400 font-mono w-6 flex-shrink-0">#{g.worldRanking}</span>}
+                  <span className="text-sm font-medium text-gray-900">{g.name}</span>
+                </button>
+              );
+            })}
+        </div>
+      </div>
+
+      {/* Teams */}
+      <div className="gold-rule mb-4" />
+      <h3 className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-3 px-1">Teams</h3>
+      <div className="space-y-3 mb-6">
+        {players.map(p => {
+          const myPicks = draftAssignments.filter(a => a.player_id === p.id).sort((a, b) => a.pick_number - b.pick_number);
+          return (
+            <div key={p.id} className="card p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-serif font-bold text-sm text-masters-green">{p.name}</span>
+                <span className="text-[10px] text-gray-400">{myPicks.length} picks</span>
+              </div>
+              {myPicks.length > 0 ? (
+                <div className="flex flex-wrap gap-1">
+                  {myPicks.map(a => {
+                    const g = config.golfers.find(gf => gf.id === a.golfer_id);
+                    return <span key={a.golfer_id} className="text-[10px] bg-masters-cream-dark rounded-full px-2 py-0.5 font-medium text-gray-700">{g?.name || "?"}</span>;
+                  })}
+                </div>
+              ) : <p className="text-[10px] text-gray-300 italic">No picks yet</p>}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Lock button (chairman only) */}
+      {isOwner && (
+        <button onClick={lockDraft} disabled={!allEqual || saving}
+          className={`w-full py-4 rounded-xl font-semibold text-sm transition-colors mb-4 ${allEqual ? "bg-masters-gold text-white active:bg-masters-gold-dark" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>
+          {allEqual ? `Lock Draft — ${pickCounts[0]} golfers each` : "Each player must have equal picks to lock"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function SettingsPill({ label, info }: { label: string; info: string }) {
   const [showInfo, setShowInfo] = useState(false);
   return (
@@ -298,6 +544,8 @@ export default function PoolLeaderboardPage() {
   const [customAdHeadline, setCustomAdHeadline] = useState<string | null>(null);
   const [customAdDescription, setCustomAdDescription] = useState<string | null>(null);
   const [adRemoved, setAdRemoved] = useState(false);
+  const [draftComplete, setDraftComplete] = useState(true);
+  const [isOwner, setIsOwner] = useState(false);
 
   const fetchPool = useCallback(async () => {
     try {
@@ -314,6 +562,15 @@ export default function PoolLeaderboardPage() {
         if (data.customAdHeadline) setCustomAdHeadline(data.customAdHeadline);
         if (data.customAdDescription) setCustomAdDescription(data.customAdDescription);
         if (data.adRemoved) setAdRemoved(data.adRemoved);
+        setDraftComplete(data.draftComplete !== false);
+        // Check if current user is chairman
+        try {
+          const meRes = await fetch("/api/auth/me");
+          if (meRes.ok) {
+            const me = await meRes.json();
+            if (me?.chairmanId === data.chairmanId) setIsOwner(true);
+          }
+        } catch { /* not logged in */ }
       }
     } finally {
       setLoading(false);
@@ -448,32 +705,42 @@ export default function PoolLeaderboardPage() {
         </button>
       </div>
 
-      {/* Standings cards */}
-      <div className="space-y-3">
-        {standings.map((standing, i) => (
-          <StandingCard
-            key={standing.player.id}
-            standing={standing}
-            expanded={expandedId === standing.player.id}
-            onToggle={() =>
-              setExpandedId(expandedId === standing.player.id ? null : standing.player.id)
-            }
-            index={i}
-            buyIn={config.buyIn}
-            allStandings={standings}
-            tournamentOver={currentRound >= 4}
-            payoutMethod={config.settings.payoutMethod || "honor-system"}
-            chairmanNameForPayout={chairmanName}
-          />
-        ))}
-      </div>
+      {/* Live Draft or Standings */}
+      {!draftComplete ? (
+        <LiveDraft
+          slug={slug as string}
+          config={config as PoolConfig & { assignments: { playerId: string; golferId: string; pickNumber: number }[] }}
+          isOwner={isOwner}
+          onComplete={fetchPool}
+        />
+      ) : (
+        <>
+          {/* Standings cards */}
+          <div className="space-y-3">
+            {standings.map((standing, i) => (
+              <StandingCard
+                key={standing.player.id}
+                standing={standing}
+                expanded={expandedId === standing.player.id}
+                onToggle={() =>
+                  setExpandedId(expandedId === standing.player.id ? null : standing.player.id)
+                }
+                index={i}
+                buyIn={config.buyIn}
+                allStandings={standings}
+                tournamentOver={currentRound >= 4}
+                payoutMethod={config.settings.payoutMethod || "honor-system"}
+                chairmanNameForPayout={chairmanName}
+              />
+            ))}
+          </div>
 
-      {/* Empty state */}
-      {currentRound === 0 && (
-        <div className="text-center mt-8 mb-4">
-          <div className="gold-rule mb-4" />
-          <p className="font-serif italic text-gray-400 text-sm">
-            Scores will appear once Round 1 data is entered.
+          {/* Empty state */}
+          {currentRound === 0 && (
+            <div className="text-center mt-8 mb-4">
+              <div className="gold-rule mb-4" />
+              <p className="font-serif italic text-gray-400 text-sm">
+                Scores will appear once Round 1 data is entered.
           </p>
         </div>
       )}
@@ -492,6 +759,8 @@ export default function PoolLeaderboardPage() {
           Sign Up Here
         </Link>
       </div>
+        </>
+      )}
     </div>
   );
 }

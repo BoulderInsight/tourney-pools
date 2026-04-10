@@ -572,7 +572,7 @@ export default function PoolSetupPage() {
                     });
                     setSaving(false);
                     if (res.ok) {
-                      router.push(`/pool/${slug}/draft`);
+                      router.push(`/pool/${slug}`);
                     } else {
                       setError("Failed to save. Try again.");
                     }

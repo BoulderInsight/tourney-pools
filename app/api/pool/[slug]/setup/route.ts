@@ -41,7 +41,8 @@ export async function POST(
       pool_name = ${poolName},
       buy_in = ${buyIn},
       settings = ${JSON.stringify(settings)},
-      setup_complete = ${settings.draftType === "random"}
+      setup_complete = true,
+      draft_complete = ${settings.draftType === "random"}
     WHERE id = ${poolId}
   `;
 

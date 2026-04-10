@@ -97,7 +97,7 @@ export async function POST(
   }
 
   if (body.action === "lock") {
-    await sql`UPDATE pools SET setup_complete = true WHERE id = ${poolId}`;
+    await sql`UPDATE pools SET draft_complete = true WHERE id = ${poolId}`;
     return NextResponse.json({ ok: true });
   }
 
