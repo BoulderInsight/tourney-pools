@@ -196,20 +196,22 @@ function DashboardContent() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-end gap-3 mb-2">
-        {isSuperAdmin && (
-          <Link href="/admin" className="text-xs text-purple-600 font-semibold">
-            Admin
-          </Link>
-        )}
-        <button onClick={handleLogout} className="text-xs text-gray-400 active:text-red-500 transition-colors">
-          Sign out
-        </button>
-      </div>
-      <div className="flex items-center justify-center mb-2">
+      <div className="flex items-start justify-between mb-6">
         <Image src="/mymasterspool2.png" alt="My Masters Pool" width={200} height={100} />
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-3">
+            {isSuperAdmin && (
+              <Link href="/admin" className="text-xs text-purple-600 font-semibold">
+                Admin
+              </Link>
+            )}
+            <button onClick={handleLogout} className="text-xs text-gray-400 active:text-red-500 transition-colors">
+              Sign out
+            </button>
+          </div>
+          <h1 className="font-serif text-2xl font-bold text-masters-green">My Pools</h1>
+        </div>
       </div>
-      <h1 className="font-serif text-2xl font-bold text-masters-green mb-6">My Pools</h1>
 
       {/* Upgrade success */}
       {justUpgraded && (

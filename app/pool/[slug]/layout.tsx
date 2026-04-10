@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -52,9 +53,10 @@ export default function PoolLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <>
-      {/* Top bar with nav */}
-      <div className="flex items-center justify-end mb-2 -mt-1">
-        {isLoggedIn && (
+      {/* Top bar with logo + nav */}
+      {isLoggedIn && (
+        <div className="flex items-center justify-between mb-2 -mt-1">
+          <Image src="/mymasterspool2.png" alt="My Masters Pool" width={140} height={70} />
           <div className="flex items-center gap-3">
             <Link href="/dashboard" className="text-xs text-masters-green font-semibold active:underline">
               My Pools
@@ -63,8 +65,8 @@ export default function PoolLayout({ children }: { children: React.ReactNode }) 
               Sign out
             </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
       {children}
       <nav className="fixed bottom-0 inset-x-0 z-50 bg-white/95 backdrop-blur-md border-t border-masters-cream-dark">
         <div className="flex items-stretch" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
