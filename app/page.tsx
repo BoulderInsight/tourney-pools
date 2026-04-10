@@ -5,7 +5,7 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[80vh] text-center">
       <Image
-        src="/MyMastersPoolstacked.jpeg"
+        src="/MyMastersPoolstacked.png"
         alt="My Masters Pool"
         width={360}
         height={200}
