@@ -405,19 +405,20 @@ function LiveDraft({ slug, config, isOwner, onComplete }: {
         ))}
       </div>
 
-      {/* Current picker banner */}
+      {/* Current picker / confirm pick (replaces banner when golfer selected) */}
       {currentPicker && (
-        <div className="bg-masters-green text-white rounded-xl px-4 py-3 mb-3 text-center">
-          <p className="text-[10px] uppercase tracking-wider opacity-70 mb-0.5">Round {currentRound} · Pick #{draftAssignments.length + 1}</p>
-          <p className="font-serif text-xl font-bold">{currentPicker.name}&apos;s Pick</p>
-        </div>
-      )}
-
-      {/* Confirm button (chairman only, when golfer selected) */}
-      {isOwner && selectedGolfer && currentPicker && (
-        <button onClick={confirmPick} disabled={saving} className="w-full btn-gold mb-3 disabled:opacity-60">
-          {saving ? "Adding..." : `Add ${selectedName} to ${currentPicker.name}'s Team`}
-        </button>
+        isOwner && selectedGolfer ? (
+          <button onClick={confirmPick} disabled={saving}
+            className="w-full rounded-xl px-4 py-3 mb-3 text-center font-semibold text-sm transition-colors disabled:opacity-60"
+            style={{ backgroundColor: "#fed60d", color: "#096a52" }}>
+            {saving ? "Adding..." : `Add ${selectedName} to ${currentPicker.name}'s Team`}
+          </button>
+        ) : (
+          <div className="bg-masters-green text-white rounded-xl px-4 py-3 mb-3 text-center">
+            <p className="text-[10px] uppercase tracking-wider opacity-70 mb-0.5">Round {currentRound} · Pick #{draftAssignments.length + 1}</p>
+            <p className="font-serif text-xl font-bold">{currentPicker.name}&apos;s Pick</p>
+          </div>
+        )
       )}
 
       {/* Copy link for spectators */}
