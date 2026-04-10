@@ -409,9 +409,9 @@ function LiveDraft({ slug, config, isOwner, onComplete }: {
       {currentPicker && (
         isOwner && selectedGolfer ? (
           <button onClick={confirmPick} disabled={saving}
-            className="w-full rounded-xl px-4 py-3 mb-3 text-center font-semibold text-sm transition-colors disabled:opacity-60"
-            style={{ backgroundColor: "#fed60d", color: "#096a52" }}>
-            {saving ? "Adding..." : `Add ${selectedName} to ${currentPicker.name}'s Team`}
+            className="w-full btn-gold rounded-xl px-4 py-3 mb-3 text-center disabled:opacity-60">
+            <p className="text-[10px] uppercase tracking-wider opacity-70 mb-0.5">Tap to confirm</p>
+            <p className="font-serif text-xl font-bold">Add {selectedName} to {currentPicker.name}&apos;s Team</p>
           </button>
         ) : (
           <div className="bg-masters-green text-white rounded-xl px-4 py-3 mb-3 text-center">
