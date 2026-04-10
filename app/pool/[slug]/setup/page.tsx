@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useId, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { CommissionerSettings, PoolPlayer, DraftType, MissedCutRule, PurseType, PayoutMethod } from "@/lib/types";
 import { DEFAULT_SETTINGS, DEFAULT_FIELD, draftGolfers } from "@/lib/pool";
 
@@ -112,6 +112,7 @@ function StepDots({ current, total }: { current: number; total: number }) {
 
 export default function PoolSetupPage() {
   const { slug } = useParams() as { slug: string };
+  const router = useRouter();
   const uid = useId();
   const [step, setStep] = useState(0);
 
@@ -548,14 +549,49 @@ export default function PoolSetupPage() {
               <button type="button" onClick={() => setStep(1)} className="text-sm text-gray-400 font-medium px-4 py-3">
                 Back
               </button>
-              <button
-                type="button"
-                onClick={runDraft}
-                disabled={golferCount < validPlayers.length}
-                className="btn-green disabled:opacity-40"
-              >
-                Run Draft
-              </button>
+              {settings.draftType === "snake" ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setSaving(true);
+                    setError("");
+                    const golferEntries = parseFieldEntries();
+                    const dist = settings.purseType === "custom"
+                      ? customDist.split(",").map((n) => Number(n.trim())) : [];
+                    const finalSettings = { ...settings, purseDistribution: dist };
+                    const res = await fetch(`/api/pool/${slug}/setup`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        poolName,
+                        players: players.filter((p) => p.name.trim()),
+                        golferEntries,
+                        buyIn,
+                        settings: finalSettings,
+                      }),
+                    });
+                    setSaving(false);
+                    if (res.ok) {
+                      router.push(`/pool/${slug}/draft`);
+                    } else {
+                      setError("Failed to save. Try again.");
+                    }
+                  }}
+                  disabled={golferCount < validPlayers.length || saving}
+                  className="btn-gold disabled:opacity-40"
+                >
+                  {saving ? "Saving..." : "Start Live Draft"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={runDraft}
+                  disabled={golferCount < validPlayers.length}
+                  className="btn-green disabled:opacity-40"
+                >
+                  Run Auto Draft
+                </button>
+              )}
             </div>
           </div>
         )}
