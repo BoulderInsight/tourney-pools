@@ -289,7 +289,7 @@ export default function PoolScoresPage() {
     <div>
       {/* Sticky search + filters */}
       <div className="sticky top-0 z-40 -mx-4 px-4 pt-2 pb-3 bg-masters-cream/95 backdrop-blur-sm space-y-3">
-        <div className="-mt-1 text-right">
+        <div className="-mt-4 text-right">
           <h1 className="font-serif text-2xl font-bold text-masters-green">
             {isSuperAdmin ? "Score Entry" : "Scores"}
           </h1>
