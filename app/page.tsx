@@ -5,10 +5,10 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[80vh] text-center">
       <Image
-        src="/MyMastersPoolstacked.png"
+        src="/MyMastersPoolstacked.jpeg"
         alt="My Masters Pool"
-        width={320}
-        height={232}
+        width={360}
+        height={200}
         className="mb-6"
         priority
       />

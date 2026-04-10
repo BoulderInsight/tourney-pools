@@ -119,7 +119,7 @@ export default function DraftPage() {
     <div className="pb-safe">
       {/* Header */}
       <div className="flex items-center justify-center mb-3">
-        <Image src="/MyMastersPoolstacked.png" alt="My Masters Pool" width={160} height={116} />
+        <Image src="/MyMastersPoolstacked.jpeg" alt="My Masters Pool" width={260} height={144} />
       </div>
       <h1 className="font-serif text-2xl font-bold text-masters-green text-center mb-4">Live Snake Draft</h1>
 
