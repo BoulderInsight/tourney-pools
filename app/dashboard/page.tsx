@@ -198,7 +198,7 @@ function DashboardContent() {
       {/* Header with logo */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <Image src="/MyMastersPoolstacked.png" alt="My Masters Pool" width={60} height={44} />
+          <Image src="/MyMastersPoolstacked.png" alt="My Masters Pool" width={100} height={73} />
           <h1 className="font-serif text-2xl font-bold text-masters-green">My Pools</h1>
         </div>
         <div className="flex items-center gap-3">

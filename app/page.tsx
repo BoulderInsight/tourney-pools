@@ -7,8 +7,8 @@ export default function LandingPage() {
       <Image
         src="/MyMastersPoolstacked.png"
         alt="My Masters Pool"
-        width={220}
-        height={160}
+        width={320}
+        height={232}
         className="mb-6"
         priority
       />
