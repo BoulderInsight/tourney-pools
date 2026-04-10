@@ -9,15 +9,11 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { slug: string } }
 ) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+  // GET is public so spectators can watch the draft
   const sql = getDb();
   const poolRows = await sql`
     SELECT id, settings FROM pools
-    WHERE slug = ${params.slug} AND chairman_id = ${session.chairmanId}
+    WHERE slug = ${params.slug}
   `;
   if (poolRows.length === 0) {
     return NextResponse.json({ error: "Pool not found" }, { status: 404 });
