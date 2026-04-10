@@ -92,26 +92,44 @@ function GolferDetail({ golfer, counted, totalScore, penaltyScore }: {
   );
 }
 
-function PayoutInfo({ standing, buyIn, allStandings }: {
+function PayoutInfo({ standing, buyIn, allStandings, payoutMethod, chairmanName }: {
   standing: PlayerStanding;
   buyIn: number;
   allStandings: PlayerStanding[];
+  payoutMethod: string;
+  chairmanName: string;
 }) {
   const winners = allStandings.filter(s => s.prize > 0);
   const isWinner = standing.prize > 0;
   const netWin = standing.prize - buyIn;
+  const isChairmanCollects = payoutMethod === "chairman-collects";
 
   if (isWinner && netWin > 0) {
     return (
       <div className="mt-3 bg-green-50 rounded-xl p-3">
         <p className="text-xs font-semibold text-green-700">
-          Collects ${netWin} net (${standing.prize} prize - ${buyIn} buy-in)
+          {isChairmanCollects
+            ? `Receives $${standing.prize} from the Chairman`
+            : `Collects $${netWin} net ($${standing.prize} prize - $${buyIn} buy-in)`
+          }
         </p>
       </div>
     );
   }
 
   if (!isWinner && winners.length > 0) {
+    if (isChairmanCollects) {
+      return (
+        <div className="mt-3 bg-red-50 rounded-xl p-3">
+          <p className="text-[10px] text-red-400 uppercase tracking-wider font-semibold mb-1.5">Owes</p>
+          <p className="text-xs font-medium text-red-700">
+            Pay {chairmanName || "the Chairman"} <strong>${buyIn.toFixed(2)}</strong>
+          </p>
+        </div>
+      );
+    }
+
+    // Honor system — show individual payments to each winner
     const totalPrize = winners.reduce((s, w) => s + w.prize, 0);
     const payments = winners.map(w => ({
       name: w.player.name,
@@ -133,7 +151,7 @@ function PayoutInfo({ standing, buyIn, allStandings }: {
   return null;
 }
 
-function StandingCard({ standing, expanded, onToggle, index, buyIn, allStandings, tournamentOver }: {
+function StandingCard({ standing, expanded, onToggle, index, buyIn, allStandings, tournamentOver, payoutMethod, chairmanNameForPayout }: {
   standing: PlayerStanding;
   expanded: boolean;
   onToggle: () => void;
@@ -141,6 +159,8 @@ function StandingCard({ standing, expanded, onToggle, index, buyIn, allStandings
   buyIn: number;
   allStandings: PlayerStanding[];
   tournamentOver: boolean;
+  payoutMethod: string;
+  chairmanNameForPayout: string;
 }) {
   const isLeader = standing.rank === 1 && standing.totalScore !== null;
   const hasRank = standing.rank > 0;
@@ -231,7 +251,7 @@ function StandingCard({ standing, expanded, onToggle, index, buyIn, allStandings
           </div>
 
           {/* Payout info when tournament is over */}
-          {tournamentOver && <PayoutInfo standing={standing} buyIn={buyIn} allStandings={allStandings} />}
+          {tournamentOver && <PayoutInfo standing={standing} buyIn={buyIn} allStandings={allStandings} payoutMethod={payoutMethod} chairmanName={chairmanNameForPayout} />}
         </div>
       )}
     </div>
@@ -442,6 +462,8 @@ export default function PoolLeaderboardPage() {
             buyIn={config.buyIn}
             allStandings={standings}
             tournamentOver={currentRound >= 4}
+            payoutMethod={config.settings.payoutMethod || "honor-system"}
+            chairmanNameForPayout={chairmanName}
           />
         ))}
       </div>

@@ -2,6 +2,7 @@ export type DraftType = "snake" | "random";
 export type ScoringType = "all" | "best-n";
 export type MissedCutRule = "penalty" | "zero" | "worst-made";
 export type PurseType = "winner-take-all" | "70-30" | "60-30-10" | "custom";
+export type PayoutMethod = "chairman-collects" | "honor-system";
 
 export interface CommissionerSettings {
   draftType: DraftType;
@@ -11,6 +12,7 @@ export interface CommissionerSettings {
   missedCutPenalty: number;
   purseType: PurseType;
   purseDistribution: number[];
+  payoutMethod?: PayoutMethod;
 }
 
 export interface PoolPlayer {

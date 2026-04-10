@@ -10,7 +10,7 @@ import {
 } from "./types";
 
 export const DEFAULT_SETTINGS: CommissionerSettings = {
-  draftType: "snake",
+  draftType: "random",
   scoringType: "all",
   bestN: 4,
   missedCutRule: "penalty",

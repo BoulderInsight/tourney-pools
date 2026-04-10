@@ -2,7 +2,7 @@
 
 import { useState, useId, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { CommissionerSettings, PoolPlayer, DraftType, MissedCutRule, PurseType } from "@/lib/types";
+import { CommissionerSettings, PoolPlayer, DraftType, MissedCutRule, PurseType, PayoutMethod } from "@/lib/types";
 import { DEFAULT_SETTINGS, DEFAULT_FIELD, draftGolfers } from "@/lib/pool";
 
 const STEPS = ["Pool Info", "Rules", "Field", "Draft", "Confirm"] as const;
@@ -354,19 +354,20 @@ export default function PoolSetupPage() {
             <Section label="Draft Type">
               <div className="space-y-2.5">
                 <OptionCard
-                  selected={settings.draftType === "snake"}
-                  onClick={() => set("draftType", "snake")}
-                  title="Snake Draft"
-                  description="Picks reverse each round. Fair distribution across all players."
-                  badge="Recommended"
-                  info="In a snake draft, the pick order reverses each round. Example with 4 players: Round 1 picks 1-2-3-4, Round 2 picks 4-3-2-1, Round 3 picks 1-2-3-4, and so on. This ensures the person who picks last in one round picks first in the next, creating the fairest possible distribution of golfer talent across all teams."
-                />
-                <OptionCard
                   selected={settings.draftType === "random"}
                   onClick={() => set("draftType", "random")}
-                  title="Pure Random"
-                  description="Golfers assigned sequentially. Simpler, but less balanced."
-                  info="All golfers are shuffled randomly and then dealt out one at a time to each player in order (1-2-3-4-1-2-3-4...). This is the simplest method but can be less fair since later picks in each round always go to the same players. Best for casual pools where simplicity is preferred over perfect balance."
+                  title="Auto Random"
+                  description="Golfers are shuffled and dealt out randomly. Fully automated — no picking required."
+                  badge="Quick & Easy"
+                  info="All golfers in the field are randomly shuffled, then automatically dealt out evenly to each player. No one picks — the app handles everything instantly. Great for casual pools or when you don't want to coordinate a live draft."
+                />
+                <OptionCard
+                  selected={settings.draftType === "snake"}
+                  onClick={() => set("draftType", "snake")}
+                  title="Live Snake Draft"
+                  description="Players take turns picking golfers. Pick order reverses each round for fairness."
+                  badge="Most Popular"
+                  info="The chairman draws for pick order, then each player takes turns choosing a golfer. The order reverses each round (1-2-3-4, then 4-3-2-1, then 1-2-3-4...) so everyone gets a fair mix of early and late picks. The chairman enters each pick as players call them out. This is how most serious pools run their draft."
                 />
               </div>
             </Section>
@@ -485,6 +486,26 @@ export default function PoolSetupPage() {
               )}
             </Section>
 
+            <Section label="Payout Method">
+              <div className="space-y-2.5">
+                <OptionCard
+                  selected={(settings.payoutMethod || "honor-system") === "honor-system"}
+                  onClick={() => set("payoutMethod", "honor-system")}
+                  title="Honor System"
+                  description="Players settle up directly with each other after the tournament."
+                  badge="Default"
+                  info="When the tournament ends, each player's card will show exactly who they owe and how much. Players handle payments directly — Venmo, cash, etc. The chairman doesn't need to collect or distribute anything."
+                />
+                <OptionCard
+                  selected={settings.payoutMethod === "chairman-collects"}
+                  onClick={() => set("payoutMethod", "chairman-collects")}
+                  title="Chairman Collects"
+                  description="The chairman collects all buy-ins upfront and distributes winnings."
+                  info="The chairman collects the buy-in from each player before the tournament starts, then pays out the winners when it's over. Each player's card will show 'Pay the Chairman' instead of individual names."
+                />
+              </div>
+            </Section>
+
             <div className="flex justify-between">
               <button type="button" onClick={() => setStep(0)} className="text-sm text-gray-400 font-medium px-4 py-3">
                 Back
@@ -515,7 +536,11 @@ export default function PoolSetupPage() {
             <p className="text-xs text-gray-400 mt-2">
               {golferCount} golfers · {validPlayers.length} players
               {golferCount > 0 && validPlayers.length > 0
-                ? ` · ~${Math.ceil(golferCount / validPlayers.length)} golfers per player`
+                ? (() => {
+                    const perPlayer = Math.floor(golferCount / validPlayers.length);
+                    const unused = golferCount % validPlayers.length;
+                    return ` · ${perPlayer} golfers per player${unused > 0 ? ` (${unused} unused)` : ""}`;
+                  })()
                 : ""}
             </p>
 
@@ -636,6 +661,12 @@ export default function PoolSetupPage() {
                       : settings.purseType === "60-30-10"
                       ? "60/30/10 split (top 3)"
                       : `Custom: ${customDist}`,
+                },
+                {
+                  label: "Payout",
+                  value: settings.payoutMethod === "chairman-collects"
+                    ? "Chairman collects"
+                    : "Honor system",
                 },
               ].map(({ label, value }) => (
                 <div key={label} className="flex gap-3 text-sm py-3 border-b border-masters-cream-dark last:border-0">
