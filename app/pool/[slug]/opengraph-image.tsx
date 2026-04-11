@@ -121,11 +121,11 @@ export default async function OGImage({ params }: { params: { slug: string } }) 
             <div
               style={{
                 display: "flex",
-                fontSize: 38,
+                fontSize: 48,
                 fontWeight: 700,
                 color: "#d4a843",
                 marginTop: "16px",
-                textShadow: "0 2px 12px rgba(0,0,0,0.5)",
+                textShadow: "0 3px 16px rgba(0,0,0,0.6)",
               }}
             >
               {tournamentName}
@@ -137,11 +137,11 @@ export default async function OGImage({ params }: { params: { slug: string } }) 
             <div
               style={{
                 display: "flex",
-                fontSize: 36,
+                fontSize: 44,
                 fontWeight: 700,
                 color: "white",
                 marginTop: "12px",
-                textShadow: "0 2px 12px rgba(0,0,0,0.5)",
+                textShadow: "0 3px 16px rgba(0,0,0,0.6)",
               }}
             >
               ${totalPurse} Purse
