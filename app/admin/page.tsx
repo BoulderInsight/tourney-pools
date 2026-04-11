@@ -95,7 +95,7 @@ export default function AdminPage() {
     <div>
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
-        <span className="font-serif text-xl font-bold text-tp-primary">TourneyPools</span>
+        <img src="/logo.png" alt="TourneyPools" className="h-8" />
         <div className="flex flex-col items-end gap-1">
           <Link href="/dashboard" className="text-xs text-tp-primary font-semibold">
             Dashboard

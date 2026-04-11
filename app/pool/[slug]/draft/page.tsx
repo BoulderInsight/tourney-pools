@@ -118,7 +118,7 @@ export default function DraftPage() {
     <div className="pb-safe">
       {/* Header */}
       <div className="flex items-center justify-center mb-3">
-        <h1 className="font-serif text-3xl font-bold text-tp-primary">TourneyPools</h1>
+        <img src="/logo.png" alt="TourneyPools" className="h-10 mx-auto" />
       </div>
       <h1 className="font-serif text-2xl font-bold text-tp-primary text-center mb-4">Live Snake Draft</h1>
 

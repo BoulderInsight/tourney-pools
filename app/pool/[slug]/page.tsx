@@ -634,7 +634,7 @@ export default function PoolLeaderboardPage() {
   if (!config) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <h1 className="font-serif text-3xl font-bold text-tp-primary mb-2">TourneyPools</h1>
+        <img src="/logo.png" alt="TourneyPools" className="h-10 mx-auto mb-2" />
         <h1 className="font-serif text-2xl font-bold text-tp-primary mb-2">
           Pool Not Found
         </h1>
@@ -658,7 +658,7 @@ export default function PoolLeaderboardPage() {
   if (!config.setupComplete) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <h1 className="font-serif text-3xl font-bold text-tp-primary mb-2">TourneyPools</h1>
+        <img src="/logo.png" alt="TourneyPools" className="h-10 mx-auto mb-2" />
         <h1 className="font-serif text-2xl font-bold text-tp-primary mb-2">
           Pool Coming Soon
         </h1>

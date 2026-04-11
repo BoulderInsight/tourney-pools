@@ -29,6 +29,7 @@ CREATE TABLE tournaments (
   year INTEGER NOT NULL,
   status TEXT NOT NULL DEFAULT 'scheduled'
     CHECK (status IN ('scheduled', 'in_progress', 'completed', 'cancelled')),
+  logo_url TEXT,
   api_source TEXT,
   api_tournament_id TEXT,
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -108,8 +109,8 @@ CREATE INDEX idx_tournaments_status ON tournaments(status);
 CREATE INDEX idx_tournament_golfers_tournament ON tournament_golfers(tournament_id);
 
 -- Seed 2026 major tournaments
-INSERT INTO tournaments (name, slug, course_name, location, start_date, end_date, year, status) VALUES
-  ('The Masters', 'masters-2026', 'Augusta National Golf Club', 'Augusta, GA', '2026-04-09', '2026-04-12', 2026, 'scheduled'),
-  ('PGA Championship', 'pga-championship-2026', 'Aronimink Golf Club', 'Newtown Square, PA', '2026-05-14', '2026-05-17', 2026, 'scheduled'),
-  ('U.S. Open', 'us-open-2026', 'Oakmont Country Club', 'Oakmont, PA', '2026-06-18', '2026-06-21', 2026, 'scheduled'),
-  ('The Open Championship', 'the-open-2026', 'Royal Portrush Golf Club', 'County Antrim, Northern Ireland', '2026-07-16', '2026-07-19', 2026, 'scheduled');
+INSERT INTO tournaments (name, slug, course_name, location, start_date, end_date, year, status, logo_url) VALUES
+  ('The Masters', 'masters-2026', 'Augusta National Golf Club', 'Augusta, GA', '2026-04-09', '2026-04-12', 2026, 'scheduled', '/tournaments/masters.png'),
+  ('PGA Championship', 'pga-championship-2026', 'Aronimink Golf Club', 'Newtown Square, PA', '2026-05-14', '2026-05-17', 2026, 'scheduled', '/tournaments/pga-championship.png'),
+  ('U.S. Open', 'us-open-2026', 'Oakmont Country Club', 'Oakmont, PA', '2026-06-18', '2026-06-21', 2026, 'scheduled', '/tournaments/us-open.png'),
+  ('The Open Championship', 'the-open-2026', 'Royal Portrush Golf Club', 'County Antrim, Northern Ireland', '2026-07-16', '2026-07-19', 2026, 'scheduled', '/tournaments/the-open.png');

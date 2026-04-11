@@ -55,7 +55,7 @@ export default function PoolLayout({ children }: { children: React.ReactNode }) 
       {/* Top bar with logo + nav + page title */}
       {isLoggedIn && (
         <div className="flex items-start justify-between mb-4 -mt-1">
-          <span className="font-serif text-xl font-bold text-tp-primary">TourneyPools</span>
+          <img src="/logo.png" alt="TourneyPools" className="h-8" />
           <div className="flex flex-col items-end gap-0.5">
             <div className="flex items-center gap-3">
               <Link href="/dashboard" className="text-xs text-tp-primary font-semibold active:underline">

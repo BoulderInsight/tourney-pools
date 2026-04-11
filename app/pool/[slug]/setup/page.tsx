@@ -15,6 +15,7 @@ interface Tournament {
   end_date: string | null;
   year: number;
   status: string;
+  logo_url: string | null;
 }
 
 const STEPS = ["Tournament", "Pool Info", "Rules", "Field", "Draft", "Confirm"] as const;
@@ -382,12 +383,17 @@ export default function PoolSetupPage() {
                           : "border-tp-bg-dark bg-white active:bg-tp-bg/40"}`}
                     >
                       <div className="flex items-start gap-3">
-                        <div
-                          className={`mt-0.5 w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center
-                            ${isSelected ? "border-tp-primary bg-tp-primary" : "border-gray-300"}`}
-                        >
-                          {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
-                        </div>
+                        {t.logo_url ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={t.logo_url} alt="" className="w-10 h-10 object-contain flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <div
+                            className={`mt-0.5 w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center
+                              ${isSelected ? "border-tp-primary bg-tp-primary" : "border-gray-300"}`}
+                          >
+                            {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-semibold text-gray-900">{t.name}</span>

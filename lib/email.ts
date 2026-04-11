@@ -25,20 +25,31 @@ export async function sendVerificationEmail(email: string, token: string) {
     to: email,
     subject: "Verify your TourneyPools account",
     html: `
-      <div style="font-family: Georgia, serif; max-width: 480px; margin: 0 auto; padding: 32px; background: #f7f5f2;">
-        <div style="text-align: center; margin-bottom: 24px;">
-          <h1 style="color: #1a365d; font-size: 24px; margin: 0;">TourneyPools</h1>
+      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #f7f5f2;">
+        <!-- Hero banner -->
+        <div style="border-radius: 12px 12px 0 0; overflow: hidden;">
+          <img src="${BASE_URL}/OGImage.jpeg" alt="TourneyPools" style="display: block; width: 100%; height: auto;" />
         </div>
-        <div style="background: white; border-radius: 12px; padding: 32px; text-align: center;">
-          <h2 style="color: #1a365d; font-size: 20px; margin: 0 0 12px;">Verify Your Email</h2>
-          <p style="color: #666; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
-            Click the button below to verify your email and activate your chairman account.
+
+        <!-- Content card -->
+        <div style="background: #ffffff; padding: 36px 32px 32px; text-align: center;">
+          <h1 style="color: #1a365d; font-size: 22px; font-weight: 700; margin: 0 0 8px;">Verify Your Email</h1>
+          <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 0 0 28px;">
+            Click the button below to activate your account and start creating golf pools.
           </p>
-          <a href="${verifyUrl}" style="display: inline-block; background: #1a365d; color: white; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px;">
+          <a href="${verifyUrl}" style="display: inline-block; background: #1a365d; color: #ffffff; padding: 14px 36px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px; letter-spacing: 0.3px;">
             Verify Email
           </a>
-          <p style="color: #aaa; font-size: 11px; margin-top: 24px;">
-            Or copy this link: ${verifyUrl}
+          <p style="color: #b0b0b0; font-size: 11px; margin-top: 28px; line-height: 1.5;">
+            Or copy this link:<br />
+            <a href="${verifyUrl}" style="color: #2a5298; word-break: break-all;">${verifyUrl}</a>
+          </p>
+        </div>
+
+        <!-- Footer -->
+        <div style="padding: 16px 32px 24px; text-align: center;">
+          <p style="color: #9ca3af; font-size: 11px; margin: 0;">
+            &copy; ${new Date().getFullYear()} TourneyPools &middot; Golf pools for every tournament
           </p>
         </div>
       </div>

@@ -36,7 +36,7 @@ export default function SignupPage() {
     return (
       <main className="px-4 pt-4 pb-safe max-w-lg mx-auto">
       <div className="flex flex-col items-center justify-center min-h-[75vh] text-center">
-        <h1 className="font-serif text-3xl font-bold text-tp-primary mb-2">TourneyPools</h1>
+        <img src="/logo.png" alt="TourneyPools" className="h-10 mx-auto mb-2" />
         <div className="card p-8 w-full">
           <div className="w-16 h-16 rounded-full bg-tp-primary/10 flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-tp-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">

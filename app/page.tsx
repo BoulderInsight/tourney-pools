@@ -11,6 +11,7 @@ interface Tournament {
   end_date: string | null;
   year: number;
   status: string;
+  logo_url: string | null;
 }
 
 function formatDateRange(startDate: string | null, endDate: string | null): string {
@@ -35,7 +36,7 @@ async function getUpcomingTournaments(): Promise<Tournament[]> {
   try {
     const sql = getDb();
     const rows = await sql`
-      SELECT id, name, slug, course_name, location, start_date, end_date, year, status
+      SELECT id, name, slug, course_name, location, start_date, end_date, year, status, logo_url
       FROM tournaments
       WHERE status IN ('scheduled', 'in_progress')
       ORDER BY start_date ASC
@@ -228,20 +229,26 @@ export default async function LandingPage() {
             <div className="grid sm:grid-cols-2 gap-4">
               {tournaments.map((t) => (
                 <div key={t.id} className="bg-white/[0.08] backdrop-blur-sm rounded-2xl p-5 border border-white/[0.08]">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-serif text-lg font-bold text-white">{t.name}</h3>
+                  <div className="flex items-start gap-4 mb-3">
+                    {t.logo_url && (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={t.logo_url} alt="" className="w-10 h-10 object-contain flex-shrink-0 mt-0.5" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-serif text-lg font-bold text-white">{t.name}</h3>
+                        {t.status === "in_progress" ? (
+                          <span className="text-[9px] bg-green-400/20 text-green-300 px-2.5 py-1 rounded-full font-bold uppercase tracking-wider flex-shrink-0">
+                            Live
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-white/30 font-mono flex-shrink-0">{t.year}</span>
+                        )}
+                      </div>
                       {t.course_name && (
                         <p className="text-sm text-white/60 mt-0.5">{t.course_name}</p>
                       )}
                     </div>
-                    {t.status === "in_progress" ? (
-                      <span className="text-[9px] bg-green-400/20 text-green-300 px-2.5 py-1 rounded-full font-bold uppercase tracking-wider flex-shrink-0">
-                        Live
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-white/30 font-mono flex-shrink-0">{t.year}</span>
-                    )}
                   </div>
                   <div className="flex items-center gap-3 text-xs text-white/40">
                     {t.location && (

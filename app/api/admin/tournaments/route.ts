@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { id, name, slug, courseName, location, startDate, endDate, year, status, apiSource, apiTournamentId } = body;
+  const { id, name, slug, courseName, location, startDate, endDate, year, status, logoUrl, apiSource, apiTournamentId } = body;
 
   if (!name || !slug || !year) {
     return NextResponse.json({ error: "name, slug, and year are required" }, { status: 400 });
@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
         end_date = ${endDate || null},
         year = ${year},
         status = ${status || 'scheduled'},
+        logo_url = ${logoUrl || null},
         api_source = ${apiSource || null},
         api_tournament_id = ${apiTournamentId || null},
         updated_at = now()
@@ -64,8 +65,8 @@ export async function POST(req: NextRequest) {
 
   // Create new
   const result = await sql`
-    INSERT INTO tournaments (name, slug, course_name, location, start_date, end_date, year, status, api_source, api_tournament_id)
-    VALUES (${name}, ${slug}, ${courseName || null}, ${location || null}, ${startDate || null}, ${endDate || null}, ${year}, ${status || 'scheduled'}, ${apiSource || null}, ${apiTournamentId || null})
+    INSERT INTO tournaments (name, slug, course_name, location, start_date, end_date, year, status, logo_url, api_source, api_tournament_id)
+    VALUES (${name}, ${slug}, ${courseName || null}, ${location || null}, ${startDate || null}, ${endDate || null}, ${year}, ${status || 'scheduled'}, ${logoUrl || null}, ${apiSource || null}, ${apiTournamentId || null})
     RETURNING id
   `;
 
