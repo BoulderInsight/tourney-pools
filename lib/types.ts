@@ -1,4 +1,4 @@
-export type DraftType = "snake" | "random";
+export type DraftType = "snake" | "random" | "auto-snake";
 export type ScoringType = "all" | "best-n";
 export type MissedCutRule = "penalty" | "zero" | "worst-made";
 export type PurseType = "winner-take-all" | "70-30" | "60-30-10" | "custom";

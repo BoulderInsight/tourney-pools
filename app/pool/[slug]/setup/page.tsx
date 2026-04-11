@@ -196,6 +196,7 @@ export default function PoolSetupPage() {
       name: e.name,
       r1: null, r2: null, r3: null, r4: null,
       madeCut: null,
+      worldRanking: e.ranking,
     }));
 
     const result = draftGolfers(players, golfers, settings.draftType);
@@ -366,6 +367,14 @@ export default function PoolSetupPage() {
                   description="Golfers are shuffled and dealt out randomly. Fully automated — no picking required."
                   badge="Quick & Easy"
                   info="All golfers in the field are randomly shuffled, then automatically dealt out evenly to each player. No one picks — the app handles everything instantly. Great for casual pools or when you don't want to coordinate a live draft."
+                />
+                <OptionCard
+                  selected={settings.draftType === "auto-snake"}
+                  onClick={() => set("draftType", "auto-snake")}
+                  title="Auto Snake Draft"
+                  description="Randomized player order, golfers assigned by world ranking in snake format."
+                  badge="Best of Both"
+                  info="Player order is randomized, then golfers are assigned automatically by world ranking in snake format. Player 1 gets the #1 seed, Player 2 gets #2, Player 3 gets #3 — then it snakes back: Player 3 gets #4, Player 2 gets #5, Player 1 gets #6, and so on. Fair, balanced, and no live draft coordination needed."
                 />
                 <OptionCard
                   selected={settings.draftType === "snake"}
@@ -552,7 +561,7 @@ export default function PoolSetupPage() {
                 >
                   {saving ? "Saving..." : "Launch Live Draft"}
                 </button>
-              ) : (
+              ) : /* random or auto-snake */ (
                 <button type="button" onClick={() => setStep(2)} disabled={!rulesComplete} className="btn-green disabled:opacity-40">
                   Next: Field
                 </button>
@@ -644,7 +653,7 @@ export default function PoolSetupPage() {
           <div>
             <h2 className="font-serif text-lg text-masters-green mb-1 font-bold">Draft Results</h2>
             <p className="text-xs text-gray-500 mb-5">
-              {settings.draftType === "snake" ? "Snake draft" : "Random assignment"} complete.
+              {settings.draftType === "snake" ? "Snake draft" : settings.draftType === "auto-snake" ? "Auto snake draft" : "Random assignment"} complete.
             </p>
 
             <div className="space-y-4">
@@ -712,7 +721,7 @@ export default function PoolSetupPage() {
                 { label: "Golfers", value: `${golferCount} in field` },
                 {
                   label: "Draft",
-                  value: settings.draftType === "snake" ? "Snake Draft" : "Pure Random",
+                  value: settings.draftType === "snake" ? "Live Snake Draft" : settings.draftType === "auto-snake" ? "Auto Snake Draft" : "Pure Random",
                 },
                 {
                   label: "Missed Cut",

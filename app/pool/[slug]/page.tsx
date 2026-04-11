@@ -711,9 +711,11 @@ export default function PoolLeaderboardPage() {
       {/* Settings pills — tap for explanation */}
       <div className="flex flex-wrap gap-1.5 mt-3 mb-5">
         <SettingsPill
-          label={config.settings.draftType === "snake" ? "Snake Draft" : "Random Draft"}
+          label={config.settings.draftType === "snake" ? "Snake Draft" : config.settings.draftType === "auto-snake" ? "Auto Snake" : "Random Draft"}
           info={config.settings.draftType === "snake"
             ? "Pick order reverses each round (1-2-3-4, then 4-3-2-1) so everyone gets a fair mix of early and late picks."
+            : config.settings.draftType === "auto-snake"
+            ? "Player order was randomized, then golfers were assigned by world ranking in snake format — fair and balanced."
             : "Golfers are shuffled randomly and dealt out in order. Simpler but less balanced than snake."
           }
         />

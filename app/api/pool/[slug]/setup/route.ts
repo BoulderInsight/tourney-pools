@@ -42,7 +42,7 @@ export async function POST(
       buy_in = ${buyIn},
       settings = ${JSON.stringify(settings)},
       setup_complete = true,
-      draft_complete = ${settings.draftType === "random"}
+      draft_complete = ${settings.draftType === "random" || settings.draftType === "auto-snake"}
     WHERE id = ${poolId}
   `;
 
@@ -85,9 +85,13 @@ export async function POST(
     });
   }
 
-  // Only auto-draft for random. Snake draft is handled interactively on the draft page.
-  if (settings.draftType === "random") {
-    const draftResult = draftGolfers(insertedPlayers, insertedGolfers, settings.draftType);
+  // Auto-draft for random and auto-snake. Live snake draft is handled interactively on the draft page.
+  if (settings.draftType === "random" || settings.draftType === "auto-snake") {
+    // For auto-snake, attach rankings so draftGolfers can sort by seed
+    const golferPool = settings.draftType === "auto-snake"
+      ? insertedGolfers.map((g, i) => ({ ...g, worldRanking: entries[i].ranking }))
+      : insertedGolfers;
+    const draftResult = draftGolfers(insertedPlayers, golferPool, settings.draftType);
 
     for (const a of draftResult) {
       await sql`

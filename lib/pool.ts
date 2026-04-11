@@ -332,22 +332,56 @@ export function draftGolfers(
   const totalPicks = pool.length;
   let pickNumber = 0;
 
+  // Shuffle player order for all draft types
+  const playerOrder = [...players];
+  for (let i = playerOrder.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [playerOrder[i], playerOrder[j]] = [playerOrder[j], playerOrder[i]];
+  }
+
   if (draftType === "random") {
-    // Shuffle pool
+    // Shuffle golfer pool randomly
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
     for (let i = 0; i < totalPicks; i++) {
       assignments.push({
-        playerId: players[i % numPlayers].id,
+        playerId: playerOrder[i % numPlayers].id,
         golferId: pool[i].id,
         pickNumber: i + 1,
       });
     }
+  } else if (draftType === "auto-snake") {
+    // Sort golfers by world ranking (best first, unranked last)
+    pool.sort((a, b) => {
+      const aR = a.worldRanking ?? 9999;
+      const bR = b.worldRanking ?? 9999;
+      return aR - bR;
+    });
+
+    // Snake through ranked golfers
+    let round = 0;
+    let idx = 0;
+    while (idx < totalPicks) {
+      const forward = round % 2 === 0;
+      for (
+        let p = forward ? 0 : numPlayers - 1;
+        forward ? p < numPlayers : p >= 0;
+        forward ? p++ : p--
+      ) {
+        if (idx >= totalPicks) break;
+        assignments.push({
+          playerId: playerOrder[p].id,
+          golferId: pool[idx].id,
+          pickNumber: idx + 1,
+        });
+        idx++;
+      }
+      round++;
+    }
   } else {
-    // Snake draft
-    // Shuffle pool for randomness
+    // Live snake draft — shuffle pool for pick display order
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -364,7 +398,7 @@ export function draftGolfers(
       ) {
         if (idx >= totalPicks) break;
         assignments.push({
-          playerId: players[p].id,
+          playerId: playerOrder[p].id,
           golferId: pool[idx].id,
           pickNumber: idx + 1,
         });
