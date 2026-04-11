@@ -15,7 +15,7 @@ No test framework is configured.
 
 ## Architecture
 
-Multi-tenant golf pool app. Next.js 14 App Router, Neon Postgres, Tailwind CSS, deployed on Vercel.
+**TourneyPools** (tourneypools.com) — Multi-tenant golf pool platform supporting any tournament. Next.js 14 App Router, Neon Postgres, Tailwind CSS, deployed on Vercel.
 
 ### Data flow
 
@@ -29,16 +29,17 @@ Multi-tenant golf pool app. Next.js 14 App Router, Neon Postgres, Tailwind CSS, 
 - **`lib/types.ts`** — TypeScript interfaces: `CommissionerSettings`, `PoolConfig`, `Golfer`, `PlayerStanding`, `GolferStanding`. Commissioner settings has: draftType, scoringType, bestN, missedCutRule, missedCutPenalty, purseType, purseDistribution, payoutMethod.
 - **`lib/auth.ts`** — JWT auth (jose), bcrypt password hashing, HTTP-only cookie sessions (7-day expiry)
 - **`lib/db.ts`** — `getDb()` returns Neon SQL client (cache disabled for real-time)
-- **`lib/odds-api.ts`** — Fetches live scores from masters.com, fuzzy-matches golfer names (accent normalization), updates shared `tournament_golfers` table
+- **`lib/odds-api.ts`** — Fetches live scores, fuzzy-matches golfer names (accent normalization), updates shared `tournament_golfers` table
 - **`lib/email.ts`** — Verification emails via SMTP2GO/Nodemailer
 
-### Database schema (6 tables)
+### Database schema (7 tables)
 
+- **tournaments** — Master list of golf tournaments (name, slug, course, dates, year, status, optional API source/ID for external data providers)
 - **chairmen** — Pool organizers (email/password auth, Stripe customer, tier system)
-- **pools** — Each pool has a unique slug, JSONB `settings` column for commissioner preferences, links to chairman
+- **pools** — Each pool has a unique slug, JSONB `settings` column for commissioner preferences, links to chairman and optionally to a tournament via `tournament_id` FK
 - **players** — Participants within a pool
-- **golfers** — Pool-specific golfer entries, linked to shared tournament_golfers via `tournament_golfer_id`
-- **tournament_golfers** — Shared master list of golfer scores, updated by cron sync. Scores flow: cron updates tournament_golfers → API uses `COALESCE(tg.r1, g.r1)` to prefer shared data → all pools see updates
+- **tournament_golfers** — Shared master list of golfer scores per tournament, linked via `tournament_id` FK. Updated by cron sync. Golfers have world_ranking and status fields.
+- **golfers** — Pool-specific golfer entries, linked to shared tournament_golfers via `tournament_golfer_id`. Scores flow: cron updates tournament_golfers → API uses `COALESCE(tg.r1, g.r1)` to prefer shared data → all pools see updates
 - **assignments** — Draft picks linking players to golfers
 
 Schema DDL is in `lib/db-seed.sql`.
@@ -46,6 +47,10 @@ Schema DDL is in `lib/db-seed.sql`.
 ### Multi-tenancy
 
 Pools are identified by nanoid slugs. All queries are scoped by `pool_id`. The `settings` column is JSONB — always read/written as a unit, never queried individually.
+
+### Tournament model
+
+The `tournaments` table stores metadata for each golf event (name, slug, course, dates, status). Pools link to a tournament via `tournament_id`. Tournament status lifecycle: `scheduled` → `in_progress` → `completed` (or `cancelled`). The `api_source` and `api_tournament_id` columns support future integration with external data providers (e.g. SlashGolf, DataGolf).
 
 ### Score sync
 
@@ -78,7 +83,7 @@ One-time payment upgrades chairman tier. Checkout via `POST /api/stripe/checkout
 
 ## Conventions
 
-- **Tailwind-only styling** with custom Masters theme: `masters-green` (#006747), `masters-gold` (#c9a84c), `masters-cream` (#f5f0e8). Fonts: Playfair Display (serif), Raleway (sans). See `tailwind.config.ts`.
+- **Tailwind-only styling** with TourneyPools theme: `tp-primary` (#1a365d, deep navy), `tp-accent` (#d4a843, warm gold), `tp-bg` (#f7f5f2, warm off-white). Fonts: DM Serif Display (serif headings), Inter (sans body). See `tailwind.config.ts`.
 - **Path alias**: `@/*` maps to project root
 - **UUIDs** for all primary keys (`gen_random_uuid()`)
 - **No ORM** — raw SQL with tagged template literals via Neon client

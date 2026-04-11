@@ -3,7 +3,6 @@
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import ConfirmModal from "@/app/components/confirm-modal";
 import { BoulderInsightAd, CustomAd } from "@/app/components/sponsor-banner";
 
@@ -76,7 +75,7 @@ function DashboardContent() {
     const res = await fetch("/api/pools", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ poolName: newName || "My Masters Pool" }),
+      body: JSON.stringify({ poolName: newName || "My Golf Pool" }),
     });
     if (res.ok) {
       const { slug } = await res.json();
@@ -197,7 +196,7 @@ function DashboardContent() {
     <div>
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
-        <Image src="/mymasterspool2.png" alt="My Masters Pool" width={200} height={100} />
+        <span className="font-serif text-xl font-bold text-tp-primary">TourneyPools</span>
         <div className="flex flex-col items-end gap-1">
           <div className="flex items-center gap-3">
             {isSuperAdmin && (
@@ -206,7 +205,7 @@ function DashboardContent() {
               </Link>
             )}
             {pools.length > 0 && (
-              <Link href={`/pool/${pools[0].slug}/scores`} className="text-xs text-masters-green font-semibold">
+              <Link href={`/pool/${pools[0].slug}/scores`} className="text-xs text-tp-primary font-semibold">
                 Scores
               </Link>
             )}
@@ -214,14 +213,14 @@ function DashboardContent() {
               Sign out
             </button>
           </div>
-          <h1 className="font-serif text-2xl font-bold text-masters-green">My Pools</h1>
+          <h1 className="font-serif text-2xl font-bold text-tp-primary">My Pools</h1>
         </div>
       </div>
 
       {/* Upgrade success */}
       {justUpgraded && (
-        <div className="card p-4 mb-4 bg-masters-gold/10 border-masters-gold/30 text-center">
-          <p className="text-sm font-semibold text-masters-gold-dark">Welcome to Premium!</p>
+        <div className="card p-4 mb-4 bg-tp-accent/10 border-tp-accent/30 text-center">
+          <p className="text-sm font-semibold text-tp-accent-dark">Welcome to Premium!</p>
           <p className="text-xs text-gray-500 mt-1">Unlimited pools, no ads, and custom branding are now unlocked.</p>
         </div>
       )}
@@ -230,7 +229,7 @@ function DashboardContent() {
       {canCreatePool ? (
         <div className="card p-4 mb-6">
           <div className="flex gap-2">
-            <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Pool name (e.g. Blue Rock Masters)" className="input-field flex-1" />
+            <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Pool name (e.g. The Masters 2026)" className="input-field flex-1" />
             <button onClick={createPool} disabled={creating} className="btn-green flex-shrink-0 disabled:opacity-60">
               {creating ? "..." : "Create"}
             </button>
@@ -250,7 +249,7 @@ function DashboardContent() {
       {!isPaid && pools.length > 0 && (
         <div className="flex items-center justify-between mb-4 px-1">
           <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Free Plan — 1 pool</span>
-          <button onClick={handleUpgrade} className="text-[10px] text-masters-gold font-semibold active:underline">
+          <button onClick={handleUpgrade} className="text-[10px] text-tp-accent font-semibold active:underline">
             Upgrade →
           </button>
         </div>
@@ -265,7 +264,7 @@ function DashboardContent() {
         <div className="space-y-3">
           {pools.map((pool) => (
             <div key={pool.id} className="card overflow-hidden">
-              <Link href={pool.setup_complete ? `/pool/${pool.slug}` : `/pool/${pool.slug}/setup`} className="block p-4 active:bg-masters-cream/40 transition-colors">
+              <Link href={pool.setup_complete ? `/pool/${pool.slug}` : `/pool/${pool.slug}/setup`} className="block p-4 active:bg-tp-bg/40 transition-colors">
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="font-serif font-bold text-gray-900">{pool.pool_name}</span>
@@ -291,11 +290,11 @@ function DashboardContent() {
               {pool.setup_complete && (
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText(`https://mymasterspool.com/pool/${pool.slug}`);
+                    navigator.clipboard.writeText(`https://tourneypools.com/pool/${pool.slug}`);
                     setCopied(pool.id);
                     setTimeout(() => setCopied(null), 2000);
                   }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-masters-gold border-t border-masters-cream-dark active:bg-masters-gold/5 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-tp-accent border-t border-tp-bg-dark active:bg-tp-accent/5 transition-colors"
                 >
                   {copied === pool.id ? (
                     <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Link Copied!</>
@@ -305,21 +304,21 @@ function DashboardContent() {
                 </button>
               )}
               {/* Pool actions */}
-              <div className="flex border-t border-masters-cream-dark">
+              <div className="flex border-t border-tp-bg-dark">
                 <Link
                   href={`/pool/${pool.slug}`}
-                  className="flex-1 text-center py-2.5 text-xs font-semibold text-masters-green active:bg-masters-green/5 transition-colors"
+                  className="flex-1 text-center py-2.5 text-xs font-semibold text-tp-primary active:bg-tp-primary/5 transition-colors"
                 >
                   View
                 </Link>
-                <div className="w-px bg-masters-cream-dark" />
+                <div className="w-px bg-tp-bg-dark" />
                 <Link
                   href={`/pool/${pool.slug}/scores`}
-                  className="flex-1 text-center py-2.5 text-xs font-semibold text-masters-green active:bg-masters-green/5 transition-colors"
+                  className="flex-1 text-center py-2.5 text-xs font-semibold text-tp-primary active:bg-tp-primary/5 transition-colors"
                 >
                   Scores
                 </Link>
-                <div className="w-px bg-masters-cream-dark" />
+                <div className="w-px bg-tp-bg-dark" />
                 {pool.setup_complete ? (
                   <span className="flex-1 text-center py-2.5 text-xs font-semibold text-gray-300 cursor-not-allowed">
                     Edit
@@ -327,12 +326,12 @@ function DashboardContent() {
                 ) : (
                   <Link
                     href={`/pool/${pool.slug}/setup`}
-                    className="flex-1 text-center py-2.5 text-xs font-semibold text-masters-green active:bg-masters-green/5 transition-colors"
+                    className="flex-1 text-center py-2.5 text-xs font-semibold text-tp-primary active:bg-tp-primary/5 transition-colors"
                   >
                     Edit
                   </Link>
                 )}
-                <div className="w-px bg-masters-cream-dark" />
+                <div className="w-px bg-tp-bg-dark" />
                 <button
                   onClick={() => setDeleteModal({ id: pool.id, name: pool.pool_name })}
                   className="flex-1 text-center py-2.5 text-xs font-semibold text-red-400 active:bg-red-50 transition-colors"
@@ -362,7 +361,7 @@ function DashboardContent() {
                   setAdDescriptionInput(customAdDescription || "");
                   setShowAdEditor(!showAdEditor);
                 }}
-                className="text-[10px] text-masters-gold font-semibold active:underline"
+                className="text-[10px] text-tp-accent font-semibold active:underline"
               >
                 {showAdEditor ? "Cancel" : adRemoved ? "Add an Ad" : "Remove / Replace Ad"}
               </button>
@@ -383,7 +382,7 @@ function DashboardContent() {
           {/* Ad editor (premium only) */}
           {showAdEditor && isPaid && (
             <div className="card p-5 mt-3 animate-slide-up">
-              <h3 className="font-serif text-sm font-bold text-masters-green mb-4">Manage Ad</h3>
+              <h3 className="font-serif text-sm font-bold text-tp-primary mb-4">Manage Ad</h3>
 
               <div className="space-y-4">
                 <div>
@@ -398,13 +397,13 @@ function DashboardContent() {
                       className="input-field text-xs flex-1"
                     />
                   </div>
-                  <label className="mt-2 flex items-center justify-center gap-2 w-full h-12 border-2 border-dashed border-masters-cream-dark rounded-xl text-xs text-masters-green font-semibold cursor-pointer active:bg-masters-green/5 transition-colors">
+                  <label className="mt-2 flex items-center justify-center gap-2 w-full h-12 border-2 border-dashed border-tp-bg-dark rounded-xl text-xs text-tp-primary font-semibold cursor-pointer active:bg-tp-primary/5 transition-colors">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                     {uploading ? "Uploading..." : "Upload Image"}
                     <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                   </label>
                   {adImageInput && (
-                    <div className="mt-2 rounded-lg overflow-hidden border border-masters-cream-dark">
+                    <div className="mt-2 rounded-lg overflow-hidden border border-tp-bg-dark">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={adImageInput} alt="Preview" className="max-w-full h-auto max-h-20 mx-auto" />
                     </div>
@@ -472,7 +471,7 @@ function DashboardContent() {
 
           {!isPaid && (
             <p className="text-[10px] text-gray-400 text-center mt-2">
-              <button onClick={handleUpgrade} className="text-masters-gold font-semibold">Upgrade to Premium</button>
+              <button onClick={handleUpgrade} className="text-tp-accent font-semibold">Upgrade to Premium</button>
               {" "}to remove or replace this ad.
             </p>
           )}
@@ -494,12 +493,14 @@ function DashboardContent() {
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={
-      <div className="flex flex-col items-center justify-center py-24 gap-6">
-        <div className="flex gap-3"><div className="loading-dot" /><div className="loading-dot" /><div className="loading-dot" /></div>
-      </div>
-    }>
-      <DashboardContent />
-    </Suspense>
+    <main className="px-4 pt-4 pb-safe max-w-lg mx-auto">
+      <Suspense fallback={
+        <div className="flex flex-col items-center justify-center py-24 gap-6">
+          <div className="flex gap-3"><div className="loading-dot" /><div className="loading-dot" /><div className="loading-dot" /></div>
+        </div>
+      }>
+        <DashboardContent />
+      </Suspense>
+    </main>
   );
 }

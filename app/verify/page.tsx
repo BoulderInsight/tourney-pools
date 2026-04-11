@@ -3,7 +3,6 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 
 function VerifyContent() {
   const router = useRouter();
@@ -41,7 +40,7 @@ function VerifyContent() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[75vh] text-center">
-      <Image src="/MyMastersPoolstacked.png" alt="My Masters Pool" width={280} height={155} className="mb-6" />
+      <h1 className="font-serif text-3xl font-bold text-tp-primary mb-2">TourneyPools</h1>
 
       {status === "verifying" && (
         <>
@@ -50,7 +49,7 @@ function VerifyContent() {
             <div className="loading-dot" />
             <div className="loading-dot" />
           </div>
-          <p className="font-serif italic text-masters-green/60 text-sm">Verifying your email...</p>
+          <p className="font-serif italic text-tp-primary/60 text-sm">Verifying your email...</p>
         </>
       )}
 
@@ -61,7 +60,7 @@ function VerifyContent() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="font-serif text-2xl text-masters-green font-bold mb-2">Email Verified!</h1>
+          <h1 className="font-serif text-2xl text-tp-primary font-bold mb-2">Email Verified!</h1>
           <p className="text-sm text-gray-500 mb-6">Your account is active. Redirecting to your dashboard...</p>
           <Link href="/dashboard" className="btn-green inline-block">Go to Dashboard</Link>
         </div>
@@ -74,7 +73,7 @@ function VerifyContent() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
-          <h1 className="font-serif text-2xl text-masters-green font-bold mb-2">Verification Failed</h1>
+          <h1 className="font-serif text-2xl text-tp-primary font-bold mb-2">Verification Failed</h1>
           <p className="text-sm text-red-500 mb-6">{error}</p>
           <Link href="/signup" className="btn-outline inline-block">Try Again</Link>
         </div>
@@ -85,12 +84,14 @@ function VerifyContent() {
 
 export default function VerifyPage() {
   return (
-    <Suspense fallback={
-      <div className="flex flex-col items-center justify-center min-h-[75vh]">
-        <div className="flex gap-3"><div className="loading-dot" /><div className="loading-dot" /><div className="loading-dot" /></div>
-      </div>
-    }>
-      <VerifyContent />
-    </Suspense>
+    <main className="px-4 pt-4 pb-safe max-w-lg mx-auto">
+      <Suspense fallback={
+        <div className="flex flex-col items-center justify-center min-h-[75vh]">
+          <div className="flex gap-3"><div className="loading-dot" /><div className="loading-dot" /><div className="loading-dot" /></div>
+        </div>
+      }>
+        <VerifyContent />
+      </Suspense>
+    </main>
   );
 }

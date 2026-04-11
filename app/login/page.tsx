@@ -32,9 +32,10 @@ export default function LoginPage() {
   }
 
   return (
+    <main className="px-4 pt-4 pb-safe max-w-lg mx-auto">
     <div className="flex flex-col items-center justify-center min-h-[75vh]">
       <div className="card p-8 w-full">
-        <h1 className="font-serif text-2xl text-masters-green mb-1 font-bold text-center">
+        <h1 className="font-serif text-2xl text-tp-primary mb-1 font-bold text-center">
           Welcome Back
         </h1>
         <p className="text-xs text-gray-500 mb-6 text-center">
@@ -60,9 +61,10 @@ export default function LoginPage() {
 
         <p className="text-xs text-gray-400 text-center mt-6">
           Don&apos;t have an account?{" "}
-          <Link href="/signup" className="text-masters-green font-semibold">Create one</Link>
+          <Link href="/signup" className="text-tp-primary font-semibold">Create one</Link>
         </p>
       </div>
     </div>
+    </main>
   );
 }

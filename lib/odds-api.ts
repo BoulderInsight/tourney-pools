@@ -1,8 +1,9 @@
 import { getDb } from "./db";
 
-const MASTERS_SCORES_URL = "https://www.masters.com/en_US/scores/feeds/2026/scores.json";
+// TODO: Make configurable per tournament via tournaments.api_source
+const SCORES_URL = "https://www.masters.com/en_US/scores/feeds/2026/scores.json";
 
-interface MastersGolferScore {
+interface TournamentGolferScore {
   name: string;
   r1: number | null;
   r2: number | null;
@@ -11,21 +12,21 @@ interface MastersGolferScore {
   madeCut: boolean | null;
 }
 
-export async function fetchTournamentScores(): Promise<MastersGolferScore[]> {
-  const res = await fetch(MASTERS_SCORES_URL, {
+export async function fetchTournamentScores(): Promise<TournamentGolferScore[]> {
+  const res = await fetch(SCORES_URL, {
     cache: "no-store",
     headers: { "User-Agent": "Mozilla/5.0" },
   });
 
   if (!res.ok) {
-    throw new Error(`Masters API error: ${res.status}`);
+    throw new Error(`Score API error: ${res.status}`);
   }
 
   const data = await res.json();
   const players = data?.data?.player || [];
   const PAR = 72;
 
-  const golfers: MastersGolferScore[] = [];
+  const golfers: TournamentGolferScore[] = [];
 
   for (const p of players) {
     const r1Total = p.round1?.total;

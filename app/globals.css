@@ -2,15 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500&family=Raleway:wght@300;400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap");
 
 /* ── Base ──────────────────────────────────────────────── */
 
 :root {
-  --masters-green: #006747;
-  --masters-green-deep: #004d34;
-  --masters-gold: #c9a84c;
-  --masters-cream: #f5f0e8;
+  --tp-primary: #1a365d;
+  --tp-primary-deep: #0f2440;
+  --tp-accent: #d4a843;
+  --tp-bg: #f7f5f2;
 }
 
 html {
@@ -19,27 +19,27 @@ html {
 }
 
 body {
-  font-family: "Raleway", system-ui, sans-serif;
-  background-color: var(--masters-cream);
+  font-family: "Inter", system-ui, sans-serif;
+  background-color: var(--tp-bg);
   color: #1a1a1a;
   min-height: 100dvh;
 }
 
-/* Subtle texture overlay on cream bg */
+/* Subtle texture overlay on bg */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  background-image: radial-gradient(circle at 1px 1px, rgba(0, 103, 71, 0.03) 1px, transparent 0);
+  background-image: radial-gradient(circle at 1px 1px, rgba(26, 54, 93, 0.03) 1px, transparent 0);
   background-size: 24px 24px;
 }
 
 /* ── Typography ────────────────────────────────────────── */
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: "Playfair Display", Georgia, serif;
+  font-family: "DM Serif Display", Georgia, serif;
 }
 
 /* ── Component Classes ─────────────────────────────────── */
@@ -47,7 +47,7 @@ h1, h2, h3, h4, h5, h6 {
 @layer components {
   .card {
     @apply bg-white rounded-2xl shadow-card;
-    border: 1px solid rgba(0, 103, 71, 0.06);
+    border: 1px solid rgba(26, 54, 93, 0.06);
   }
 
   .card-interactive {
@@ -60,30 +60,30 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .btn-green {
-    @apply bg-masters-green text-white font-semibold rounded-xl
+    @apply bg-tp-primary text-white font-semibold rounded-xl
            px-6 py-3.5 text-sm tracking-wide
-           active:bg-masters-green-deep transition-colors duration-150;
+           active:bg-tp-primary-deep transition-colors duration-150;
     min-height: 48px;
   }
 
   .btn-gold {
-    @apply bg-masters-gold text-white font-semibold rounded-xl
+    @apply bg-tp-accent text-white font-semibold rounded-xl
            px-6 py-3.5 text-sm tracking-wide
-           active:bg-masters-gold-dark transition-colors duration-150;
+           active:bg-tp-accent-dark transition-colors duration-150;
     min-height: 48px;
   }
 
   .btn-outline {
-    @apply border-2 border-masters-green text-masters-green font-semibold rounded-xl
+    @apply border-2 border-tp-primary text-tp-primary font-semibold rounded-xl
            px-6 py-3.5 text-sm tracking-wide bg-transparent
-           active:bg-masters-green/5 transition-colors duration-150;
+           active:bg-tp-primary/5 transition-colors duration-150;
     min-height: 48px;
   }
 
   .input-field {
-    @apply w-full border-2 border-masters-cream-dark bg-white rounded-xl
+    @apply w-full border-2 border-tp-bg-dark bg-white rounded-xl
            px-4 py-3.5 text-sm font-sans
-           focus:border-masters-green focus:ring-1 focus:ring-masters-green/20
+           focus:border-tp-primary focus:ring-1 focus:ring-tp-primary/20
            outline-none transition-colors duration-150;
     min-height: 48px;
   }
@@ -93,8 +93,8 @@ h1, h2, h3, h4, h5, h6 {
     background: linear-gradient(
       90deg,
       transparent 0%,
-      var(--masters-gold) 20%,
-      var(--masters-gold) 80%,
+      var(--tp-accent) 20%,
+      var(--tp-accent) 80%,
       transparent 100%
     );
     opacity: 0.4;
@@ -128,7 +128,7 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .pill-active {
-    @apply bg-masters-green text-white;
+    @apply bg-tp-primary text-white;
   }
 
   .pill-inactive {
@@ -142,8 +142,8 @@ h1, h2, h3, h4, h5, h6 {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background-color: var(--masters-green);
-  animation: pulseGreen 1.5s ease-in-out infinite;
+  background-color: var(--tp-primary);
+  animation: pulsePrimary 1.5s ease-in-out infinite;
 }
 
 .loading-dot:nth-child(2) {
@@ -154,7 +154,7 @@ h1, h2, h3, h4, h5, h6 {
   animation-delay: 0.4s;
 }
 
-@keyframes pulseGreen {
+@keyframes pulsePrimary {
   0%, 100% { opacity: 0.2; transform: scale(0.8); }
   50% { opacity: 1; transform: scale(1); }
 }
@@ -189,7 +189,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 103, 71, 0.15);
+  background: rgba(26, 54, 93, 0.15);
   border-radius: 2px;
 }
 

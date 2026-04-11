@@ -5,7 +5,19 @@ import { useParams, useRouter } from "next/navigation";
 import { CommissionerSettings, PoolPlayer, DraftType, MissedCutRule, PurseType, PayoutMethod } from "@/lib/types";
 import { DEFAULT_SETTINGS, DEFAULT_FIELD, draftGolfers } from "@/lib/pool";
 
-const STEPS = ["Pool Info", "Rules", "Field", "Draft", "Confirm"] as const;
+interface Tournament {
+  id: string;
+  name: string;
+  slug: string;
+  course_name: string | null;
+  location: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  year: number;
+  status: string;
+}
+
+const STEPS = ["Tournament", "Pool Info", "Rules", "Field", "Draft", "Confirm"] as const;
 
 function OptionCard({
   selected,
@@ -27,8 +39,8 @@ function OptionCard({
   return (
     <div className={`w-full rounded-xl border-2 transition-all duration-150 overflow-hidden
       ${selected
-        ? "border-masters-green bg-masters-green/5 shadow-card"
-        : "border-masters-cream-dark bg-white"}`}
+        ? "border-tp-primary bg-tp-primary/5 shadow-card"
+        : "border-tp-bg-dark bg-white"}`}
     >
       <button
         type="button"
@@ -39,7 +51,7 @@ function OptionCard({
         <div className="flex items-start gap-3">
           <div
             className={`mt-0.5 w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center
-              ${selected ? "border-masters-green bg-masters-green" : "border-gray-300"}`}
+              ${selected ? "border-tp-primary bg-tp-primary" : "border-gray-300"}`}
           >
             {selected && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
           </div>
@@ -47,7 +59,7 @@ function OptionCard({
             <div className="flex items-center gap-2">
               <span className="font-semibold text-gray-900 text-sm">{title}</span>
               {badge && (
-                <span className="text-[9px] bg-masters-gold text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                <span className="text-[9px] bg-tp-accent text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
                   {badge}
                 </span>
               )}
@@ -63,13 +75,13 @@ function OptionCard({
             onClick={(e) => { e.stopPropagation(); setShowInfo(!showInfo); }}
             className="w-full text-left px-4 pb-1 -mt-1"
           >
-            <span className="text-[11px] text-masters-green font-semibold">
+            <span className="text-[11px] text-tp-primary font-semibold">
               {showInfo ? "Hide details" : "Learn more"}
             </span>
           </button>
           {showInfo && (
             <div className="px-4 pb-4 pt-1 animate-fade-in">
-              <div className="bg-masters-cream/60 rounded-lg p-3 text-xs text-gray-600 leading-relaxed">
+              <div className="bg-tp-bg/60 rounded-lg p-3 text-xs text-gray-600 leading-relaxed">
                 {info}
               </div>
             </div>
@@ -99,9 +111,9 @@ function StepDots({ current, total }: { current: number; total: number }) {
           key={i}
           className={`rounded-full transition-all duration-300
             ${i === current
-              ? "w-8 h-2.5 bg-masters-green"
+              ? "w-8 h-2.5 bg-tp-primary"
               : i < current
-              ? "w-2.5 h-2.5 bg-masters-gold"
+              ? "w-2.5 h-2.5 bg-tp-accent"
               : "w-2.5 h-2.5 bg-gray-200"
             }`}
         />
@@ -110,14 +122,39 @@ function StepDots({ current, total }: { current: number; total: number }) {
   );
 }
 
+function formatDateRange(startDate: string | null, endDate: string | null): string {
+  if (!startDate) return "";
+  const start = new Date(startDate + "T12:00:00");
+  const end = endDate ? new Date(endDate + "T12:00:00") : null;
+
+  const monthFmt = new Intl.DateTimeFormat("en-US", { month: "short" });
+  const startMonth = monthFmt.format(start);
+  const startDay = start.getDate();
+
+  if (!end) return `${startMonth} ${startDay}`;
+
+  const endMonth = monthFmt.format(end);
+  const endDay = end.getDate();
+
+  if (startMonth === endMonth) {
+    return `${startMonth} ${startDay}–${endDay}`;
+  }
+  return `${startMonth} ${startDay} – ${endMonth} ${endDay}`;
+}
+
 export default function PoolSetupPage() {
   const { slug } = useParams() as { slug: string };
   const router = useRouter();
   const uid = useId();
   const [step, setStep] = useState(0);
 
+  // Tournament
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [tournamentsLoading, setTournamentsLoading] = useState(true);
+  const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(null);
+
   // Pool info
-  const [poolName, setPoolName] = useState("Masters Pool 2026");
+  const [poolName, setPoolName] = useState("Golf Pool");
   const [buyIn, setBuyIn] = useState(20);
   const [players, setPlayers] = useState<PoolPlayer[]>([
     { id: "p0", name: "" },
@@ -139,6 +176,22 @@ export default function PoolSetupPage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
 
+  // Fetch available tournaments
+  useEffect(() => {
+    async function loadTournaments() {
+      try {
+        const res = await fetch("/api/tournaments");
+        if (res.ok) {
+          const data = await res.json();
+          setTournaments(data);
+        }
+      } finally {
+        setTournamentsLoading(false);
+      }
+    }
+    loadTournaments();
+  }, []);
+
   // Load existing pool data to resume where you left off
   useEffect(() => {
     async function loadPool() {
@@ -151,10 +204,22 @@ export default function PoolSetupPage() {
           setPlayers(data.players.map((p: { id: string; name: string }) => ({ id: p.id, name: p.name })));
         }
         if (data?.settings) setSettings((prev) => ({ ...prev, ...data.settings }));
+        if (data?.tournamentId) setSelectedTournamentId(data.tournamentId);
       }
     }
     loadPool();
   }, [slug]);
+
+  // When a tournament is selected, auto-set pool name
+  const selectedTournament = tournaments.find(t => t.id === selectedTournamentId);
+
+  function handleSelectTournament(id: string) {
+    setSelectedTournamentId(id);
+    const t = tournaments.find(t => t.id === id);
+    if (t) {
+      setPoolName(`${t.name} ${t.year} Pool`);
+    }
+  }
 
   const set = <K extends keyof CommissionerSettings>(key: K, val: CommissionerSettings[K]) =>
     setSettings((s) => ({ ...s, [key]: val }));
@@ -201,7 +266,23 @@ export default function PoolSetupPage() {
 
     const result = draftGolfers(players, golfers, settings.draftType);
     setAssignments(result);
-    setStep(3);
+    setStep(4);
+  }
+
+  // Build the setup payload (shared between save and live-draft-launch)
+  function buildPayload() {
+    const golferEntries = parseFieldEntries();
+    const dist = settings.purseType === "custom"
+      ? customDist.split(",").map((n) => Number(n.trim())) : [];
+    const finalSettings = { ...settings, purseDistribution: dist };
+    return {
+      poolName,
+      players: players.filter((p) => p.name.trim()),
+      golferEntries,
+      buyIn,
+      settings: finalSettings,
+      tournamentId: selectedTournamentId,
+    };
   }
 
   // Save
@@ -209,31 +290,10 @@ export default function PoolSetupPage() {
     setSaving(true);
     setError("");
 
-    const golferEntries = fieldText.split("\n").map((line) => {
-      const trimmed = line.trim();
-      if (!trimmed) return null;
-      const match = trimmed.match(/^(.+?)\s*\(#(\d+)\)$/);
-      if (match) return { name: match[1].trim(), ranking: parseInt(match[2]) };
-      return { name: trimmed, ranking: null };
-    }).filter(Boolean) as { name: string; ranking: number | null }[];
-
-    const dist =
-      settings.purseType === "custom"
-        ? customDist.split(",").map((n) => Number(n.trim()))
-        : [];
-
-    const finalSettings = { ...settings, purseDistribution: dist };
-
     const res = await fetch(`/api/pool/${slug}/setup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        poolName,
-        players: players.filter((p) => p.name.trim()),
-        golferEntries,
-        buyIn,
-        settings: finalSettings,
-      }),
+      body: JSON.stringify(buildPayload()),
     });
 
     if (res.ok) {
@@ -244,6 +304,23 @@ export default function PoolSetupPage() {
     setSaving(false);
   }
 
+  // Launch live draft (save + redirect)
+  async function launchLiveDraft() {
+    setSaving(true);
+    setError("");
+    const res = await fetch(`/api/pool/${slug}/setup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(buildPayload()),
+    });
+    setSaving(false);
+    if (res.ok) {
+      router.push(`/pool/${slug}`);
+    } else {
+      setError("Failed to save. Try again.");
+    }
+  }
+
   const validPlayers = players.filter((p) => p.name.trim());
   const golferCount = parseFieldEntries().length;
 
@@ -251,12 +328,12 @@ export default function PoolSetupPage() {
   if (saved) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-        <div className="w-20 h-20 rounded-full bg-masters-gold/15 flex items-center justify-center mb-6">
-          <svg className="w-10 h-10 text-masters-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="w-20 h-20 rounded-full bg-tp-accent/15 flex items-center justify-center mb-6">
+          <svg className="w-10 h-10 text-tp-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h2 className="font-serif text-2xl text-masters-green mb-2 font-bold">Pool is Live!</h2>
+        <h2 className="font-serif text-2xl text-tp-primary mb-2 font-bold">Pool is Live!</h2>
         <p className="text-gray-500 text-sm mb-8 max-w-xs">
           Share the leaderboard link with your players. Scores can be entered as rounds are played.
         </p>
@@ -271,10 +348,110 @@ export default function PoolSetupPage() {
       <StepDots current={step} total={STEPS.length} />
 
       <div className="card p-5">
-        {/* -- Step 0: Pool Info -- */}
+        {/* -- Step 0: Select Tournament -- */}
         {step === 0 && (
           <div>
-            <h2 className="font-serif text-lg text-masters-green mb-5 font-bold">Pool Info</h2>
+            <h2 className="font-serif text-lg text-tp-primary mb-1 font-bold">Select Tournament</h2>
+            <p className="text-xs text-gray-500 mb-5">
+              Choose the tournament this pool is for.
+            </p>
+
+            {tournamentsLoading ? (
+              <div className="flex justify-center py-12">
+                <div className="flex gap-3">
+                  <div className="loading-dot" />
+                  <div className="loading-dot" />
+                  <div className="loading-dot" />
+                </div>
+              </div>
+            ) : tournaments.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-sm text-gray-400 mb-4">No tournaments available yet.</p>
+                <p className="text-xs text-gray-400">Ask a super admin to add tournaments, or proceed without one.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {tournaments.map((t) => {
+                  const isSelected = selectedTournamentId === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => handleSelectTournament(t.id)}
+                      className={`w-full text-left rounded-xl border-2 p-4 transition-all duration-150
+                        ${isSelected
+                          ? "border-tp-primary bg-tp-primary/5 shadow-card"
+                          : "border-tp-bg-dark bg-white active:bg-tp-bg/40"}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`mt-0.5 w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center
+                            ${isSelected ? "border-tp-primary bg-tp-primary" : "border-gray-300"}`}
+                        >
+                          {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-gray-900">{t.name}</span>
+                            <span className="text-[10px] text-gray-400 font-mono">{t.year}</span>
+                            {t.status === "in_progress" && (
+                              <span className="text-[9px] bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                                Live
+                              </span>
+                            )}
+                          </div>
+                          {t.course_name && (
+                            <p className="text-xs text-gray-600 mt-1">{t.course_name}</p>
+                          )}
+                          <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+                            {t.location && <span>{t.location}</span>}
+                            {t.start_date && (
+                              <>
+                                {t.location && <span className="text-gray-200">|</span>}
+                                <span>{formatDateRange(t.start_date, t.end_date)}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="flex justify-end mt-6">
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                disabled={!selectedTournamentId && tournaments.length > 0}
+                className="btn-green disabled:opacity-40"
+              >
+                Next: Pool Info
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* -- Step 1: Pool Info -- */}
+        {step === 1 && (
+          <div>
+            <h2 className="font-serif text-lg text-tp-primary mb-5 font-bold">Pool Info</h2>
+
+            {selectedTournament && (
+              <div className="bg-tp-bg/60 rounded-xl p-3 mb-6 flex items-center gap-3">
+                <svg className="w-5 h-5 text-tp-accent flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                </svg>
+                <div>
+                  <span className="text-sm font-semibold text-gray-800">{selectedTournament.name}</span>
+                  <span className="text-xs text-gray-400 ml-2">
+                    {selectedTournament.course_name && `${selectedTournament.course_name} · `}
+                    {formatDateRange(selectedTournament.start_date, selectedTournament.end_date)}
+                  </span>
+                </div>
+              </div>
+            )}
 
             <Section label="Pool Name">
               <input
@@ -323,8 +500,8 @@ export default function PoolSetupPage() {
                 <button
                   type="button"
                   onClick={addPlayer}
-                  className="w-full h-12 flex items-center justify-center gap-2 text-sm text-masters-green font-semibold
-                    border-2 border-dashed border-masters-green/20 rounded-xl active:bg-masters-green/5 transition-colors"
+                  className="w-full h-12 flex items-center justify-center gap-2 text-sm text-tp-primary font-semibold
+                    border-2 border-dashed border-tp-primary/20 rounded-xl active:bg-tp-primary/5 transition-colors"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -340,10 +517,13 @@ export default function PoolSetupPage() {
               )}
             </Section>
 
-            <div className="flex justify-end">
+            <div className="flex justify-between">
+              <button type="button" onClick={() => setStep(0)} className="text-sm text-gray-400 font-medium px-4 py-3">
+                Back
+              </button>
               <button
                 type="button"
-                onClick={() => setStep(1)}
+                onClick={() => setStep(2)}
                 disabled={validPlayers.length < 2}
                 className="btn-green disabled:opacity-40"
               >
@@ -353,10 +533,10 @@ export default function PoolSetupPage() {
           </div>
         )}
 
-        {/* -- Step 1: Rules -- */}
-        {step === 1 && (
+        {/* -- Step 2: Rules -- */}
+        {step === 2 && (
           <div>
-            <h2 className="font-serif text-lg text-masters-green mb-5 font-bold">Chairman Rules</h2>
+            <h2 className="font-serif text-lg text-tp-primary mb-5 font-bold">Chairman Rules</h2>
 
             <Section label="Draft Type">
               <div className="space-y-2.5">
@@ -414,7 +594,7 @@ export default function PoolSetupPage() {
               </div>
 
               {settings.missedCutRule === "penalty" && (
-                <div className="mt-4 flex items-center gap-3 bg-masters-cream/60 rounded-xl p-4">
+                <div className="mt-4 flex items-center gap-3 bg-tp-bg/60 rounded-xl p-4">
                   <label className="text-sm text-gray-600 flex-shrink-0">Penalty per round:</label>
                   <div className="flex items-center gap-1">
                     <span className="text-sm text-gray-400 font-mono">+</span>
@@ -424,7 +604,7 @@ export default function PoolSetupPage() {
                       max={20}
                       value={settings.missedCutPenalty}
                       onChange={(e) => set("missedCutPenalty", Number(e.target.value))}
-                      className="w-16 border-2 border-masters-cream-dark bg-white rounded-lg px-2 py-2 text-sm text-center font-mono focus:border-masters-green outline-none"
+                      className="w-16 border-2 border-tp-bg-dark bg-white rounded-lg px-2 py-2 text-sm text-center font-mono focus:border-tp-primary outline-none"
                     />
                   </div>
                   <span className="text-xs text-gray-400">(x2 rds = +{settings.missedCutPenalty * 2})</span>
@@ -440,7 +620,7 @@ export default function PoolSetupPage() {
                   title="Count All Golfers"
                   description="Every golfer on your roster contributes to your total."
                   badge="Recommended"
-                  info="Every golfer drafted to your team counts toward your total score. If you have 10 golfers, all 10 scores are added together. This rewards consistent drafting across your entire roster and makes every pick matter equally. It's the most common format for Masters pools."
+                  info="Every golfer drafted to your team counts toward your total score. If you have 10 golfers, all 10 scores are added together. This rewards consistent drafting across your entire roster and makes every pick matter equally. It's the most common format for golf pools."
                 />
                 <OptionCard
                   selected={settings.scoringType === "best-n"}
@@ -452,7 +632,7 @@ export default function PoolSetupPage() {
               </div>
 
               {settings.scoringType === "best-n" && (
-                <div className="mt-4 flex items-center gap-3 bg-masters-cream/60 rounded-xl p-4">
+                <div className="mt-4 flex items-center gap-3 bg-tp-bg/60 rounded-xl p-4">
                   <label className="text-sm text-gray-600">Count best:</label>
                   <input
                     type="number"
@@ -460,7 +640,7 @@ export default function PoolSetupPage() {
                     max={20}
                     value={settings.bestN}
                     onChange={(e) => set("bestN", Number(e.target.value))}
-                    className="w-16 border-2 border-masters-cream-dark bg-white rounded-lg px-2 py-2 text-sm text-center font-mono focus:border-masters-green outline-none"
+                    className="w-16 border-2 border-tp-bg-dark bg-white rounded-lg px-2 py-2 text-sm text-center font-mono focus:border-tp-primary outline-none"
                   />
                   <span className="text-sm text-gray-400">golfers per player</span>
                 </div>
@@ -487,7 +667,7 @@ export default function PoolSetupPage() {
               </div>
 
               {settings.purseType === "custom" && (
-                <div className="mt-4 bg-masters-cream/60 rounded-xl p-4">
+                <div className="mt-4 bg-tp-bg/60 rounded-xl p-4">
                   <label className="text-xs text-gray-500 block mb-2">
                     Comma-separated percentages summing to 100 (e.g. 50,30,20)
                   </label>
@@ -522,7 +702,7 @@ export default function PoolSetupPage() {
             </Section>
 
             <div className="flex justify-between">
-              <button type="button" onClick={() => setStep(0)} className="text-sm text-gray-400 font-medium px-4 py-3">
+              <button type="button" onClick={() => setStep(1)} className="text-sm text-gray-400 font-medium px-4 py-3">
                 Back
               </button>
               {!rulesComplete && (
@@ -531,38 +711,14 @@ export default function PoolSetupPage() {
               {settings.draftType === "snake" ? (
                 <button
                   type="button"
-                  onClick={async () => {
-                    setSaving(true);
-                    setError("");
-                    const golferEntries = parseFieldEntries();
-                    const dist = settings.purseType === "custom"
-                      ? customDist.split(",").map((n) => Number(n.trim())) : [];
-                    const finalSettings = { ...settings, purseDistribution: dist };
-                    const res = await fetch(`/api/pool/${slug}/setup`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        poolName,
-                        players: players.filter((p) => p.name.trim()),
-                        golferEntries,
-                        buyIn,
-                        settings: finalSettings,
-                      }),
-                    });
-                    setSaving(false);
-                    if (res.ok) {
-                      router.push(`/pool/${slug}`);
-                    } else {
-                      setError("Failed to save. Try again.");
-                    }
-                  }}
+                  onClick={launchLiveDraft}
                   disabled={saving || !rulesComplete}
                   className="btn-green disabled:opacity-40"
                 >
                   {saving ? "Saving..." : "Launch Live Draft"}
                 </button>
               ) : /* random or auto-snake */ (
-                <button type="button" onClick={() => setStep(2)} disabled={!rulesComplete} className="btn-green disabled:opacity-40">
+                <button type="button" onClick={() => setStep(3)} disabled={!rulesComplete} className="btn-green disabled:opacity-40">
                   Next: Field
                 </button>
               )}
@@ -570,15 +726,15 @@ export default function PoolSetupPage() {
           </div>
         )}
 
-        {/* -- Step 2: Field -- */}
-        {step === 2 && (
+        {/* -- Step 3: Field -- */}
+        {step === 3 && (
           <div>
-            <h2 className="font-serif text-lg text-masters-green mb-1 font-bold">Golfer Field</h2>
+            <h2 className="font-serif text-lg text-tp-primary mb-1 font-bold">Golfer Field</h2>
             <p className="text-xs text-gray-500 mb-5">
-              2026 Masters field — {golferCount} golfers sorted by world ranking.
+              {selectedTournament ? `${selectedTournament.name} ${selectedTournament.year}` : "Tournament"} field — {golferCount} golfers sorted by world ranking.
             </p>
 
-            <div className="rounded-xl border-2 border-masters-cream-dark bg-masters-cream/30 p-3 font-mono text-xs leading-relaxed overflow-y-auto" style={{ maxHeight: 320 }}>
+            <div className="rounded-xl border-2 border-tp-bg-dark bg-tp-bg/30 p-3 font-mono text-xs leading-relaxed overflow-y-auto" style={{ maxHeight: 320 }}>
               {parseFieldEntries().map((e, i) => (
                 <div key={i} className="py-0.5 text-gray-700">
                   {e.ranking ? <span className="text-gray-400">#{e.ranking} </span> : null}{e.name}
@@ -598,37 +754,13 @@ export default function PoolSetupPage() {
             </p>
 
             <div className="flex justify-between mt-6">
-              <button type="button" onClick={() => setStep(1)} className="text-sm text-gray-400 font-medium px-4 py-3">
+              <button type="button" onClick={() => setStep(2)} className="text-sm text-gray-400 font-medium px-4 py-3">
                 Back
               </button>
               {settings.draftType === "snake" ? (
                 <button
                   type="button"
-                  onClick={async () => {
-                    setSaving(true);
-                    setError("");
-                    const golferEntries = parseFieldEntries();
-                    const dist = settings.purseType === "custom"
-                      ? customDist.split(",").map((n) => Number(n.trim())) : [];
-                    const finalSettings = { ...settings, purseDistribution: dist };
-                    const res = await fetch(`/api/pool/${slug}/setup`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        poolName,
-                        players: players.filter((p) => p.name.trim()),
-                        golferEntries,
-                        buyIn,
-                        settings: finalSettings,
-                      }),
-                    });
-                    setSaving(false);
-                    if (res.ok) {
-                      router.push(`/pool/${slug}`);
-                    } else {
-                      setError("Failed to save. Try again.");
-                    }
-                  }}
+                  onClick={launchLiveDraft}
                   disabled={golferCount < validPlayers.length || saving}
                   className="btn-green disabled:opacity-40"
                 >
@@ -648,10 +780,10 @@ export default function PoolSetupPage() {
           </div>
         )}
 
-        {/* -- Step 3: Draft Results -- */}
-        {step === 3 && (
+        {/* -- Step 4: Draft Results -- */}
+        {step === 4 && (
           <div>
-            <h2 className="font-serif text-lg text-masters-green mb-1 font-bold">Draft Results</h2>
+            <h2 className="font-serif text-lg text-tp-primary mb-1 font-bold">Draft Results</h2>
             <p className="text-xs text-gray-500 mb-5">
               {settings.draftType === "snake" ? "Snake draft" : settings.draftType === "auto-snake" ? "Auto snake draft" : "Random assignment"} complete.
             </p>
@@ -664,9 +796,9 @@ export default function PoolSetupPage() {
                 const entries = parseFieldEntries();
 
                 return (
-                  <div key={player.id} className="bg-masters-cream/60 rounded-xl p-4">
+                  <div key={player.id} className="bg-tp-bg/60 rounded-xl p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="font-serif font-bold text-masters-green">{player.name}</span>
+                      <span className="font-serif font-bold text-tp-primary">{player.name}</span>
                       <span className="text-xs text-gray-400">{myPicks.length} picks</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
@@ -675,7 +807,7 @@ export default function PoolSetupPage() {
                         return (
                           <span
                             key={a.golferId}
-                            className="inline-flex items-center text-xs bg-white border border-masters-cream-dark rounded-full px-3 py-1.5 font-medium"
+                            className="inline-flex items-center text-xs bg-white border border-tp-bg-dark rounded-full px-3 py-1.5 font-medium"
                           >
                             <span className="text-gray-300 mr-1 text-[10px] font-mono">#{a.pickNumber}</span>
                             {entries[idx]?.name}
@@ -692,15 +824,15 @@ export default function PoolSetupPage() {
               <button
                 type="button"
                 onClick={() => { runDraft(); }}
-                className="text-sm text-masters-green font-medium active:underline px-4 py-3"
+                className="text-sm text-tp-primary font-medium active:underline px-4 py-3"
               >
                 Re-run Draft
               </button>
               <div className="flex gap-2">
-                <button type="button" onClick={() => setStep(2)} className="text-sm text-gray-400 font-medium px-4 py-3">
+                <button type="button" onClick={() => setStep(3)} className="text-sm text-gray-400 font-medium px-4 py-3">
                   Back
                 </button>
-                <button type="button" onClick={() => setStep(4)} className="btn-green">
+                <button type="button" onClick={() => setStep(5)} className="btn-green">
                   Review
                 </button>
               </div>
@@ -708,13 +840,14 @@ export default function PoolSetupPage() {
           </div>
         )}
 
-        {/* -- Step 4: Confirm -- */}
-        {step === 4 && (
+        {/* -- Step 5: Confirm -- */}
+        {step === 5 && (
           <div>
-            <h2 className="font-serif text-lg text-masters-green mb-5 font-bold">Confirm &amp; Launch</h2>
+            <h2 className="font-serif text-lg text-tp-primary mb-5 font-bold">Confirm &amp; Launch</h2>
 
             <div className="space-y-0">
               {[
+                ...(selectedTournament ? [{ label: "Tournament", value: `${selectedTournament.name} ${selectedTournament.year}` }] : []),
                 { label: "Pool Name", value: poolName },
                 { label: "Players", value: `${validPlayers.length} (${validPlayers.map(p => p.name).join(", ")})` },
                 { label: "Buy-in", value: `$${buyIn}/player · $${validPlayers.length * buyIn} total` },
@@ -757,7 +890,7 @@ export default function PoolSetupPage() {
                     : "Honor system",
                 },
               ].map(({ label, value }) => (
-                <div key={label} className="flex gap-3 text-sm py-3 border-b border-masters-cream-dark last:border-0">
+                <div key={label} className="flex gap-3 text-sm py-3 border-b border-tp-bg-dark last:border-0">
                   <span className="w-24 text-gray-400 flex-shrink-0 font-medium">{label}</span>
                   <span className="text-gray-800">{value}</span>
                 </div>
@@ -767,7 +900,7 @@ export default function PoolSetupPage() {
             {error && <p className="text-red-500 text-sm mt-4">{error}</p>}
 
             <div className="flex justify-between mt-6">
-              <button type="button" onClick={() => setStep(3)} className="text-sm text-gray-400 font-medium px-4 py-3">
+              <button type="button" onClick={() => setStep(4)} className="text-sm text-gray-400 font-medium px-4 py-3">
                 Back
               </button>
               <button

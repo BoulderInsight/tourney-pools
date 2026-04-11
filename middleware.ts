@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "dev-secret-change-me");
-const COOKIE_NAME = "masters_session";
+const COOKIE_NAME = "tp_session";
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

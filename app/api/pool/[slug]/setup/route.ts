@@ -24,7 +24,7 @@ export async function POST(
   const poolId = poolRows[0].id;
 
   const body = await req.json();
-  const { poolName, players, golferEntries, golferNames, buyIn, settings } = body;
+  const { poolName, players, golferEntries, golferNames, buyIn, settings, tournamentId } = body;
 
   // Support both new format (golferEntries with rankings) and legacy (golferNames)
   const entries: { name: string; ranking: number | null }[] = golferEntries
@@ -35,14 +35,15 @@ export async function POST(
   await sql`DELETE FROM golfers WHERE pool_id = ${poolId}`;
   await sql`DELETE FROM players WHERE pool_id = ${poolId}`;
 
-  // Update pool settings
+  // Update pool settings (including tournament_id if provided)
   await sql`
     UPDATE pools SET
       pool_name = ${poolName},
       buy_in = ${buyIn},
       settings = ${JSON.stringify(settings)},
       setup_complete = true,
-      draft_complete = ${settings.draftType === "random" || settings.draftType === "auto-snake"}
+      draft_complete = ${settings.draftType === "random" || settings.draftType === "auto-snake"},
+      tournament_id = ${tournamentId || null}
     WHERE id = ${poolId}
   `;
 
@@ -61,14 +62,26 @@ export async function POST(
   // Insert golfers with rankings, linked to shared tournament_golfers
   const insertedGolfers = [];
   for (let i = 0; i < entries.length; i++) {
-    // Find or create tournament golfer
-    let tgRows = await sql`SELECT id FROM tournament_golfers WHERE name = ${entries[i].name}`;
-    if (tgRows.length === 0) {
-      tgRows = await sql`
-        INSERT INTO tournament_golfers (name, world_ranking)
-        VALUES (${entries[i].name}, ${entries[i].ranking})
-        RETURNING id
-      `;
+    // Find or create tournament golfer, scoped to tournament if provided
+    let tgRows;
+    if (tournamentId) {
+      tgRows = await sql`SELECT id FROM tournament_golfers WHERE name = ${entries[i].name} AND tournament_id = ${tournamentId}`;
+      if (tgRows.length === 0) {
+        tgRows = await sql`
+          INSERT INTO tournament_golfers (name, world_ranking, tournament_id)
+          VALUES (${entries[i].name}, ${entries[i].ranking}, ${tournamentId})
+          RETURNING id
+        `;
+      }
+    } else {
+      tgRows = await sql`SELECT id FROM tournament_golfers WHERE name = ${entries[i].name} AND tournament_id IS NULL`;
+      if (tgRows.length === 0) {
+        tgRows = await sql`
+          INSERT INTO tournament_golfers (name, world_ranking)
+          VALUES (${entries[i].name}, ${entries[i].ranking})
+          RETURNING id
+        `;
+      }
     }
     const tgId = tgRows[0].id;
 

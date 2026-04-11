@@ -15,7 +15,7 @@ export async function GET(
   const sql = getDb();
 
   const poolRows = await sql`
-    SELECT p.id, p.slug, p.pool_name, p.buy_in, p.settings, p.setup_complete, p.draft_complete, p.chairman_id, p.last_sync_at,
+    SELECT p.id, p.slug, p.pool_name, p.buy_in, p.settings, p.setup_complete, p.draft_complete, p.chairman_id, p.last_sync_at, p.tournament_id,
            c.name as chairman_name, c.tier, c.custom_ad_image, c.custom_ad_url, c.custom_ad_headline, c.custom_ad_description, c.ad_removed
     FROM pools p
     JOIN chairmen c ON c.id = p.chairman_id
@@ -102,5 +102,6 @@ export async function GET(
     adRemoved: pool.ad_removed,
     draftComplete: pool.draft_complete,
     lastSyncAt: pool.last_sync_at,
+    tournamentId: pool.tournament_id,
   });
 }

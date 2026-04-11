@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import ConfirmModal from "@/app/components/confirm-modal";
 
 interface Chairman {
@@ -92,15 +91,16 @@ export default function AdminPage() {
   }
 
   return (
+    <main className="px-4 pt-4 pb-safe max-w-lg mx-auto">
     <div>
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
-        <Image src="/mymasterspool2.png" alt="My Masters Pool" width={200} height={100} />
+        <span className="font-serif text-xl font-bold text-tp-primary">TourneyPools</span>
         <div className="flex flex-col items-end gap-1">
-          <Link href="/dashboard" className="text-xs text-masters-green font-semibold">
+          <Link href="/dashboard" className="text-xs text-tp-primary font-semibold">
             Dashboard
           </Link>
-          <h1 className="font-serif text-xl font-bold text-masters-green">Super Admin</h1>
+          <h1 className="font-serif text-xl font-bold text-tp-primary">Super Admin</h1>
           <p className="text-[10px] text-gray-400">System management</p>
         </div>
       </div>
@@ -108,15 +108,15 @@ export default function AdminPage() {
       {/* Stats */}
       <div className="flex gap-3 mb-5">
         <div className="card p-3 flex-1 text-center">
-          <div className="text-2xl font-serif font-bold text-masters-green">{chairmen.length}</div>
+          <div className="text-2xl font-serif font-bold text-tp-primary">{chairmen.length}</div>
           <div className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Chairmen</div>
         </div>
         <div className="card p-3 flex-1 text-center">
-          <div className="text-2xl font-serif font-bold text-masters-green">{pools.length}</div>
+          <div className="text-2xl font-serif font-bold text-tp-primary">{pools.length}</div>
           <div className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Pools</div>
         </div>
         <div className="card p-3 flex-1 text-center">
-          <div className="text-2xl font-serif font-bold text-masters-green">{pools.filter(p => p.setup_complete).length}</div>
+          <div className="text-2xl font-serif font-bold text-tp-primary">{pools.filter(p => p.setup_complete).length}</div>
           <div className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Live</div>
         </div>
       </div>
@@ -157,7 +157,7 @@ export default function AdminPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     {c.tier === "paid" ? (
-                      <span className="text-[10px] bg-masters-gold/20 text-masters-gold-dark px-2 py-0.5 rounded-full font-semibold">Premium</span>
+                      <span className="text-[10px] bg-tp-accent/20 text-tp-accent-dark px-2 py-0.5 rounded-full font-semibold">Premium</span>
                     ) : (
                       <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-semibold">Free</span>
                     )}
@@ -175,32 +175,32 @@ export default function AdminPage() {
                 </div>
               </div>
               {/* Actions */}
-              <div className="flex border-t border-masters-cream-dark text-xs font-semibold">
+              <div className="flex border-t border-tp-bg-dark text-xs font-semibold">
                 {!c.email_verified && (
                   <>
                     <button
                       onClick={() => patchChairman(c.id, "verify_email")}
-                      className="flex-1 text-center py-2.5 text-masters-green active:bg-masters-green/5 transition-colors"
+                      className="flex-1 text-center py-2.5 text-tp-primary active:bg-tp-primary/5 transition-colors"
                     >
                       Verify Email
                     </button>
-                    <div className="w-px bg-masters-cream-dark" />
+                    <div className="w-px bg-tp-bg-dark" />
                   </>
                 )}
                 <button
                   onClick={() => patchChairman(c.id, "set_tier", c.tier === "paid" ? "free" : "paid")}
-                  className="flex-1 text-center py-2.5 text-masters-gold active:bg-masters-gold/5 transition-colors"
+                  className="flex-1 text-center py-2.5 text-tp-accent active:bg-tp-accent/5 transition-colors"
                 >
                   {c.tier === "paid" ? "Downgrade" : "Upgrade"}
                 </button>
-                <div className="w-px bg-masters-cream-dark" />
+                <div className="w-px bg-tp-bg-dark" />
                 <button
                   onClick={() => patchChairman(c.id, "toggle_super_admin", !c.is_super_admin)}
                   className="flex-1 text-center py-2.5 text-purple-600 active:bg-purple-50 transition-colors"
                 >
                   {c.is_super_admin ? "Remove Admin" : "Make Admin"}
                 </button>
-                <div className="w-px bg-masters-cream-dark" />
+                <div className="w-px bg-tp-bg-dark" />
                 <button
                   onClick={() => setModal({ type: "chairman", id: c.id, label: c.name })}
                   className="flex-1 text-center py-2.5 text-red-400 active:bg-red-50 transition-colors"
@@ -242,23 +242,23 @@ export default function AdminPage() {
                   <span>{p.chairman_email}</span>
                 </div>
               </div>
-              <div className="flex border-t border-masters-cream-dark text-xs font-semibold">
+              <div className="flex border-t border-tp-bg-dark text-xs font-semibold">
                 <Link
                   href={`/pool/${p.slug}`}
-                  className="flex-1 text-center py-2.5 text-masters-green active:bg-masters-green/5 transition-colors"
+                  className="flex-1 text-center py-2.5 text-tp-primary active:bg-tp-primary/5 transition-colors"
                 >
                   View
                 </Link>
-                <div className="w-px bg-masters-cream-dark" />
+                <div className="w-px bg-tp-bg-dark" />
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText(`https://mymasterspool.com/pool/${p.slug}`);
+                    navigator.clipboard.writeText(`https://tourneypools.com/pool/${p.slug}`);
                   }}
-                  className="flex-1 text-center py-2.5 text-masters-gold active:bg-masters-gold/5 transition-colors"
+                  className="flex-1 text-center py-2.5 text-tp-accent active:bg-tp-accent/5 transition-colors"
                 >
                   Copy Link
                 </button>
-                <div className="w-px bg-masters-cream-dark" />
+                <div className="w-px bg-tp-bg-dark" />
                 <button
                   onClick={() => setModal({ type: "pool", id: p.id, label: p.pool_name })}
                   className="flex-1 text-center py-2.5 text-red-400 active:bg-red-50 transition-colors"
@@ -281,5 +281,6 @@ export default function AdminPage() {
         onCancel={() => setModal(null)}
       />
     </div>
+    </main>
   );
 }

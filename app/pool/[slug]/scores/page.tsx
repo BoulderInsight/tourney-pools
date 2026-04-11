@@ -16,7 +16,7 @@ function LoadingState() {
         <div className="loading-dot" />
         <div className="loading-dot" />
       </div>
-      <p className="font-serif italic text-masters-green/60 text-sm">Loading golfers...</p>
+      <p className="font-serif italic text-tp-primary/60 text-sm">Loading golfers...</p>
     </div>
   );
 }
@@ -63,7 +63,7 @@ function ScoreCell({
           onBlur={save}
           onKeyDown={(e) => e.key === "Enter" && save()}
           autoFocus
-          className="w-16 h-14 text-center text-lg font-mono font-bold border-2 border-masters-green rounded-xl bg-white outline-none"
+          className="w-16 h-14 text-center text-lg font-mono font-bold border-2 border-tp-primary rounded-xl bg-white outline-none"
         />
       </div>
     );
@@ -82,8 +82,8 @@ function ScoreCell({
       <div
         className={`w-16 h-14 flex items-center justify-center rounded-xl border-2 transition-colors
           ${value !== null
-            ? "border-masters-cream-dark bg-white"
-            : "border-dashed border-gray-200 bg-masters-cream/40"}`}
+            ? "border-tp-bg-dark bg-white"
+            : "border-dashed border-gray-200 bg-tp-bg/40"}`}
       >
         <span className={`text-lg font-mono font-bold ${value !== null ? scoreColorClass(value) : "text-gray-200"}`}>
           {value !== null ? formatScore(value) : "-"}
@@ -169,7 +169,7 @@ function GolferCard({
               ? "bg-green-50 text-green-700"
               : cutStatus === "missed"
               ? "bg-red-50 text-red-600"
-              : "bg-masters-cream/40 text-gray-400"
+              : "bg-tp-bg/40 text-gray-400"
             }`}
         >
           {cutStatus === "made" ? "Made Cut" : cutStatus === "missed" ? "Missed Cut" : "Cut Status: TBD"} — Tap to change
@@ -181,7 +181,7 @@ function GolferCard({
               ? "bg-green-50 text-green-700"
               : cutStatus === "missed"
               ? "bg-red-50 text-red-600"
-              : "bg-masters-cream/40 text-gray-400"
+              : "bg-tp-bg/40 text-gray-400"
             }`}
         >
           {cutStatus === "made" ? "Made Cut" : cutStatus === "missed" ? "Missed Cut" : "Cut Status: TBD"}
@@ -246,12 +246,12 @@ export default function PoolScoresPage() {
   if (!config || !config.setupComplete) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div className="w-20 h-20 rounded-full bg-masters-green/10 flex items-center justify-center mb-6">
-          <svg className="w-10 h-10 text-masters-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="w-20 h-20 rounded-full bg-tp-primary/10 flex items-center justify-center mb-6">
+          <svg className="w-10 h-10 text-tp-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
           </svg>
         </div>
-        <h1 className="font-serif text-2xl font-bold text-masters-green mb-2">No Pool Yet</h1>
+        <h1 className="font-serif text-2xl font-bold text-tp-primary mb-2">No Pool Yet</h1>
         <p className="text-gray-500 text-sm mb-8">Set up the pool first before entering scores.</p>
         <Link href={`/pool/${slug}/setup`} className="btn-green">Go to Setup</Link>
       </div>
@@ -288,9 +288,9 @@ export default function PoolScoresPage() {
   return (
     <div>
       {/* Sticky search + filters */}
-      <div className="sticky top-0 z-40 -mx-4 px-4 pt-2 pb-3 bg-masters-cream/95 backdrop-blur-sm space-y-3">
+      <div className="sticky top-0 z-40 -mx-4 px-4 pt-2 pb-3 bg-tp-bg/95 backdrop-blur-sm space-y-3">
         {syncMsg && (
-          <p className={`text-xs font-medium px-1 ${syncMsg.includes("fail") || syncMsg.includes("error") ? "text-red-500" : "text-masters-green"}`}>
+          <p className={`text-xs font-medium px-1 ${syncMsg.includes("fail") || syncMsg.includes("error") ? "text-red-500" : "text-tp-primary"}`}>
             {syncMsg}
           </p>
         )}
@@ -313,7 +313,7 @@ export default function PoolScoresPage() {
               type="button"
               onClick={handleSync}
               disabled={syncing}
-              className="flex items-center gap-1.5 text-xs font-semibold text-masters-green bg-masters-green/10 px-3 py-2 rounded-full active:bg-masters-green/20 transition-colors disabled:opacity-50 flex-shrink-0"
+              className="flex items-center gap-1.5 text-xs font-semibold text-tp-primary bg-tp-primary/10 px-3 py-2 rounded-full active:bg-tp-primary/20 transition-colors disabled:opacity-50 flex-shrink-0"
             >
               <svg className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

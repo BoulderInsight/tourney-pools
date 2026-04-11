@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { PoolConfig, PlayerStanding } from "@/lib/types";
 import { computeLeaderboard, formatScore, scoreColorClass } from "@/lib/pool";
-import Image from "next/image";
 import Link from "next/link";
 import { SponsorBanner } from "@/app/components/sponsor-banner";
 
@@ -16,7 +15,7 @@ function LoadingState() {
         <div className="loading-dot" />
         <div className="loading-dot" />
       </div>
-      <p className="font-serif italic text-masters-green/60 text-sm">
+      <p className="font-serif italic text-tp-primary/60 text-sm">
         Loading standings...
       </p>
     </div>
@@ -39,7 +38,7 @@ function RoundDots({ golfer }: { golfer: PoolConfig["golfers"][0] }) {
       {rounds.map((r, i) => (
         <span
           key={i}
-          className={`w-2 h-2 rounded-full ${r !== null ? "bg-masters-green" : "bg-gray-200"}`}
+          className={`w-2 h-2 rounded-full ${r !== null ? "bg-tp-primary" : "bg-gray-200"}`}
           title={`R${i + 1}: ${formatScore(r)}`}
         />
       ))}
@@ -56,7 +55,7 @@ function GolferDetail({ golfer, counted, totalScore, penaltyScore }: {
   return (
     <div
       className={`flex items-center justify-between rounded-xl px-3 py-3 text-sm
-        ${counted ? "bg-white border border-masters-cream-dark" : "bg-masters-cream/60 opacity-60"}`}
+        ${counted ? "bg-white border border-tp-bg-dark" : "bg-tp-bg/60 opacity-60"}`}
     >
       <div className="flex items-center gap-2.5 min-w-0 flex-1">
         <RoundDots golfer={golfer} />
@@ -168,7 +167,7 @@ function StandingCard({ standing, expanded, onToggle, index, buyIn, allStandings
   return (
     <div
       className={`card-interactive animate-stagger-in stagger-${Math.min(index + 1, 10)} overflow-hidden
-        ${isLeader ? "ring-2 ring-masters-gold/40" : ""}`}
+        ${isLeader ? "ring-2 ring-tp-accent/40" : ""}`}
     >
       {/* Main card content - tap to expand */}
       <button
@@ -179,11 +178,11 @@ function StandingCard({ standing, expanded, onToggle, index, buyIn, allStandings
         {/* Rank */}
         <div className="flex-shrink-0 w-14 flex items-center justify-center">
           {isLeader ? (
-            <div className="w-12 h-12 rounded-full bg-masters-gold flex items-center justify-center shadow-gold">
+            <div className="w-12 h-12 rounded-full bg-tp-accent flex items-center justify-center shadow-gold">
               <span className="text-white font-serif font-bold text-xl">1</span>
             </div>
           ) : hasRank ? (
-            <span className="font-serif font-bold text-4xl text-masters-green/80 tabular-nums">
+            <span className="font-serif font-bold text-4xl text-tp-primary/80 tabular-nums">
               {standing.rank}
             </span>
           ) : (
@@ -200,7 +199,7 @@ function StandingCard({ standing, expanded, onToggle, index, buyIn, allStandings
               {standing.player.name}
             </span>
             {isLeader && (
-              <span className="text-[9px] bg-masters-gold text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+              <span className="text-[9px] bg-tp-accent text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
                 Leader
               </span>
             )}
@@ -214,7 +213,7 @@ function StandingCard({ standing, expanded, onToggle, index, buyIn, allStandings
         <div className="flex flex-col items-end flex-shrink-0">
           <ScoreBadge score={standing.totalScore} size="xl" />
           {standing.prize > 0 && (
-            <span className="text-xs font-semibold text-masters-gold mt-0.5">
+            <span className="text-xs font-semibold text-tp-accent mt-0.5">
               ${standing.prize}
             </span>
           )}
@@ -371,12 +370,12 @@ function LiveDraft({ slug, config, isOwner, onComplete }: {
   if (!orderDrawn) {
     return (
       <div className="card p-6 text-center mt-4">
-        <h2 className="font-serif text-lg font-bold text-masters-green mb-2">
+        <h2 className="font-serif text-lg font-bold text-tp-primary mb-2">
           {isOwner ? "Draw for Pick Order" : "Waiting for Chairman to Draw Order..."}
         </h2>
         <div className="space-y-2 mb-6">
           {players.map(p => (
-            <div key={p.id} className="flex items-center gap-3 bg-masters-cream/60 rounded-xl px-4 py-3">
+            <div key={p.id} className="flex items-center gap-3 bg-tp-bg/60 rounded-xl px-4 py-3">
               <span className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-400">?</span>
               <span className="font-medium text-gray-800">{p.name}</span>
             </div>
@@ -397,7 +396,7 @@ function LiveDraft({ slug, config, isOwner, onComplete }: {
       <div className="flex items-center gap-2 justify-center mb-4 flex-wrap">
         {players.map((p, i) => (
           <div key={p.id} className={`flex flex-col items-center px-3 py-2 rounded-xl text-center
-            ${currentPicker?.id === p.id ? "bg-masters-green text-white shadow-card" : `${getTeamColor(i).bg} ${getTeamColor(i).text} border ${getTeamColor(i).border}`}`}>
+            ${currentPicker?.id === p.id ? "bg-tp-primary text-white shadow-card" : `${getTeamColor(i).bg} ${getTeamColor(i).text} border ${getTeamColor(i).border}`}`}>
             <span className="text-[9px] font-bold uppercase tracking-wider opacity-70">#{i + 1}</span>
             <span className="text-xs font-bold truncate max-w-[70px]">{p.name}</span>
             <span className="text-[9px] opacity-60">{picksPerPlayer[p.id]} picks</span>
@@ -414,7 +413,7 @@ function LiveDraft({ slug, config, isOwner, onComplete }: {
             <p className="font-serif text-xl font-bold">Add {selectedName} to {currentPicker.name}&apos;s Team</p>
           </button>
         ) : (
-          <div className="bg-masters-green text-white rounded-xl px-4 py-3 mb-3 text-center">
+          <div className="bg-tp-primary text-white rounded-xl px-4 py-3 mb-3 text-center">
             <p className="text-[10px] uppercase tracking-wider opacity-70 mb-0.5">Round {currentRound} · Pick #{draftAssignments.length + 1}</p>
             <p className="font-serif text-xl font-bold">{currentPicker.name}&apos;s Pick</p>
           </div>
@@ -466,7 +465,7 @@ function LiveDraft({ slug, config, isOwner, onComplete }: {
 
       {/* Golfer list */}
       <div className="card overflow-hidden mb-4">
-        <div className="divide-y divide-masters-cream-dark max-h-[400px] overflow-y-auto">
+        <div className="divide-y divide-tp-bg-dark max-h-[400px] overflow-y-auto">
           {config.golfers
             .filter(g => g.name.toLowerCase().includes(search.toLowerCase()))
             .sort((a, b) => (a.worldRanking || 999) - (b.worldRanking || 999))
@@ -502,8 +501,8 @@ function LiveDraft({ slug, config, isOwner, onComplete }: {
 
               return (
                 <button key={g.id} type="button" onClick={() => setSelectedGolfer(isSelected ? null : g.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${isSelected ? "bg-masters-green/10" : "active:bg-masters-cream/60"}`}>
-                  <div className={`w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors ${isSelected ? "border-masters-green bg-masters-green" : "border-gray-300"}`}>
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${isSelected ? "bg-tp-primary/10" : "active:bg-tp-bg/60"}`}>
+                  <div className={`w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors ${isSelected ? "border-tp-primary bg-tp-primary" : "border-gray-300"}`}>
                     {isSelected && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                   </div>
                   {g.worldRanking && <span className="text-[10px] text-gray-400 font-mono w-6 flex-shrink-0">#{g.worldRanking}</span>}
@@ -531,7 +530,7 @@ function LiveDraft({ slug, config, isOwner, onComplete }: {
                 <div className="flex flex-wrap gap-1">
                   {myPicks.map(a => {
                     const g = config.golfers.find(gf => gf.id === a.golfer_id);
-                    return <span key={a.golfer_id} className="text-[10px] bg-masters-cream-dark rounded-full px-2 py-0.5 font-medium text-gray-700">{g?.name || "?"}</span>;
+                    return <span key={a.golfer_id} className="text-[10px] bg-tp-bg-dark rounded-full px-2 py-0.5 font-medium text-gray-700">{g?.name || "?"}</span>;
                   })}
                 </div>
               ) : <p className="text-[10px] text-gray-300 italic">No picks yet</p>}
@@ -543,7 +542,7 @@ function LiveDraft({ slug, config, isOwner, onComplete }: {
       {/* Lock button (chairman only) */}
       {isOwner && (
         <button onClick={lockDraft} disabled={!allEqual || saving}
-          className={`w-full py-4 rounded-xl font-semibold text-sm transition-colors mb-4 ${allEqual ? "bg-masters-gold text-white active:bg-masters-gold-dark" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>
+          className={`w-full py-4 rounded-xl font-semibold text-sm transition-colors mb-4 ${allEqual ? "bg-tp-accent text-white active:bg-tp-accent-dark" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>
           {allEqual ? `Lock Draft — ${pickCounts[0]} golfers each` : "Each player must have equal picks to lock"}
         </button>
       )}
@@ -558,7 +557,7 @@ function SettingsPill({ label, info }: { label: string; info: string }) {
       <button
         type="button"
         onClick={() => setShowInfo(!showInfo)}
-        className="inline-flex items-center gap-1 bg-masters-green/8 text-masters-green px-3 py-1.5 rounded-full text-xs font-semibold active:bg-masters-green/15 transition-colors"
+        className="inline-flex items-center gap-1 bg-tp-primary/8 text-tp-primary px-3 py-1.5 rounded-full text-xs font-semibold active:bg-tp-primary/15 transition-colors"
       >
         {label}
         <svg className="w-3 h-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -567,9 +566,9 @@ function SettingsPill({ label, info }: { label: string; info: string }) {
       </button>
       {showInfo && (
         <div className="absolute top-full left-0 mt-1 z-30 min-w-[260px]">
-          <div className="bg-white rounded-xl shadow-card-lg p-3 text-xs text-gray-600 leading-relaxed border border-masters-cream-dark">
+          <div className="bg-white rounded-xl shadow-card-lg p-3 text-xs text-gray-600 leading-relaxed border border-tp-bg-dark">
             {info}
-            <button onClick={() => setShowInfo(false)} className="block mt-2 text-masters-green font-semibold">Got it</button>
+            <button onClick={() => setShowInfo(false)} className="block mt-2 text-tp-primary font-semibold">Got it</button>
           </div>
         </div>
       )}
@@ -635,8 +634,8 @@ export default function PoolLeaderboardPage() {
   if (!config) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <Image src="/MyMastersPoolstacked.png" alt="My Masters Pool" width={360} height={200} className="mb-6" />
-        <h1 className="font-serif text-2xl font-bold text-masters-green mb-2">
+        <h1 className="font-serif text-3xl font-bold text-tp-primary mb-2">TourneyPools</h1>
+        <h1 className="font-serif text-2xl font-bold text-tp-primary mb-2">
           Pool Not Found
         </h1>
         <p className="text-gray-500 text-sm mb-8 max-w-xs leading-relaxed">
@@ -659,8 +658,8 @@ export default function PoolLeaderboardPage() {
   if (!config.setupComplete) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <Image src="/MyMastersPoolstacked.png" alt="My Masters Pool" width={360} height={200} className="mb-6" />
-        <h1 className="font-serif text-2xl font-bold text-masters-green mb-2">
+        <h1 className="font-serif text-3xl font-bold text-tp-primary mb-2">TourneyPools</h1>
+        <h1 className="font-serif text-2xl font-bold text-tp-primary mb-2">
           Pool Coming Soon
         </h1>
         <p className="text-gray-500 text-sm mb-8 max-w-xs leading-relaxed">
@@ -679,13 +678,13 @@ export default function PoolLeaderboardPage() {
   return (
     <div>
       {/* Sticky Header */}
-      <div className="sticky top-0 z-40 -mx-4 px-4 pt-2 pb-3 bg-masters-cream/95 backdrop-blur-sm">
-        <h1 className="font-serif text-2xl font-bold text-masters-green leading-tight text-center">
-          {config.poolName || "Masters Pool 2026"}
+      <div className="sticky top-0 z-40 -mx-4 px-4 pt-2 pb-3 bg-tp-bg/95 backdrop-blur-sm">
+        <h1 className="font-serif text-2xl font-bold text-tp-primary leading-tight text-center">
+          {config.poolName || "Golf Pool"}
         </h1>
         <div className="flex items-center justify-center gap-3 mt-1.5 text-xs text-gray-500">
           <span className="flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-masters-gold" />
+            <span className="w-1.5 h-1.5 rounded-full bg-tp-accent" />
             <strong className="text-gray-700">${totalPurse}</strong> purse
           </span>
           <span className="text-gray-300">|</span>
@@ -762,7 +761,7 @@ export default function PoolLeaderboardPage() {
         <div className="gold-rule flex-1" />
         <button
           onClick={fetchPool}
-          className="ml-3 flex items-center gap-1.5 text-xs text-gray-400 active:text-masters-green transition-colors"
+          className="ml-3 flex items-center gap-1.5 text-xs text-gray-400 active:text-tp-primary transition-colors"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

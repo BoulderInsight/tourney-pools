@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   const sql = getDb();
   await sql`
     INSERT INTO pools (slug, chairman_id, pool_name)
-    VALUES (${slug}, ${session.chairmanId}, ${poolName || 'My Masters Pool'})
+    VALUES (${slug}, ${session.chairmanId}, ${poolName || 'My Golf Pool'})
   `;
 
   return NextResponse.json({ slug });

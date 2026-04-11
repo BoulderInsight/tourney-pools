@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname, useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -52,18 +51,18 @@ export default function PoolLayout({ children }: { children: React.ReactNode }) 
   const visibleTabs = tabs.filter((t) => t.alwaysShow || isOwner);
 
   return (
-    <>
+    <main className="px-4 pt-4 pb-safe max-w-lg mx-auto">
       {/* Top bar with logo + nav + page title */}
       {isLoggedIn && (
         <div className="flex items-start justify-between mb-4 -mt-1">
-          <Image src="/mymasterspool2.png" alt="My Masters Pool" width={200} height={100} />
+          <span className="font-serif text-xl font-bold text-tp-primary">TourneyPools</span>
           <div className="flex flex-col items-end gap-0.5">
             <div className="flex items-center gap-3">
-              <Link href="/dashboard" className="text-xs text-masters-green font-semibold active:underline">
+              <Link href="/dashboard" className="text-xs text-tp-primary font-semibold active:underline">
                 My Pools
               </Link>
               {isOwner && (
-                <Link href={`/pool/${slug}/scores`} className="text-xs text-masters-green font-semibold active:underline">
+                <Link href={`/pool/${slug}/scores`} className="text-xs text-tp-primary font-semibold active:underline">
                   Scores
                 </Link>
               )}
@@ -72,29 +71,29 @@ export default function PoolLayout({ children }: { children: React.ReactNode }) 
               </button>
             </div>
             {pathname.endsWith("/scores") && (
-              <h1 className="font-serif text-2xl font-bold text-masters-green">Score Entry</h1>
+              <h1 className="font-serif text-2xl font-bold text-tp-primary">Score Entry</h1>
             )}
             {pathname.endsWith("/setup") && (
-              <h1 className="font-serif text-2xl font-bold text-masters-green">Pool Set Up</h1>
+              <h1 className="font-serif text-2xl font-bold text-tp-primary">Pool Set Up</h1>
             )}
           </div>
         </div>
       )}
       {children}
-      <nav className="fixed bottom-0 inset-x-0 z-50 bg-white/95 backdrop-blur-md border-t border-masters-cream-dark">
+      <nav className="fixed bottom-0 inset-x-0 z-50 bg-white/95 backdrop-blur-md border-t border-tp-bg-dark">
         <div className="flex items-stretch" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
           {visibleTabs.map((tab) => {
             const active = pathname === tab.href;
             return (
               <Link key={tab.href} href={tab.href}
-                className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 transition-colors duration-150 ${active ? "text-masters-green" : "text-gray-400"}`}>
+                className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 transition-colors duration-150 ${active ? "text-tp-primary" : "text-gray-400"}`}>
                 {tab.icon(active)}
-                <span className={`text-[10px] font-semibold tracking-wide ${active ? "text-masters-green" : "text-gray-400"}`}>{tab.label}</span>
+                <span className={`text-[10px] font-semibold tracking-wide ${active ? "text-tp-primary" : "text-gray-400"}`}>{tab.label}</span>
               </Link>
             );
           })}
         </div>
       </nav>
-    </>
+    </main>
   );
 }

@@ -9,35 +9,35 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        masters: {
-          green: "#006747",
-          "green-deep": "#004d34",
-          "green-light": "#008a5e",
-          gold: "#c9a84c",
-          "gold-light": "#d4b96a",
-          "gold-dark": "#a88a3a",
-          cream: "#f5f0e8",
-          "cream-dark": "#ebe4d6",
-          "cream-light": "#faf7f2",
+        tp: {
+          primary: "#1a365d",
+          "primary-deep": "#0f2440",
+          "primary-light": "#2a5298",
+          accent: "#d4a843",
+          "accent-light": "#e0be6a",
+          "accent-dark": "#b08a2e",
+          bg: "#f7f5f2",
+          "bg-dark": "#eae6df",
+          "bg-light": "#faf9f7",
         },
       },
       fontFamily: {
-        serif: ["Playfair Display", "Georgia", "serif"],
-        display: ["Playfair Display", "Georgia", "serif"],
-        sans: ["Raleway", "system-ui", "sans-serif"],
-        body: ["Raleway", "system-ui", "sans-serif"],
+        serif: ["DM Serif Display", "Georgia", "serif"],
+        display: ["DM Serif Display", "Georgia", "serif"],
+        sans: ["Inter", "system-ui", "sans-serif"],
+        body: ["Inter", "system-ui", "sans-serif"],
       },
       boxShadow: {
-        card: "0 2px 12px rgba(0, 103, 71, 0.08)",
-        "card-hover": "0 4px 20px rgba(0, 103, 71, 0.14)",
-        "card-lg": "0 8px 32px rgba(0, 103, 71, 0.12)",
-        gold: "0 2px 12px rgba(201, 168, 76, 0.2)",
+        card: "0 2px 12px rgba(26, 54, 93, 0.08)",
+        "card-hover": "0 4px 20px rgba(26, 54, 93, 0.14)",
+        "card-lg": "0 8px 32px rgba(26, 54, 93, 0.12)",
+        gold: "0 2px 12px rgba(212, 168, 67, 0.2)",
       },
       animation: {
         "fade-in": "fadeIn 0.3s ease-out",
         "slide-up": "slideUp 0.3s ease-out",
         "stagger-in": "fadeSlideUp 0.4s ease-out both",
-        "pulse-green": "pulseGreen 1.5s ease-in-out infinite",
+        "pulse-primary": "pulsePrimary 1.5s ease-in-out infinite",
         "expand": "expand 0.15s ease-out",
       },
       keyframes: {
@@ -53,7 +53,7 @@ const config: Config = {
           "0%": { opacity: "0", transform: "translateY(12px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
-        pulseGreen: {
+        pulsePrimary: {
           "0%, 100%": { opacity: "0.4" },
           "50%": { opacity: "1" },
         },

@@ -5,7 +5,7 @@ import Image from "next/image";
 export function BoulderInsightAd() {
   return (
     <a
-      href="https://boulderinsight.com?utm_source=masterspool&utm_medium=banner"
+      href="https://boulderinsight.com?utm_source=tourneypools&utm_medium=banner"
       target="_blank"
       rel="noopener noreferrer"
       className="block rounded-xl overflow-hidden my-4"
@@ -29,7 +29,7 @@ export function BoulderInsightAd() {
         </p>
         <div className="flex items-center justify-between mt-3">
           <span className="text-[10px] text-white/40">info@boulderinsight.com</span>
-          <span className="text-[10px] text-masters-gold font-semibold">Learn More →</span>
+          <span className="text-[10px] text-tp-accent font-semibold">Learn More →</span>
         </div>
       </div>
     </a>
@@ -46,7 +46,7 @@ export function CustomAd({ imageUrl, linkUrl, headline, description }: {
   const hasImage = imageUrl;
 
   const content = (
-    <div className="rounded-xl overflow-hidden my-4 bg-white border border-masters-cream-dark">
+    <div className="rounded-xl overflow-hidden my-4 bg-white border border-tp-bg-dark">
       {hasImage && (
         <div className="flex justify-center p-3 pb-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}

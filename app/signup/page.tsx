@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 
 export default function SignupPage() {
   const [name, setName] = useState("");
@@ -35,15 +34,16 @@ export default function SignupPage() {
 
   if (emailSent) {
     return (
+      <main className="px-4 pt-4 pb-safe max-w-lg mx-auto">
       <div className="flex flex-col items-center justify-center min-h-[75vh] text-center">
-        <Image src="/MyMastersPoolstacked.png" alt="My Masters Pool" width={280} height={155} className="mb-6" />
+        <h1 className="font-serif text-3xl font-bold text-tp-primary mb-2">TourneyPools</h1>
         <div className="card p-8 w-full">
-          <div className="w-16 h-16 rounded-full bg-masters-green/10 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-masters-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="w-16 h-16 rounded-full bg-tp-primary/10 flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-tp-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
           </div>
-          <h1 className="font-serif text-2xl text-masters-green font-bold mb-2">Check Your Email</h1>
+          <h1 className="font-serif text-2xl text-tp-primary font-bold mb-2">Check Your Email</h1>
           <p className="text-sm text-gray-500 mb-2">
             We sent a verification link to:
           </p>
@@ -53,13 +53,15 @@ export default function SignupPage() {
           </p>
         </div>
       </div>
+      </main>
     );
   }
 
   return (
+    <main className="px-4 pt-4 pb-safe max-w-lg mx-auto">
     <div className="flex flex-col items-center justify-center min-h-[75vh]">
       <div className="card p-8 w-full">
-        <h1 className="font-serif text-2xl text-masters-green mb-1 font-bold text-center">
+        <h1 className="font-serif text-2xl text-tp-primary mb-1 font-bold text-center">
           Create Account
         </h1>
         <p className="text-xs text-gray-500 mb-6 text-center">
@@ -89,9 +91,10 @@ export default function SignupPage() {
 
         <p className="text-xs text-gray-400 text-center mt-6">
           Already have an account?{" "}
-          <Link href="/login" className="text-masters-green font-semibold">Sign in</Link>
+          <Link href="/login" className="text-tp-primary font-semibold">Sign in</Link>
         </p>
       </div>
     </div>
+    </main>
   );
 }

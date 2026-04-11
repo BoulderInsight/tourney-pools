@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Image from "next/image";
 
 interface Player { id: string; name: string; pick_order: number; }
 interface Golfer { id: string; name: string; world_ranking: number | null; tg_ranking: number | null; }
@@ -119,20 +118,20 @@ export default function DraftPage() {
     <div className="pb-safe">
       {/* Header */}
       <div className="flex items-center justify-center mb-3">
-        <Image src="/MyMastersPoolstacked.png" alt="My Masters Pool" width={260} height={144} />
+        <h1 className="font-serif text-3xl font-bold text-tp-primary">TourneyPools</h1>
       </div>
-      <h1 className="font-serif text-2xl font-bold text-masters-green text-center mb-4">Live Snake Draft</h1>
+      <h1 className="font-serif text-2xl font-bold text-tp-primary text-center mb-4">Live Snake Draft</h1>
 
       {/* Step 1: Draw for order */}
       {!orderDrawn ? (
         <div className="card p-6 text-center">
-          <h2 className="font-serif text-lg font-bold text-masters-green mb-2">Draw for Pick Order</h2>
+          <h2 className="font-serif text-lg font-bold text-tp-primary mb-2">Draw for Pick Order</h2>
           <p className="text-xs text-gray-500 mb-6">
             Randomly assign who picks first, second, third, and so on.
           </p>
           <div className="space-y-2 mb-6">
             {players.map((p) => (
-              <div key={p.id} className="flex items-center gap-3 bg-masters-cream/60 rounded-xl px-4 py-3">
+              <div key={p.id} className="flex items-center gap-3 bg-tp-bg/60 rounded-xl px-4 py-3">
                 <span className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-400">?</span>
                 <span className="font-medium text-gray-800">{p.name}</span>
               </div>
@@ -150,7 +149,7 @@ export default function DraftPage() {
               <div
                 key={p.id}
                 className={`flex flex-col items-center px-3 py-2 rounded-xl text-center
-                  ${currentPicker?.id === p.id ? "bg-masters-green text-white shadow-card" : "bg-white border border-masters-cream-dark text-gray-600"}`}
+                  ${currentPicker?.id === p.id ? "bg-tp-primary text-white shadow-card" : "bg-white border border-tp-bg-dark text-gray-600"}`}
               >
                 <span className="text-[9px] font-bold uppercase tracking-wider opacity-70">#{i + 1}</span>
                 <span className="text-xs font-bold truncate max-w-[70px]">{p.name}</span>
@@ -161,7 +160,7 @@ export default function DraftPage() {
 
           {/* Current picker */}
           {currentPicker && (
-            <div className="bg-masters-green text-white rounded-xl px-4 py-3 mb-4 text-center">
+            <div className="bg-tp-primary text-white rounded-xl px-4 py-3 mb-4 text-center">
               <p className="text-[10px] uppercase tracking-wider opacity-70 mb-0.5">Round {currentRound} · Pick #{assignments.length + 1}</p>
               <p className="font-serif text-xl font-bold">{currentPicker.name}&apos;s Pick</p>
             </div>
@@ -205,7 +204,7 @@ export default function DraftPage() {
 
           {/* Golfer list with checkboxes / owner labels */}
           <div className="card overflow-hidden mb-4">
-            <div className="divide-y divide-masters-cream-dark max-h-[400px] overflow-y-auto">
+            <div className="divide-y divide-tp-bg-dark max-h-[400px] overflow-y-auto">
               {golfers
                 .filter(g => g.name.toLowerCase().includes(search.toLowerCase()))
                 .map((g) => {
@@ -222,7 +221,7 @@ export default function DraftPage() {
                         <div className="w-5 h-5 flex-shrink-0" />
                         {rank && <span className="text-[10px] text-gray-400 font-mono w-6 flex-shrink-0">#{rank}</span>}
                         <span className="text-sm text-gray-500 line-through flex-1">{g.name}</span>
-                        <span className="text-[10px] bg-masters-green/10 text-masters-green px-2 py-0.5 rounded-full font-semibold flex-shrink-0">
+                        <span className="text-[10px] bg-tp-primary/10 text-tp-primary px-2 py-0.5 rounded-full font-semibold flex-shrink-0">
                           {owner?.name}
                         </span>
                       </div>
@@ -236,10 +235,10 @@ export default function DraftPage() {
                       onClick={() => setSelectedGolfer(isSelected ? null : g.id)}
                       disabled={!currentPicker}
                       className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors
-                        ${isSelected ? "bg-masters-green/10" : "active:bg-masters-cream/60"}`}
+                        ${isSelected ? "bg-tp-primary/10" : "active:bg-tp-bg/60"}`}
                     >
                       <div className={`w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors
-                        ${isSelected ? "border-masters-green bg-masters-green" : "border-gray-300"}`}>
+                        ${isSelected ? "border-tp-primary bg-tp-primary" : "border-gray-300"}`}>
                         {isSelected && (
                           <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -265,7 +264,7 @@ export default function DraftPage() {
               return (
                 <div key={p.id} className="card p-3">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-serif font-bold text-sm text-masters-green">{p.name}</span>
+                    <span className="font-serif font-bold text-sm text-tp-primary">{p.name}</span>
                     <span className="text-[10px] text-gray-400">{myPicks.length} picks</span>
                   </div>
                   {myPicks.length > 0 ? (
@@ -273,7 +272,7 @@ export default function DraftPage() {
                       {myPicks.map(a => {
                         const g = golfers.find(gf => gf.id === a.golfer_id);
                         return (
-                          <span key={a.golfer_id} className="text-[10px] bg-masters-cream-dark rounded-full px-2 py-0.5 font-medium text-gray-700">
+                          <span key={a.golfer_id} className="text-[10px] bg-tp-bg-dark rounded-full px-2 py-0.5 font-medium text-gray-700">
                             {g?.name || "?"}
                           </span>
                         );
@@ -293,7 +292,7 @@ export default function DraftPage() {
             disabled={!allEqual || saving}
             className={`w-full py-4 rounded-xl font-semibold text-sm transition-colors mb-4 ${
               allEqual
-                ? "bg-masters-gold text-white active:bg-masters-gold-dark"
+                ? "bg-tp-accent text-white active:bg-tp-accent-dark"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
             }`}
           >
