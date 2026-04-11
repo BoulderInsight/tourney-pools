@@ -246,7 +246,7 @@ export default async function LandingPage() {
                 <div key={t.id} className="bg-white/[0.08] backdrop-blur-sm rounded-2xl p-5 border border-white/[0.08]">
                   <div className="flex items-start gap-4 mb-3">
                     {t.logo_url && (
-                      <div className="w-14 h-14 rounded-xl bg-white flex items-center justify-center flex-shrink-0 p-2">
+                      <div className="w-20 h-20 rounded-xl bg-white flex items-center justify-center flex-shrink-0 p-2.5">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={t.logo_url} alt="" className="w-full h-full object-contain" />
                       </div>
