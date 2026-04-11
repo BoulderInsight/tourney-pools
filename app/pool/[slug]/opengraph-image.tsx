@@ -43,7 +43,6 @@ export default async function OGImage({ params }: { params: { slug: string } }) 
           display: "flex", alignItems: "center", justifyContent: "center",
           width: "100%", height: "100%", background: "#1a365d",
           color: "white", fontSize: 48, fontWeight: 700,
-          fontFamily: "Georgia, serif",
         }}>
           TourneyPools
         </div>
@@ -56,7 +55,7 @@ export default async function OGImage({ params }: { params: { slug: string } }) 
   const playerCount = Number(pool.player_count);
 
   let tournamentName: string | null = null;
-  let courseName: string | null = null;
+  let courseAndLocation: string | null = null;
   let dateRange: string | null = null;
 
   if (pool.tournament_id) {
@@ -67,12 +66,11 @@ export default async function OGImage({ params }: { params: { slug: string } }) 
     if (tournRows.length > 0) {
       const t = tournRows[0];
       tournamentName = t.name;
-      courseName = [t.course_name, t.location].filter(Boolean).join(" · ");
+      courseAndLocation = [t.course_name, t.location].filter(Boolean).join(" · ");
       dateRange = formatDateRange(t.start_date, t.end_date);
     }
   }
 
-  // Status line
   let statusText = "";
   if (!pool.setup_complete) {
     statusText = "Setting up";
@@ -84,6 +82,10 @@ export default async function OGImage({ params }: { params: { slug: string } }) 
 
   const statusLine = `${playerCount} player${playerCount !== 1 ? "s" : ""} · $${pool.buy_in} buy-in · ${statusText}`;
 
+  // Build tournament subtitle
+  const subtitleParts = [courseAndLocation, dateRange].filter(Boolean);
+  const subtitle = subtitleParts.join(" · ");
+
   return new ImageResponse(
     (
       <div
@@ -94,59 +96,29 @@ export default async function OGImage({ params }: { params: { slug: string } }) 
           height: "100%",
           background: "#1a365d",
           padding: "48px 56px",
-          fontFamily: "system-ui, sans-serif",
-          position: "relative",
-          overflow: "hidden",
         }}
       >
-        {/* Subtle radial glow */}
-        <div
-          style={{
-            position: "absolute",
-            top: "-200px",
-            right: "-200px",
-            width: "600px",
-            height: "600px",
-            borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(212,168,67,0.12) 0%, transparent 70%)",
-            display: "flex",
-          }}
-        />
-
-        {/* Top bar: TourneyPools text logo */}
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <div style={{ fontSize: 28, fontWeight: 700, color: "white", fontFamily: "Georgia, serif", letterSpacing: "-0.5px" }}>
+        {/* Top: TourneyPools */}
+        <div style={{ display: "flex" }}>
+          <div style={{ fontSize: 28, fontWeight: 700, color: "white", letterSpacing: "-0.5px" }}>
             TourneyPools
           </div>
         </div>
 
         {/* Center content */}
-        <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "center", marginTop: "-16px" }}>
-          {/* Pool name */}
-          <div
-            style={{
-              fontSize: 64,
-              fontWeight: 800,
-              color: "white",
-              lineHeight: 1.1,
-              letterSpacing: "-1px",
-              maxWidth: "900px",
-            }}
-          >
+        <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "center" }}>
+          <div style={{ display: "flex", fontSize: 64, fontWeight: 800, color: "white", lineHeight: 1.1, letterSpacing: "-1px" }}>
             {pool.pool_name}
           </div>
 
-          {/* Tournament info */}
           {tournamentName && (
-            <div style={{ display: "flex", flexDirection: "column", marginTop: "20px", gap: "4px" }}>
-              <div style={{ fontSize: 28, fontWeight: 600, color: "#d4a843" }}>
+            <div style={{ display: "flex", flexDirection: "column", marginTop: "20px" }}>
+              <div style={{ display: "flex", fontSize: 28, fontWeight: 600, color: "#d4a843" }}>
                 {tournamentName}
               </div>
-              {(courseName || dateRange) && (
-                <div style={{ fontSize: 20, color: "rgba(255,255,255,0.5)", display: "flex", gap: "12px" }}>
-                  {courseName && <span>{courseName}</span>}
-                  {courseName && dateRange && <span style={{ color: "rgba(255,255,255,0.25)" }}>·</span>}
-                  {dateRange && <span>{dateRange}</span>}
+              {subtitle && (
+                <div style={{ display: "flex", fontSize: 20, color: "rgba(255,255,255,0.5)", marginTop: "4px" }}>
+                  {subtitle}
                 </div>
               )}
             </div>
@@ -155,48 +127,31 @@ export default async function OGImage({ params }: { params: { slug: string } }) 
 
         {/* Bottom bar */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-          <div style={{ display: "flex", alignItems: "center" }}>
-            {/* Status pill */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                background: "rgba(255,255,255,0.1)",
-                borderRadius: "999px",
-                padding: "10px 20px",
-                fontSize: 18,
-                color: "rgba(255,255,255,0.7)",
-                fontWeight: 500,
-              }}
-            >
-              {statusText === "Live" && (
-                <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#4ade80", display: "flex" }} />
-              )}
-              {statusLine}
-            </div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              background: "rgba(255,255,255,0.1)",
+              borderRadius: "999px",
+              padding: "10px 20px",
+              fontSize: 18,
+              color: "rgba(255,255,255,0.7)",
+              fontWeight: 500,
+            }}
+          >
+            {statusText === "Live" && (
+              <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#4ade80", display: "flex" }} />
+            )}
+            <span>{statusLine}</span>
           </div>
 
-          {/* Chairman */}
           {pool.chairman_name && (
-            <div style={{ fontSize: 16, color: "rgba(255,255,255,0.35)", fontWeight: 500 }}>
+            <div style={{ display: "flex", fontSize: 16, color: "rgba(255,255,255,0.35)", fontWeight: 500 }}>
               Chairman: {pool.chairman_name}
             </div>
           )}
         </div>
-
-        {/* Gold accent line at bottom */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: "4px",
-            background: "linear-gradient(90deg, transparent, #d4a843, transparent)",
-            display: "flex",
-          }}
-        />
       </div>
     ),
     { ...size }
