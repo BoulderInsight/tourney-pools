@@ -5,8 +5,8 @@ export const metadata: Metadata = {
   title: "TourneyPools — Golf Pools for Every Tournament",
   description: "Create a golf pool, draft golfers with friends, and track live scores through tournament week. Works for The Masters, PGA Championship, U.S. Open, and any event.",
   icons: {
-    icon: "/favicon.jpg",
-    apple: "/favicon.jpg",
+    icon: "/favicon.png",
+    apple: "/favicon.png",
   },
   openGraph: {
     title: "TourneyPools — Golf Pools for Every Tournament",
