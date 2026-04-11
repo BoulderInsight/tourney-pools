@@ -34,6 +34,8 @@ export default function LoginPage() {
   return (
     <main className="px-4 pt-4 pb-safe max-w-lg mx-auto">
     <div className="flex flex-col items-center justify-center min-h-[75vh]">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/logo-stacked.png" alt="TourneyPools" className="h-28 mb-8" />
       <div className="card p-8 w-full">
         <h1 className="font-serif text-2xl text-tp-primary mb-1 font-bold text-center">
           Welcome Back

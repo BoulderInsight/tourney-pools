@@ -2,6 +2,7 @@ import "./globals.css";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "https://tourneypools.com"),
   title: "TourneyPools — Golf Pools for Every Tournament",
   description: "Create a golf pool, draft golfers with friends, and track live scores through tournament week. Works for The Masters, PGA Championship, U.S. Open, and any event.",
   icons: {
