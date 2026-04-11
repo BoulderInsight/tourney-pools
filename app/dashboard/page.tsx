@@ -229,7 +229,7 @@ function DashboardContent() {
       {canCreatePool ? (
         <div className="card p-4 mb-6">
           <div className="flex gap-2">
-            <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Pool name (e.g. The Masters 2026)" className="input-field flex-1" />
+            <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Pool name (e.g. Heritage High Point)" className="input-field flex-1" />
             <button onClick={createPool} disabled={creating} className="btn-green flex-shrink-0 disabled:opacity-60">
               {creating ? "..." : "Create"}
             </button>
