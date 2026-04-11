@@ -246,15 +246,24 @@ function DashboardContent() {
           </div>
         </div>
       ) : (
-        <div className="card p-5 mb-6 text-center">
-          <p className="text-sm text-gray-600 mb-1 font-medium">You&apos;ve reached the free pool limit</p>
-          <p className="text-xs text-gray-400 mb-4">Upgrade to Pro for unlimited pools, unlimited players, and no ads.</p>
-          <div className="flex gap-2">
-            <button onClick={() => handleUpgrade("monthly")} className="btn-gold flex-1">
-              $4.99/mo
+        <div className="card p-5 mb-6">
+          <p className="text-sm text-gray-600 mb-1 font-medium text-center">You&apos;ve reached the free pool limit</p>
+          <p className="text-xs text-gray-400 mb-4 text-center">Upgrade to Pro for unlimited pools, unlimited players, and no ads.</p>
+          <div className="flex gap-2.5">
+            <button
+              onClick={() => handleUpgrade("monthly")}
+              className="flex-1 rounded-xl border-2 border-tp-bg-dark bg-white p-4 text-center active:bg-tp-bg/40 transition-colors"
+            >
+              <p className="text-lg font-bold text-tp-primary">$4.99</p>
+              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">per month</p>
             </button>
-            <button onClick={() => handleUpgrade("annual")} className="btn-green flex-1">
-              $29.99/yr <span className="opacity-70 text-xs ml-1">Save 50%</span>
+            <button
+              onClick={() => handleUpgrade("annual")}
+              className="flex-1 rounded-xl border-2 border-tp-accent bg-tp-accent/5 p-4 text-center active:bg-tp-accent/10 transition-colors relative overflow-hidden"
+            >
+              <span className="absolute top-0 right-0 bg-tp-accent text-white text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-bl-lg">Save 50%</span>
+              <p className="text-lg font-bold text-tp-primary">$29.99</p>
+              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">per year</p>
             </button>
           </div>
         </div>
@@ -394,7 +403,7 @@ function DashboardContent() {
             </div>
           )}
 
-          {/* Ad editor (premium only) */}
+          {/* Ad editor (Pro only) */}
           {showAdEditor && isPro && (
             <div className="card p-5 mt-3 animate-slide-up">
               <h3 className="font-serif text-sm font-bold text-tp-primary mb-4">Manage Ad</h3>
