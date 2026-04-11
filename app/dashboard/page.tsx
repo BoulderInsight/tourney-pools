@@ -41,8 +41,8 @@ function DashboardContent() {
   const [uploading, setUploading] = useState(false);
   const [placeholder, setPlaceholder] = useState("Pool name (e.g. My Golf Pool)");
 
-  const isPaid = tier === "paid";
-  const canCreatePool = isPaid || pools.length < 1;
+  const isPro = tier === "pro" || tier === "paid"; // "paid" for backward compat
+  const canCreatePool = isPro || pools.length < 1;
 
   const fetchPools = useCallback(async () => {
     const [poolRes, meRes, acctRes, sugRes] = await Promise.all([
@@ -173,8 +173,12 @@ function DashboardContent() {
     setUploading(false);
   }
 
-  async function handleUpgrade() {
-    const res = await fetch("/api/stripe/checkout", { method: "POST" });
+  async function handleUpgrade(plan: "monthly" | "annual" = "monthly") {
+    const res = await fetch("/api/stripe/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan }),
+    });
     if (res.ok) {
       const { url } = await res.json();
       window.location.href = url;
@@ -226,8 +230,8 @@ function DashboardContent() {
       {/* Upgrade success */}
       {justUpgraded && (
         <div className="card p-4 mb-4 bg-tp-accent/10 border-tp-accent/30 text-center">
-          <p className="text-sm font-semibold text-tp-accent-dark">Welcome to Premium!</p>
-          <p className="text-xs text-gray-500 mt-1">Unlimited pools, no ads, and custom branding are now unlocked.</p>
+          <p className="text-sm font-semibold text-tp-accent-dark">Welcome to Pro!</p>
+          <p className="text-xs text-gray-500 mt-1">Unlimited pools, unlimited players, no ads, and custom branding are now unlocked.</p>
         </div>
       )}
 
@@ -244,19 +248,24 @@ function DashboardContent() {
       ) : (
         <div className="card p-5 mb-6 text-center">
           <p className="text-sm text-gray-600 mb-1 font-medium">You&apos;ve reached the free pool limit</p>
-          <p className="text-xs text-gray-400 mb-4">Upgrade to create unlimited pools, remove ads, and add custom branding.</p>
-          <button onClick={handleUpgrade} className="btn-gold w-full">
-            Upgrade to Premium — $4.99
-          </button>
+          <p className="text-xs text-gray-400 mb-4">Upgrade to Pro for unlimited pools, unlimited players, and no ads.</p>
+          <div className="flex gap-2">
+            <button onClick={() => handleUpgrade("monthly")} className="btn-gold flex-1">
+              $4.99/mo
+            </button>
+            <button onClick={() => handleUpgrade("annual")} className="btn-green flex-1">
+              $29.99/yr <span className="opacity-70 text-xs ml-1">Save 50%</span>
+            </button>
+          </div>
         </div>
       )}
 
       {/* Tier badge */}
-      {!isPaid && pools.length > 0 && (
+      {!isPro && pools.length > 0 && (
         <div className="flex items-center justify-between mb-4 px-1">
-          <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Free Plan — 1 pool</span>
-          <button onClick={handleUpgrade} className="text-[10px] text-tp-accent font-semibold active:underline">
-            Upgrade →
+          <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Free — 1 pool · 8 players max</span>
+          <button onClick={() => handleUpgrade("monthly")} className="text-[10px] text-tp-accent font-semibold active:underline">
+            Go Pro →
           </button>
         </div>
       )}
@@ -358,7 +367,7 @@ function DashboardContent() {
             <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">
               {adRemoved ? "No ad on your pools" : "Ad showing on your pools"}
             </span>
-            {isPaid && (
+            {isPro && (
               <button
                 onClick={() => {
                   setAdImageInput(customAdImage || "");
@@ -386,7 +395,7 @@ function DashboardContent() {
           )}
 
           {/* Ad editor (premium only) */}
-          {showAdEditor && isPaid && (
+          {showAdEditor && isPro && (
             <div className="card p-5 mt-3 animate-slide-up">
               <h3 className="font-serif text-sm font-bold text-tp-primary mb-4">Manage Ad</h3>
 
@@ -475,9 +484,9 @@ function DashboardContent() {
             </div>
           )}
 
-          {!isPaid && (
+          {!isPro && (
             <p className="text-[10px] text-gray-400 text-center mt-2">
-              <button onClick={handleUpgrade} className="text-tp-accent font-semibold">Upgrade to Premium</button>
+              <button onClick={() => handleUpgrade("monthly")} className="text-tp-accent font-semibold">Go Pro</button>
               {" "}to remove or replace this ad.
             </p>
           )}

@@ -171,6 +171,8 @@ export default function PoolSetupPage() {
   // Draft results
   const [assignments, setAssignments] = useState<ReturnType<typeof draftGolfers>>([]);
 
+  const [chairmanTier, setChairmanTier] = useState("free");
+
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -194,9 +196,12 @@ export default function PoolSetupPage() {
   // Load existing pool data to resume where you left off
   useEffect(() => {
     async function loadPool() {
-      const res = await fetch(`/api/pool/${slug}`);
-      if (res.ok) {
-        const data = await res.json();
+      const [poolRes, meRes] = await Promise.all([
+        fetch(`/api/pool/${slug}`),
+        fetch("/api/auth/me"),
+      ]);
+      if (poolRes.ok) {
+        const data = await poolRes.json();
         if (data?.poolName) setPoolName(data.poolName);
         if (data?.buyIn) setBuyIn(data.buyIn);
         if (data?.players?.length > 0) {
@@ -204,6 +209,10 @@ export default function PoolSetupPage() {
         }
         if (data?.settings) setSettings((prev) => ({ ...prev, ...data.settings }));
         if (data?.tournamentId) setSelectedTournamentId(data.tournamentId);
+      }
+      if (meRes.ok) {
+        const me = await meRes.json();
+        if (me?.tier) setChairmanTier(me.tier);
       }
     }
     loadPool();
@@ -228,6 +237,9 @@ export default function PoolSetupPage() {
 
   const set = <K extends keyof CommissionerSettings>(key: K, val: CommissionerSettings[K]) =>
     setSettings((s) => ({ ...s, [key]: val }));
+
+  const isPro = chairmanTier === "pro" || chairmanTier === "paid";
+  const maxPlayers = isPro ? Infinity : 8;
 
   // Rules validation — every section must have a selection
   // payoutMethod defaults to "honor-system" if not explicitly set
@@ -511,17 +523,23 @@ export default function PoolSetupPage() {
                     )}
                   </div>
                 ))}
-                <button
-                  type="button"
-                  onClick={addPlayer}
-                  className="w-full h-12 flex items-center justify-center gap-2 text-sm text-tp-primary font-semibold
-                    border-2 border-dashed border-tp-primary/20 rounded-xl active:bg-tp-primary/5 transition-colors"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  Add Player
-                </button>
+                {players.length < maxPlayers ? (
+                  <button
+                    type="button"
+                    onClick={addPlayer}
+                    className="w-full h-12 flex items-center justify-center gap-2 text-sm text-tp-primary font-semibold
+                      border-2 border-dashed border-tp-primary/20 rounded-xl active:bg-tp-primary/5 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Player
+                  </button>
+                ) : !isPro && (
+                  <p className="text-xs text-tp-accent text-center py-3 font-medium">
+                    Free plan limited to {maxPlayers} players. Go Pro for unlimited.
+                  </p>
+                )}
               </div>
 
               {validPlayers.length > 0 && (

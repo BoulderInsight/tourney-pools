@@ -170,8 +170,8 @@ export default function AdminPage() {
                     <p className="text-xs text-gray-400 mt-0.5">{c.email}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {c.tier === "paid" ? (
-                      <span className="text-[10px] bg-tp-accent/20 text-tp-accent-dark px-2 py-0.5 rounded-full font-semibold">Premium</span>
+                    {(c.tier === "pro" || c.tier === "paid") ? (
+                      <span className="text-[10px] bg-tp-accent/20 text-tp-accent-dark px-2 py-0.5 rounded-full font-semibold">Pro</span>
                     ) : (
                       <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-semibold">Free</span>
                     )}
@@ -202,10 +202,10 @@ export default function AdminPage() {
                   </>
                 )}
                 <button
-                  onClick={() => patchChairman(c.id, "set_tier", c.tier === "paid" ? "free" : "paid")}
+                  onClick={() => patchChairman(c.id, "set_tier", (c.tier === "pro" || c.tier === "paid") ? "free" : "pro")}
                   className="flex-1 text-center py-2.5 text-tp-accent active:bg-tp-accent/5 transition-colors"
                 >
-                  {c.tier === "paid" ? "Downgrade" : "Upgrade"}
+                  {(c.tier === "pro" || c.tier === "paid") ? "Downgrade" : "Upgrade"}
                 </button>
                 <div className="w-px bg-tp-bg-dark" />
                 <button

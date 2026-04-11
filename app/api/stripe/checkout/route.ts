@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import Stripe from "stripe";
@@ -7,18 +7,28 @@ function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!);
 }
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const body = await req.json().catch(() => ({}));
+  const plan = body.plan === "annual" ? "annual" : "monthly";
+
+  const priceId = plan === "annual"
+    ? process.env.STRIPE_ANNUAL_PRICE_ID
+    : process.env.STRIPE_MONTHLY_PRICE_ID;
+
+  if (!priceId) {
+    return NextResponse.json({ error: "Stripe price not configured" }, { status: 500 });
+  }
+
   const sql = getDb();
 
-  // Check if already paid
   const rows = await sql`SELECT tier, stripe_customer_id FROM chairmen WHERE id = ${session.chairmanId}`;
-  if (rows[0]?.tier === "paid") {
-    return NextResponse.json({ error: "Already premium" }, { status: 400 });
+  if (rows[0]?.tier === "pro") {
+    return NextResponse.json({ error: "Already on Pro" }, { status: 400 });
   }
 
   // Get or create Stripe customer
@@ -35,18 +45,11 @@ export async function POST() {
 
   const checkoutSession = await getStripe().checkout.sessions.create({
     customer: customerId,
-    mode: "payment",
-    line_items: [
-      {
-        price: process.env.STRIPE_PRICE_ID!,
-        quantity: 1,
-      },
-    ],
+    mode: "subscription",
+    line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard?upgraded=1`,
     cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard`,
-    metadata: {
-      chairmanId: session.chairmanId,
-    },
+    metadata: { chairmanId: session.chairmanId },
   });
 
   return NextResponse.json({ url: checkoutSession.url });

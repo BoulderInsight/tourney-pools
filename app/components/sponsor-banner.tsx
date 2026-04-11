@@ -93,13 +93,15 @@ export function SponsorBanner({
   customAdHeadline?: string | null;
   customAdDescription?: string | null;
 }) {
-  // Premium user chose to remove ad entirely
-  if (tier === "paid" && adRemoved) {
+  const isPro = tier === "pro" || tier === "paid";
+
+  // Pro user chose to remove ad entirely
+  if (isPro && adRemoved) {
     return null;
   }
 
-  // Premium user with custom ad
-  if (tier === "paid" && (customAdImage || customAdHeadline)) {
+  // Pro user with custom ad
+  if (isPro && (customAdImage || customAdHeadline)) {
     return <CustomAd imageUrl={customAdImage} linkUrl={customAdUrl} headline={customAdHeadline} description={customAdDescription} />;
   }
 

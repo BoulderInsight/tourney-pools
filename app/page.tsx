@@ -321,7 +321,7 @@ export default async function LandingPage() {
               Create Your First Pool
             </Link>
             <p className="text-xs text-gray-400 mt-4">
-              Free plan includes 1 pool. <span className="text-tp-accent font-medium">Upgrade for $4.99</span> for unlimited pools and custom branding.
+              Free plan includes 1 pool with up to 8 players. <span className="text-tp-accent font-medium">Go Pro for $4.99/mo</span> for unlimited pools and players.
             </p>
           </div>
         </div>
