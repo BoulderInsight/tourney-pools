@@ -213,10 +213,16 @@ export default function PoolSetupPage() {
   const selectedTournament = tournaments.find(t => t.id === selectedTournamentId);
 
   function handleSelectTournament(id: string) {
+    const prev = selectedTournamentId;
     setSelectedTournamentId(id);
     const t = tournaments.find(t => t.id === id);
     if (t) {
-      setPoolName(`${t.name} ${t.year} Pool`);
+      // Only auto-set pool name if it's the default or was auto-set from a previous tournament selection
+      const prevTournament = prev ? tournaments.find(t => t.id === prev) : null;
+      const prevAutoName = prevTournament ? `${prevTournament.name} ${prevTournament.year} Pool` : null;
+      if (poolName === "Golf Pool" || poolName === prevAutoName) {
+        setPoolName(`${t.name} ${t.year} Pool`);
+      }
     }
   }
 
