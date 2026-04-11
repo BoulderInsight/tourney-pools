@@ -357,6 +357,19 @@ export default function PoolSetupPage() {
               Choose the tournament this pool is for.
             </p>
 
+            {/* Next button — shown at top when a tournament is selected */}
+            {selectedTournamentId && (
+              <div className="mb-5">
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="btn-green w-full"
+                >
+                  Next: Pool Info
+                </button>
+              </div>
+            )}
+
             {tournamentsLoading ? (
               <div className="flex justify-center py-12">
                 <div className="flex gap-3">
@@ -425,17 +438,6 @@ export default function PoolSetupPage() {
                 })}
               </div>
             )}
-
-            <div className="flex justify-end mt-6">
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                disabled={!selectedTournamentId && tournaments.length > 0}
-                className="btn-green disabled:opacity-40"
-              >
-                Next: Pool Info
-              </button>
-            </div>
           </div>
         )}
 
