@@ -32,19 +32,25 @@ function formatDateRange(startDate: string | null, endDate: string | null): stri
   return `${startStr} – ${endStr}`;
 }
 
-async function getUpcomingTournaments(): Promise<Tournament[]> {
+async function getUpcomingTournaments(): Promise<{ tournaments: Tournament[]; totalCount: number }> {
   try {
     const sql = getDb();
+    // Get in_progress first, then scheduled, limit to 4 for display
     const rows = await sql`
       SELECT id, name, slug, course_name, location, start_date, end_date, year, status, logo_url
       FROM tournaments
       WHERE status IN ('scheduled', 'in_progress')
-      ORDER BY start_date ASC
+      ORDER BY
+        CASE WHEN status = 'in_progress' THEN 0 ELSE 1 END,
+        start_date ASC
       LIMIT 4
     `;
-    return rows as Tournament[];
+    const countRows = await sql`
+      SELECT COUNT(*) as count FROM tournaments WHERE status IN ('scheduled', 'in_progress')
+    `;
+    return { tournaments: rows as Tournament[], totalCount: Number(countRows[0].count) };
   } catch {
-    return [];
+    return { tournaments: [], totalCount: 0 };
   }
 }
 
@@ -142,7 +148,8 @@ const FEATURES = [
 export const dynamic = "force-dynamic";
 
 export default async function LandingPage() {
-  const tournaments = await getUpcomingTournaments();
+  const { tournaments, totalCount } = await getUpcomingTournaments();
+  const remaining = totalCount - tournaments.length;
 
   return (
     <div className="min-h-screen">
@@ -169,7 +176,9 @@ export default async function LandingPage() {
         <div className="absolute inset-0 pointer-events-none" style={{
           background: "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(26,54,93,0.06) 0%, transparent 70%)"
         }} />
-        <div className="max-w-2xl mx-auto px-6 pt-20 pb-16 text-center relative">
+        <div className="max-w-2xl mx-auto px-6 pt-16 pb-16 text-center relative">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-stacked.png" alt="TourneyPools" className="h-40 sm:h-48 mx-auto mb-8" />
           <div className="inline-flex items-center gap-2 bg-tp-accent/10 text-tp-accent-dark text-xs font-semibold px-3.5 py-1.5 rounded-full mb-6 tracking-wide">
             <span className="w-1.5 h-1.5 rounded-full bg-tp-accent" />
             Free to use &middot; No credit card required
@@ -275,7 +284,7 @@ export default async function LandingPage() {
 
             <div className="text-center mt-8">
               <Link href="/signup" className="inline-flex items-center gap-2 text-sm font-semibold text-tp-accent hover:text-tp-accent-light transition-colors">
-                Create a pool for any event
+                {remaining > 0 ? `+ ${remaining} more tournaments to choose from` : "Create a pool for any event"}
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
