@@ -418,7 +418,7 @@ export default function PoolSetupPage() {
                       <div className="flex items-start gap-3">
                         {t.logo_url ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
-                          <img src={t.logo_url} alt="" className="w-10 h-10 object-contain flex-shrink-0 mt-0.5" />
+                          <img src={t.logo_url} alt="" className="w-14 h-14 object-contain flex-shrink-0" />
                         ) : (
                           <div
                             className={`mt-0.5 w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center
