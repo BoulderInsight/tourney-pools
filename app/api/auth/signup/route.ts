@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
   const verificationToken = nanoid(32);
 
-  // Create account without a password — they'll set it when they click the email link
+  // Create account without a password. They'll set it when they click the email link
   await sql`
     INSERT INTO chairmen (email, password, name, email_verified, verification_token)
     VALUES (${email.toLowerCase()}, '', ${name}, false, ${verificationToken})

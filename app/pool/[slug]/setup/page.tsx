@@ -241,7 +241,7 @@ export default function PoolSetupPage() {
   const isPro = chairmanTier === "pro" || chairmanTier === "paid";
   const maxPlayers = isPro ? Infinity : 8;
 
-  // Rules validation — every section must have a selection
+  // Rules validation: every section must have a selection
   // payoutMethod defaults to "honor-system" if not explicitly set
   const effectivePayoutMethod = settings.payoutMethod || "honor-system";
   const rulesComplete =
@@ -375,7 +375,7 @@ export default function PoolSetupPage() {
               Choose the tournament this pool is for.
             </p>
 
-            {/* Next button — shown at top when a tournament is selected */}
+            {/* Next button: shown at top when a tournament is selected */}
             {selectedTournamentId && (
               <div className="mb-5">
                 <button
@@ -576,9 +576,9 @@ export default function PoolSetupPage() {
                   selected={settings.draftType === "random"}
                   onClick={() => set("draftType", "random")}
                   title="Auto Random"
-                  description="Golfers are shuffled and dealt out randomly. Fully automated — no picking required."
+                  description="Golfers are shuffled and dealt out randomly. Fully automated, no picking required."
                   badge="Quick & Easy"
-                  info="All golfers in the field are randomly shuffled, then automatically dealt out evenly to each player. No one picks — the app handles everything instantly. Great for casual pools or when you don't want to coordinate a live draft."
+                  info="All golfers in the field are randomly shuffled, then automatically dealt out evenly to each player. No one picks. The app handles everything instantly. Great for casual pools or when you don't want to coordinate a live draft."
                 />
                 <OptionCard
                   selected={settings.draftType === "auto-snake"}
@@ -586,7 +586,7 @@ export default function PoolSetupPage() {
                   title="Auto Snake Draft"
                   description="Randomized player order, golfers assigned by world ranking in snake format."
                   badge="Best of Both"
-                  info="Player order is randomized, then golfers are assigned automatically by world ranking in snake format. Player 1 gets the #1 seed, Player 2 gets #2, Player 3 gets #3 — then it snakes back: Player 3 gets #4, Player 2 gets #5, Player 1 gets #6, and so on. Fair, balanced, and no live draft coordination needed."
+                  info="Player order is randomized, then golfers are assigned automatically by world ranking in snake format: Player 1 gets the #1 seed, Player 2 gets #2, Player 3 gets #3, then it snakes back: Player 3 gets #4, Player 2 gets #5, Player 1 gets #6, and so on. Fair, balanced and no live draft coordination needed."
                 />
                 <OptionCard
                   selected={settings.draftType === "snake"}
@@ -614,14 +614,14 @@ export default function PoolSetupPage() {
                   onClick={() => set("missedCutRule", "zero")}
                   title="Zero Contribution"
                   description="Missed cut golfers stop counting. No penalty, no benefit."
-                  info="If a golfer misses the cut, their score simply stops accumulating. They keep whatever score they had through the rounds they played, but add nothing for the remaining rounds. This is the most forgiving option — a missed cut doesn't actively hurt your team, it just means you lose that golfer's potential for weekend improvement."
+                  info="If a golfer misses the cut, their score simply stops accumulating. They keep whatever score they had through the rounds they played, but add nothing for the remaining rounds. This is the most forgiving option. A missed cut doesn't actively hurt your team, it just means you lose that golfer's potential for weekend improvement."
                 />
                 <OptionCard
                   selected={settings.missedCutRule === "worst-made"}
                   onClick={() => set("missedCutRule", "worst-made")}
                   title="Worst Made Score"
                   description="Missed cut golfers receive the total of the worst golfer who made the cut."
-                  info="Missed cut golfers are assigned the same total score as the worst-performing golfer who DID make the cut. This creates a realistic penalty — your missed-cut golfer essentially performs as badly as the worst weekend player. It's a middle ground between the harsh fixed penalty and the forgiving zero contribution."
+                  info="Missed cut golfers are assigned the same total score as the worst-performing golfer who DID make the cut. This creates a realistic penalty. Your missed-cut golfer essentially performs as badly as the worst weekend player. It's a middle ground between the harsh fixed penalty and the forgiving zero contribution."
                 />
               </div>
 
@@ -659,7 +659,7 @@ export default function PoolSetupPage() {
                   onClick={() => set("scoringType", "best-n")}
                   title="Best N Golfers"
                   description="Only your top N performers count. Reduces impact of one bad pick."
-                  info="Only your best-performing golfers count toward your total. For example, if set to 'Best 3', only your 3 lowest-scoring golfers are counted — the rest are benched. This reduces the pain of one bad pick and rewards players who draft a few elite golfers rather than a deep balanced roster."
+                  info="Only your best-performing golfers count toward your total. For example, if set to 'Best 3', only your 3 lowest-scoring golfers are counted. The rest are benched. This reduces the pain of one bad pick and rewards players who draft a few elite golfers rather than a deep balanced roster."
                 />
               </div>
 
@@ -682,7 +682,7 @@ export default function PoolSetupPage() {
             <Section label="Purse Distribution">
               <div className="space-y-2.5">
                 {([
-                  { value: "winner-take-all" as PurseType, title: "Winner Take All", desc: "First place takes 100%", info: "The entire prize pool goes to the player with the lowest total score. Simple, high-stakes, and the most exciting finish — but only one person walks away with money." },
+                  { value: "winner-take-all" as PurseType, title: "Winner Take All", desc: "First place takes 100%", info: "The entire prize pool goes to the player with the lowest total score. Simple, high-stakes, and the most exciting finish, but only one person walks away with money." },
                   { value: "70-30" as PurseType, title: "70 / 30", desc: "Split between top 2", info: "First place takes 70% of the total purse, second place takes 30%. This rewards the winner heavily while still giving the runner-up something to play for through the final round." },
                   { value: "60-30-10" as PurseType, title: "60 / 30 / 10", desc: "Split between top 3", info: "First place takes 60%, second takes 30%, third takes 10%. This keeps more players in contention deeper into the tournament and softens the all-or-nothing pressure." },
                   { value: "custom" as PurseType, title: "Custom", desc: "Set your own percentages", info: "Define your own payout structure. Enter comma-separated percentages that sum to 100. For example: 50,25,15,10 would pay the top 4 finishers. You can split it however you like." },
@@ -721,7 +721,7 @@ export default function PoolSetupPage() {
                   title="Honor System"
                   description="Players settle up directly with each other after the tournament."
                   badge="Default"
-                  info="When the tournament ends, each player's card will show exactly who they owe and how much. Players handle payments directly — Venmo, cash, etc. The chairman doesn't need to collect or distribute anything."
+                  info="When the tournament ends, each player's card will show exactly who they owe and how much. Players handle payments directly (Venmo, cash, etc). The chairman doesn't need to collect or distribute anything."
                 />
                 <OptionCard
                   selected={settings.payoutMethod === "chairman-collects"}
@@ -763,7 +763,7 @@ export default function PoolSetupPage() {
           <div>
             <h2 className="font-serif text-lg text-tp-primary mb-1 font-bold">Golfer Field</h2>
             <p className="text-xs text-gray-500 mb-5">
-              {selectedTournament ? `${selectedTournament.name} ${selectedTournament.year}` : "Tournament"} field — {golferCount} golfers sorted by world ranking.
+              {selectedTournament ? `${selectedTournament.name} ${selectedTournament.year}` : "Tournament"} field: {golferCount} golfers sorted by world ranking.
             </p>
 
             <div className="rounded-xl border-2 border-tp-bg-dark bg-tp-bg/30 p-3 font-mono text-xs leading-relaxed overflow-y-auto" style={{ maxHeight: 320 }}>

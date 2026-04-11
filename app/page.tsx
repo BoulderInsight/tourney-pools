@@ -37,7 +37,7 @@ async function getUpcomingTournaments(): Promise<{ tournaments: Tournament[]; to
     const sql = getDb();
     // Get in_progress first, then scheduled, limit to 4 for display
     const rows = await sql`
-      SELECT id, name, slug, course_name, location, start_date, end_date, year, status, logo_url
+      SELECT id, name, slug, course_name, location, start_date, end_date, year, status, logo_url, api_tournament_id
       FROM tournaments
       WHERE status IN ('scheduled', 'in_progress')
       ORDER BY
@@ -48,7 +48,13 @@ async function getUpcomingTournaments(): Promise<{ tournaments: Tournament[]; to
     const countRows = await sql`
       SELECT COUNT(*) as count FROM tournaments WHERE status IN ('scheduled', 'in_progress')
     `;
-    return { tournaments: rows as Tournament[], totalCount: Number(countRows[0].count) };
+    const tournaments = (rows as (Tournament & { api_tournament_id?: string })[]).map((t) => ({
+      ...t,
+      logo_url: t.logo_url || (t.api_tournament_id
+        ? `https://res.cloudinary.com/pgatour-prod/d_tournaments:logos:R000.png/tournaments/logos/R${t.api_tournament_id.padStart(3, "0")}.png`
+        : null),
+    }));
+    return { tournaments, totalCount: Number(countRows[0].count) };
   } catch {
     return { tournaments: [], totalCount: 0 };
   }
@@ -58,7 +64,7 @@ const STEPS = [
   {
     number: "1",
     title: "Pick a Tournament",
-    description: "Choose from upcoming PGA events — The Masters, PGA Championship, U.S. Open, The Open, or any tournament you want.",
+    description: "Choose from upcoming PGA events. The Masters, PGA Championship, U.S. Open, The Open, or any tournament you want.",
     icon: (
       <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -118,7 +124,7 @@ const FEATURES = [
   },
   {
     title: "Shareable Links",
-    description: "Every pool gets a unique URL. Share it and anyone can follow the leaderboard — no login required.",
+    description: "Every pool gets a unique URL. Share it and anyone can follow the leaderboard. No login required.",
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -136,7 +142,7 @@ const FEATURES = [
   },
   {
     title: "Any Tournament",
-    description: "Not just the majors. Set up a pool for any golf event — PGA Tour, LIV, amateur, or your local club.",
+    description: "Not just the majors. Set up a pool for any golf event. PGA Tour, LIV, amateur, or your local club.",
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -198,7 +204,7 @@ export default async function LandingPage() {
             </a>
           </div>
           <p className="text-xs text-gray-400 mt-6">
-            Have an invite link? Just open it to view the leaderboard — no account needed.
+            Have an invite link? Just open it to view the leaderboard. No account needed.
           </p>
         </div>
       </section>
@@ -240,8 +246,10 @@ export default async function LandingPage() {
                 <div key={t.id} className="bg-white/[0.08] backdrop-blur-sm rounded-2xl p-5 border border-white/[0.08]">
                   <div className="flex items-start gap-4 mb-3">
                     {t.logo_url && (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img src={t.logo_url} alt="" className="w-10 h-10 object-contain flex-shrink-0 mt-0.5" />
+                      <div className="w-11 h-11 rounded-lg bg-white flex items-center justify-center flex-shrink-0 mt-0.5 p-1.5">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={t.logo_url} alt="" className="w-full h-full object-contain" />
+                      </div>
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">

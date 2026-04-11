@@ -172,7 +172,7 @@ function GolferCard({
               : "bg-tp-bg/40 text-gray-400"
             }`}
         >
-          {cutStatus === "made" ? "Made Cut" : cutStatus === "missed" ? "Missed Cut" : "Cut Status: TBD"} — Tap to change
+          {cutStatus === "made" ? "Made Cut" : cutStatus === "missed" ? "Missed Cut" : "Cut Status: TBD"} · Tap to change
         </button>
       ) : (
         <div

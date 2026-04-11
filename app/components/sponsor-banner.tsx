@@ -105,6 +105,6 @@ export function SponsorBanner({
     return <CustomAd imageUrl={customAdImage} linkUrl={customAdUrl} headline={customAdHeadline} description={customAdDescription} />;
   }
 
-  // Everyone else — Boulder Insight ad
+  // Everyone else: Boulder Insight ad
   return <BoulderInsightAd />;
 }

@@ -283,7 +283,7 @@ function DashboardContent() {
       {/* Tier badge */}
       {!isPro && pools.length > 0 && (
         <div className="flex items-center justify-between mb-4 px-1">
-          <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Free — 1 pool · 8 players max</span>
+          <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Free: 1 pool · 8 players max</span>
           <button onClick={() => handleUpgrade("monthly")} className="text-[10px] text-tp-accent font-semibold active:underline">
             Go Pro →
           </button>

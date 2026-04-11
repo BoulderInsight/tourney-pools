@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     const chairmanId = session.metadata?.chairmanId;
     const customerId = session.customer as string | null;
 
-    console.log("Checkout completed — chairmanId:", chairmanId, "customerId:", customerId);
+    console.log("Checkout completed. chairmanId:", chairmanId, "customerId:", customerId);
 
     if (chairmanId) {
       await sql`UPDATE chairmen SET tier = 'pro' WHERE id = ${chairmanId}`;

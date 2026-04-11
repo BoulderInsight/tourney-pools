@@ -297,7 +297,7 @@ export default function DraftPage() {
             }`}
           >
             {allEqual
-              ? `Lock Pool — ${pickCounts[0]} golfers each`
+              ? `Lock Pool: ${pickCounts[0]} golfers each`
               : "Each player must have equal picks to lock"
             }
           </button>

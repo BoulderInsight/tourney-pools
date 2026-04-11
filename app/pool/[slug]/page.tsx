@@ -128,7 +128,7 @@ function PayoutInfo({ standing, buyIn, allStandings, payoutMethod, chairmanName 
       );
     }
 
-    // Honor system — show individual payments to each winner
+    // Honor system: show individual payments to each winner
     const totalPrize = winners.reduce((s, w) => s + w.prize, 0);
     const payments = winners.map(w => ({
       name: w.player.name,
@@ -187,7 +187,7 @@ function StandingCard({ standing, expanded, onToggle, index, buyIn, allStandings
             </span>
           ) : (
             <span className="font-serif font-bold text-2xl text-gray-300 tabular-nums">
-              —
+              -
             </span>
           )}
         </div>
@@ -543,7 +543,7 @@ function LiveDraft({ slug, config, isOwner, onComplete }: {
       {isOwner && (
         <button onClick={lockDraft} disabled={!allEqual || saving}
           className={`w-full py-4 rounded-xl font-semibold text-sm transition-colors mb-4 ${allEqual ? "bg-tp-accent text-white active:bg-tp-accent-dark" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>
-          {allEqual ? `Lock Draft — ${pickCounts[0]} golfers each` : "Each player must have equal picks to lock"}
+          {allEqual ? `Lock Draft: ${pickCounts[0]} golfers each` : "Each player must have equal picks to lock"}
         </button>
       )}
     </div>
@@ -707,14 +707,14 @@ export default function PoolLeaderboardPage() {
         </div>
       </div>
 
-      {/* Settings pills — tap for explanation */}
+      {/* Settings pills: tap for explanation */}
       <div className="flex flex-wrap gap-1.5 mt-3 mb-5">
         <SettingsPill
           label={config.settings.draftType === "snake" ? "Snake Draft" : config.settings.draftType === "auto-snake" ? "Auto Snake" : "Random Draft"}
           info={config.settings.draftType === "snake"
             ? "Pick order reverses each round (1-2-3-4, then 4-3-2-1) so everyone gets a fair mix of early and late picks."
             : config.settings.draftType === "auto-snake"
-            ? "Player order was randomized, then golfers were assigned by world ranking in snake format — fair and balanced."
+            ? "Player order was randomized, then golfers were assigned by world ranking in snake format. Fair and balanced."
             : "Golfers are shuffled randomly and dealt out in order. Simpler but less balanced than snake."
           }
         />
@@ -730,7 +730,7 @@ export default function PoolLeaderboardPage() {
           info={config.settings.missedCutRule === "penalty"
             ? `Golfers who miss the cut get +${config.settings.missedCutPenalty} added per remaining round they don't play. This penalizes risky picks who get eliminated early.`
             : config.settings.missedCutRule === "zero"
-            ? "Golfers who miss the cut simply stop scoring. No penalty, no benefit — their score freezes where it was."
+            ? "Golfers who miss the cut simply stop scoring. No penalty, no benefit. Their score freezes where it was."
             : "Golfers who miss the cut get assigned the same total as the worst golfer who DID make the cut."
           }
         />

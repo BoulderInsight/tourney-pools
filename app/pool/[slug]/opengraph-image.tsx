@@ -74,7 +74,7 @@ export default async function OGImage({ params }: { params: { slug: string } }) 
           />
         )}
 
-        {/* Dark gradient overlay — heavier on the right where text goes */}
+        {/* Dark gradient overlay: heavier on the right where text goes */}
         <div
           style={{
             display: "flex",
@@ -84,7 +84,7 @@ export default async function OGImage({ params }: { params: { slug: string } }) 
           }}
         />
 
-        {/* Text content — right-aligned */}
+        {/* Text content: right-aligned */}
         <div
           style={{
             display: "flex",

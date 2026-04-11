@@ -154,7 +154,7 @@ export default function AccountPage() {
           </div>
         ) : (
           <div>
-            <p className="text-xs text-gray-500 mb-4">You&apos;re on the Free plan — 1 pool, up to 8 players.</p>
+            <p className="text-xs text-gray-500 mb-4">You&apos;re on the Free plan: 1 pool, up to 8 players.</p>
             <div className="flex gap-2.5">
               <button
                 onClick={() => handleUpgrade("monthly")}
