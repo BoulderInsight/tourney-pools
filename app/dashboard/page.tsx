@@ -39,15 +39,17 @@ function DashboardContent() {
   const [adDescriptionInput, setAdDescriptionInput] = useState("");
   const [savingAd, setSavingAd] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [placeholder, setPlaceholder] = useState("Pool name");
 
   const isPaid = tier === "paid";
   const canCreatePool = isPaid || pools.length < 1;
 
   const fetchPools = useCallback(async () => {
-    const [poolRes, meRes, acctRes] = await Promise.all([
+    const [poolRes, meRes, acctRes, sugRes] = await Promise.all([
       fetch("/api/pools"),
       fetch("/api/auth/me"),
       fetch("/api/account"),
+      fetch("/api/suggestions"),
     ]);
     if (poolRes.ok) setPools(await poolRes.json());
     if (meRes.ok) {
@@ -62,6 +64,10 @@ function DashboardContent() {
       setCustomAdHeadline(acct.custom_ad_headline || null);
       setCustomAdDescription(acct.custom_ad_description || null);
       setAdRemoved(acct.ad_removed || false);
+    }
+    if (sugRes.ok) {
+      const sug = await sugRes.json();
+      if (sug?.suggestion) setPlaceholder(`e.g. ${sug.suggestion}`);
     }
     setLoading(false);
   }, []);
@@ -229,7 +235,7 @@ function DashboardContent() {
       {canCreatePool ? (
         <div className="card p-4 mb-6">
           <div className="flex gap-2">
-            <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Pool name (e.g. Heritage High Point)" className="input-field flex-1" />
+            <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={placeholder} className="input-field flex-1" />
             <button onClick={createPool} disabled={creating} className="btn-green flex-shrink-0 disabled:opacity-60">
               {creating ? "..." : "Create"}
             </button>

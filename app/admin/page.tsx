@@ -36,10 +36,15 @@ export default function AdminPage() {
   const [pools, setPools] = useState<Pool[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<"chairmen" | "pools">("chairmen");
+  const [tab, setTab] = useState<"chairmen" | "pools" | "suggestions">("chairmen");
+  const [suggestions, setSuggestions] = useState<{ id: string; name: string }[]>([]);
+  const [newSuggestion, setNewSuggestion] = useState("");
 
   const fetchData = useCallback(async () => {
-    const res = await fetch("/api/admin");
+    const [res, sugRes] = await Promise.all([
+      fetch("/api/admin"),
+      fetch("/api/admin/suggestions"),
+    ]);
     if (res.status === 403) {
       router.push("/dashboard");
       return;
@@ -50,6 +55,9 @@ export default function AdminPage() {
       setPools(data.pools);
     } else {
       setError("Failed to load admin data");
+    }
+    if (sugRes.ok) {
+      setSuggestions(await sugRes.json());
     }
     setLoading(false);
   }, [router]);
@@ -136,6 +144,12 @@ export default function AdminPage() {
           className={`pill ${tab === "pools" ? "pill-active" : "pill-inactive"}`}
         >
           Pools ({pools.length})
+        </button>
+        <button
+          onClick={() => setTab("suggestions")}
+          className={`pill ${tab === "suggestions" ? "pill-active" : "pill-inactive"}`}
+        >
+          Names ({suggestions.length})
         </button>
       </div>
 
@@ -268,6 +282,64 @@ export default function AdminPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Suggestions Tab */}
+      {tab === "suggestions" && (
+        <div>
+          <div className="flex gap-2 mb-4">
+            <input
+              value={newSuggestion}
+              onChange={(e) => setNewSuggestion(e.target.value)}
+              placeholder="Add a funny pool name..."
+              className="input-field flex-1"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newSuggestion.trim()) {
+                  fetch("/api/suggestions", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: newSuggestion.trim() }),
+                  }).then(() => { setNewSuggestion(""); fetchData(); });
+                }
+              }}
+            />
+            <button
+              onClick={() => {
+                if (!newSuggestion.trim()) return;
+                fetch("/api/suggestions", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ name: newSuggestion.trim() }),
+                }).then(() => { setNewSuggestion(""); fetchData(); });
+              }}
+              className="btn-green flex-shrink-0"
+            >
+              Add
+            </button>
+          </div>
+          <div className="space-y-2">
+            {suggestions.map((s) => (
+              <div key={s.id} className="card px-4 py-3 flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-800">{s.name}</span>
+                <button
+                  onClick={() => {
+                    fetch("/api/suggestions", {
+                      method: "DELETE",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ id: s.id }),
+                    }).then(() => fetchData());
+                  }}
+                  className="text-xs text-red-400 font-semibold active:underline"
+                >
+                  Delete
+                </button>
+              </div>
+            ))}
+            {suggestions.length === 0 && (
+              <p className="text-center text-sm text-gray-400 italic py-6">No suggestions yet. Add your first one above.</p>
+            )}
+          </div>
         </div>
       )}
 

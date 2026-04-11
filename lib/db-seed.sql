@@ -96,6 +96,12 @@ CREATE TABLE assignments (
   pick_number INTEGER NOT NULL
 );
 
+CREATE TABLE pool_name_suggestions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT UNIQUE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
 CREATE INDEX idx_pools_slug ON pools(slug);
 CREATE INDEX idx_pools_chairman ON pools(chairman_id);
 CREATE INDEX idx_pools_tournament ON pools(tournament_id);
