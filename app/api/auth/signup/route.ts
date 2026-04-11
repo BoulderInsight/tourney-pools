@@ -20,8 +20,8 @@ export async function POST(req: NextRequest) {
       await sql`UPDATE chairmen SET verification_token = ${token} WHERE id = ${existing[0].id}`;
       try {
         await sendVerificationEmail(email.toLowerCase(), token);
-      } catch {
-        // Continue even if email fails
+      } catch (err) {
+        console.error("Verification email failed (resend):", err);
       }
       return NextResponse.json({ needsVerification: true });
     }
@@ -38,8 +38,8 @@ export async function POST(req: NextRequest) {
 
   try {
     await sendVerificationEmail(email.toLowerCase(), verificationToken);
-  } catch {
-    // Continue even if email fails — they can resend later
+  } catch (err) {
+    console.error("Verification email failed:", err);
   }
 
   return NextResponse.json({ needsVerification: true });

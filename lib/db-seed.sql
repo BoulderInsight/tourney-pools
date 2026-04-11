@@ -5,6 +5,16 @@ CREATE TABLE chairmen (
   email TEXT UNIQUE NOT NULL,
   password TEXT NOT NULL,
   name TEXT NOT NULL,
+  email_verified BOOLEAN DEFAULT false,
+  verification_token TEXT,
+  is_super_admin BOOLEAN DEFAULT false,
+  tier TEXT DEFAULT 'free',
+  stripe_customer_id TEXT,
+  custom_ad_image TEXT,
+  custom_ad_url TEXT,
+  custom_ad_headline TEXT,
+  custom_ad_description TEXT,
+  ad_removed BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -33,6 +43,7 @@ CREATE TABLE pools (
   buy_in INTEGER NOT NULL DEFAULT 20,
   settings JSONB NOT NULL DEFAULT '{}',
   setup_complete BOOLEAN DEFAULT false,
+  draft_complete BOOLEAN DEFAULT false,
   tournament_id UUID REFERENCES tournaments(id),
   last_sync_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now()
@@ -55,6 +66,7 @@ CREATE TABLE tournament_golfers (
   r4 INTEGER,
   made_cut BOOLEAN,
   world_ranking INTEGER,
+  odds_api_id TEXT,
   status TEXT DEFAULT 'active',
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
@@ -71,6 +83,7 @@ CREATE TABLE golfers (
   made_cut BOOLEAN,
   odds_api_id TEXT,
   manual_override BOOLEAN DEFAULT false,
+  world_ranking INTEGER,
   tournament_golfer_id UUID REFERENCES tournament_golfers(id)
 );
 
