@@ -196,7 +196,7 @@ function DashboardContent() {
     <div>
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
-        <img src="/logo.png" alt="TourneyPools" className="h-8" />
+        <img src="/logo.png" alt="TourneyPools" className="h-12" />
         <div className="flex flex-col items-end gap-1">
           <div className="flex items-center gap-3">
             {isSuperAdmin && (
