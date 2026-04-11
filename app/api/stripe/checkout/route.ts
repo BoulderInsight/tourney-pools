@@ -3,7 +3,9 @@ import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!);
+}
 
 export async function POST() {
   const session = await getSession();
@@ -22,7 +24,7 @@ export async function POST() {
   // Get or create Stripe customer
   let customerId = rows[0]?.stripe_customer_id;
   if (!customerId) {
-    const customer = await stripe.customers.create({
+    const customer = await getStripe().customers.create({
       email: session.email,
       name: session.name,
       metadata: { chairmanId: session.chairmanId },
@@ -31,7 +33,7 @@ export async function POST() {
     await sql`UPDATE chairmen SET stripe_customer_id = ${customerId} WHERE id = ${session.chairmanId}`;
   }
 
-  const checkoutSession = await stripe.checkout.sessions.create({
+  const checkoutSession = await getStripe().checkout.sessions.create({
     customer: customerId,
     mode: "payment",
     line_items: [

@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!);
+}
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
@@ -13,7 +15,7 @@ export async function POST(req: NextRequest) {
   // If webhook secret is set, verify signature. Otherwise accept raw (for initial setup).
   if (process.env.STRIPE_WEBHOOK_SECRET) {
     try {
-      event = stripe.webhooks.constructEvent(body, sig!, process.env.STRIPE_WEBHOOK_SECRET);
+      event = getStripe().webhooks.constructEvent(body, sig!, process.env.STRIPE_WEBHOOK_SECRET);
     } catch {
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }

@@ -15,16 +15,20 @@ interface Tournament {
 
 function formatDateRange(startDate: string | null, endDate: string | null): string {
   if (!startDate) return "";
-  const start = new Date(startDate + "T12:00:00");
-  const end = endDate ? new Date(endDate + "T12:00:00") : null;
-  const monthFmt = new Intl.DateTimeFormat("en-US", { month: "short" });
-  const startMonth = monthFmt.format(start);
-  const startDay = start.getDate();
-  if (!end) return `${startMonth} ${startDay}`;
-  const endMonth = monthFmt.format(end);
-  const endDay = end.getDate();
-  if (startMonth === endMonth) return `${startMonth} ${startDay}–${endDay}`;
-  return `${startMonth} ${startDay} – ${endMonth} ${endDay}`;
+  const start = new Date(startDate);
+  const end = endDate ? new Date(endDate) : null;
+  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", timeZone: "UTC" };
+  const startStr = start.toLocaleDateString("en-US", opts);
+  if (!end) return startStr;
+  const startMonth = start.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
+  const endMonth = end.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
+  const endDay = end.toLocaleDateString("en-US", { day: "numeric", timeZone: "UTC" });
+  if (startMonth === endMonth) {
+    const startDay = start.toLocaleDateString("en-US", { day: "numeric", timeZone: "UTC" });
+    return `${startMonth} ${startDay}–${endDay}`;
+  }
+  const endStr = end.toLocaleDateString("en-US", opts);
+  return `${startStr} – ${endStr}`;
 }
 
 async function getUpcomingTournaments(): Promise<Tournament[]> {
