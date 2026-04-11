@@ -39,7 +39,7 @@ function DashboardContent() {
   const [adDescriptionInput, setAdDescriptionInput] = useState("");
   const [savingAd, setSavingAd] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [placeholder, setPlaceholder] = useState("Pool name");
+  const [placeholder, setPlaceholder] = useState("Pool name (e.g. My Golf Pool)");
 
   const isPaid = tier === "paid";
   const canCreatePool = isPaid || pools.length < 1;
@@ -67,7 +67,7 @@ function DashboardContent() {
     }
     if (sugRes.ok) {
       const sug = await sugRes.json();
-      if (sug?.suggestion) setPlaceholder(`e.g. ${sug.suggestion}`);
+      if (sug?.suggestion) setPlaceholder(`Pool name (e.g. ${sug.suggestion})`);
     }
     setLoading(false);
   }, []);
