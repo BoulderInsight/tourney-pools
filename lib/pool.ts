@@ -158,7 +158,7 @@ function computeGolferStanding(
 
     if (settings.missedCutRule === "penalty") {
       const missedRounds = 4 - playedRounds.length;
-      const penalty = missedRounds * settings.missedCutPenalty;
+      const penalty = missedRounds * (settings.missedCutPenalty ?? DEFAULT_SETTINGS.missedCutPenalty);
       return {
         rawScore: playedTotal,
         penaltyScore: penalty,

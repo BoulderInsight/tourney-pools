@@ -150,7 +150,7 @@ export default function PoolSetupPage() {
         if (data?.players?.length > 0) {
           setPlayers(data.players.map((p: { id: string; name: string }) => ({ id: p.id, name: p.name })));
         }
-        if (data?.settings) setSettings(data.settings);
+        if (data?.settings) setSettings((prev) => ({ ...prev, ...data.settings }));
       }
     }
     loadPool();
@@ -158,6 +158,14 @@ export default function PoolSetupPage() {
 
   const set = <K extends keyof CommissionerSettings>(key: K, val: CommissionerSettings[K]) =>
     setSettings((s) => ({ ...s, [key]: val }));
+
+  // Rules validation — every section must have a selection
+  const rulesComplete =
+    !!settings.draftType &&
+    !!settings.missedCutRule &&
+    !!settings.scoringType &&
+    !!settings.purseType &&
+    !!(settings.payoutMethod || false);
 
   // Players
   const addPlayer = () =>
@@ -508,6 +516,9 @@ export default function PoolSetupPage() {
               <button type="button" onClick={() => setStep(0)} className="text-sm text-gray-400 font-medium px-4 py-3">
                 Back
               </button>
+              {!rulesComplete && (
+                <p className="text-xs text-red-500 self-center">Select one option in each section above.</p>
+              )}
               {settings.draftType === "snake" ? (
                 <button
                   type="button"
@@ -536,13 +547,13 @@ export default function PoolSetupPage() {
                       setError("Failed to save. Try again.");
                     }
                   }}
-                  disabled={saving}
+                  disabled={saving || !rulesComplete}
                   className="btn-green disabled:opacity-40"
                 >
                   {saving ? "Saving..." : "Launch Live Draft"}
                 </button>
               ) : (
-                <button type="button" onClick={() => setStep(2)} className="btn-green">
+                <button type="button" onClick={() => setStep(2)} disabled={!rulesComplete} className="btn-green disabled:opacity-40">
                   Next: Field
                 </button>
               )}

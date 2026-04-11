@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { PoolConfig, CommissionerSettings } from "@/lib/types";
+import { DEFAULT_SETTINGS } from "@/lib/pool";
 import { syncTournamentScores } from "@/lib/odds-api";
 
 export const dynamic = "force-dynamic";
@@ -80,7 +81,7 @@ export async function GET(
       worldRanking: g.world_ranking,
     })),
     buyIn: pool.buy_in,
-    settings: pool.settings as CommissionerSettings,
+    settings: { ...DEFAULT_SETTINGS, ...(pool.settings as Partial<CommissionerSettings>) },
     setupComplete: pool.setup_complete,
     assignments: assignments.map((a) => ({
       playerId: a.player_id,
