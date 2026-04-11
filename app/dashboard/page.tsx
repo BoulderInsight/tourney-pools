@@ -91,6 +91,10 @@ function DashboardContent() {
   }
 
   const [deleteModal, setDeleteModal] = useState<{ id: string; name: string } | null>(null);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackMsg, setFeedbackMsg] = useState("");
+  const [feedbackSending, setFeedbackSending] = useState(false);
+  const [feedbackSent, setFeedbackSent] = useState(false);
 
   async function confirmDeletePool() {
     if (!deleteModal) return;
@@ -219,9 +223,16 @@ function DashboardContent() {
                 Scores
               </Link>
             )}
-            <button onClick={handleLogout} className="text-xs text-gray-400 active:text-red-500 transition-colors">
-              Sign out
-            </button>
+            <Link
+              href="/account"
+              className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${
+                isPro
+                  ? "bg-tp-accent/15 text-tp-accent-dark"
+                  : "bg-gray-100 text-gray-500"
+              }`}
+            >
+              {isPro ? "Pro" : "Free"}
+            </Link>
           </div>
           <h1 className="font-serif text-2xl font-bold text-tp-primary">My Pools</h1>
         </div>
@@ -501,6 +512,62 @@ function DashboardContent() {
           )}
         </div>
       )}
+
+      {/* Feedback */}
+      <div className="mt-8 mb-4">
+        <div className="gold-rule mb-4" />
+        <button
+          onClick={() => { setShowFeedback(!showFeedback); setFeedbackSent(false); }}
+          className="w-full flex items-center justify-center gap-2 text-xs text-gray-400 font-semibold active:text-tp-primary transition-colors py-2"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          {showFeedback ? "Close" : "Send Feedback"}
+        </button>
+
+        {showFeedback && (
+          <div className="card p-4 mt-2 animate-slide-up">
+            {feedbackSent ? (
+              <div className="text-center py-4">
+                <p className="text-sm font-semibold text-tp-primary">Thanks for your feedback!</p>
+                <p className="text-xs text-gray-400 mt-1">We&apos;ll get back to you if needed.</p>
+              </div>
+            ) : (
+              <>
+                <textarea
+                  value={feedbackMsg}
+                  onChange={(e) => setFeedbackMsg(e.target.value)}
+                  placeholder="Bug report, feature request, or just say hi..."
+                  className="input-field text-sm resize-none"
+                  rows={3}
+                  style={{ minHeight: "auto" }}
+                />
+                <button
+                  onClick={async () => {
+                    if (!feedbackMsg.trim()) return;
+                    setFeedbackSending(true);
+                    const res = await fetch("/api/feedback", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ message: feedbackMsg }),
+                    });
+                    setFeedbackSending(false);
+                    if (res.ok) {
+                      setFeedbackSent(true);
+                      setFeedbackMsg("");
+                    }
+                  }}
+                  disabled={feedbackSending || !feedbackMsg.trim()}
+                  className="btn-green w-full mt-2 text-xs disabled:opacity-40"
+                >
+                  {feedbackSending ? "Sending..." : "Send"}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
       <ConfirmModal
         open={!!deleteModal}

@@ -6,7 +6,6 @@ import Link from "next/link";
 export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -19,7 +18,7 @@ export default function SignupPage() {
     const res = await fetch("/api/auth/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, email }),
     });
 
     const data = await res.json();
@@ -46,11 +45,11 @@ export default function SignupPage() {
           </div>
           <h1 className="font-serif text-2xl text-tp-primary font-bold mb-2">Check Your Email</h1>
           <p className="text-sm text-gray-500 mb-2">
-            We sent a verification link to:
+            We sent a link to set your password to:
           </p>
           <p className="text-sm font-semibold text-gray-800 mb-6">{email}</p>
           <p className="text-xs text-gray-400">
-            Click the link in the email to activate your account. Check your spam folder if you don&apos;t see it.
+            Click the link in the email to set your password and activate your account. Check your spam folder if you don&apos;t see it.
           </p>
         </div>
       </div>
@@ -68,7 +67,7 @@ export default function SignupPage() {
           Create Account
         </h1>
         <p className="text-xs text-gray-500 mb-6 text-center">
-          Set up your chairman account to create pools.
+          Enter your name and email. We&apos;ll send you a link to set your password.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -80,15 +79,11 @@ export default function SignupPage() {
             <label className="text-[11px] font-bold uppercase tracking-[0.15em] text-gray-400 mb-1 block">Email</label>
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" className="input-field" autoComplete="email" required />
           </div>
-          <div>
-            <label className="text-[11px] font-bold uppercase tracking-[0.15em] text-gray-400 mb-1 block">Password</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Minimum 6 characters" className="input-field" autoComplete="new-password" minLength={6} required />
-          </div>
 
           {error && <p className="text-red-500 text-xs">{error}</p>}
 
           <button type="submit" disabled={loading} className="btn-green w-full disabled:opacity-60">
-            {loading ? "Creating..." : "Create Account"}
+            {loading ? "Sending..." : "Continue"}
           </button>
         </form>
 
