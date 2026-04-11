@@ -224,12 +224,14 @@ export default function PoolSetupPage() {
     setSettings((s) => ({ ...s, [key]: val }));
 
   // Rules validation — every section must have a selection
+  // payoutMethod defaults to "honor-system" if not explicitly set
+  const effectivePayoutMethod = settings.payoutMethod || "honor-system";
   const rulesComplete =
     !!settings.draftType &&
     !!settings.missedCutRule &&
     !!settings.scoringType &&
     !!settings.purseType &&
-    !!(settings.payoutMethod || false);
+    !!effectivePayoutMethod;
 
   // Players
   const addPlayer = () =>
