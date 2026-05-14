@@ -10,7 +10,10 @@ export async function GET() {
     SELECT id, name, slug, course_name, location, start_date, end_date, year, status, logo_url, api_tournament_id
     FROM tournaments
     WHERE status IN ('scheduled', 'in_progress')
-    ORDER BY start_date ASC
+      AND end_date >= CURRENT_DATE
+    ORDER BY
+      CASE WHEN status = 'in_progress' THEN 0 ELSE 1 END,
+      start_date ASC
   `;
 
   // Generate logo URLs from PGA Tour CDN if we have an api_tournament_id

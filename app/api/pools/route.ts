@@ -11,11 +11,15 @@ export async function GET() {
 
   const sql = getDb();
   const pools = await sql`
-    SELECT id, slug, pool_name, buy_in, setup_complete, created_at,
-           (SELECT COUNT(*) FROM players WHERE pool_id = pools.id) as player_count
-    FROM pools
-    WHERE chairman_id = ${session.chairmanId}
-    ORDER BY created_at DESC
+    SELECT p.id, p.slug, p.pool_name, p.buy_in, p.setup_complete, p.created_at,
+           t.status AS tournament_status,
+           (SELECT COUNT(*) FROM players WHERE pool_id = p.id) as player_count
+    FROM pools p
+    LEFT JOIN tournaments t ON t.id = p.tournament_id
+    WHERE p.chairman_id = ${session.chairmanId}
+    ORDER BY
+      CASE WHEN t.status IN ('completed', 'cancelled') THEN 1 ELSE 0 END,
+      p.created_at DESC
   `;
 
   return NextResponse.json(pools);

@@ -14,6 +14,7 @@ interface Pool {
   setup_complete: boolean;
   player_count: number;
   created_at: string;
+  tournament_status: string | null;
 }
 
 function DashboardContent() {
@@ -297,85 +298,91 @@ function DashboardContent() {
         </div>
       ) : (
         <div className="space-y-3">
-          {pools.map((pool) => (
-            <div key={pool.id} className="card overflow-hidden">
-              <Link href={pool.setup_complete ? `/pool/${pool.slug}` : `/pool/${pool.slug}/setup`} className="block p-4 active:bg-tp-bg/40 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="font-serif font-bold text-gray-900">{pool.pool_name}</span>
-                    <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
-                      <span>{pool.player_count} players</span>
-                      <span className="text-gray-200">|</span>
-                      <span>${pool.buy_in} buy-in</span>
-                    </div>
+          {pools.map((pool) => {
+            const isOver = pool.tournament_status === "completed" || pool.tournament_status === "cancelled";
+            const cardClass = `card overflow-hidden${isOver ? " opacity-60" : ""}`;
+            const headerInner = (
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-serif font-bold text-gray-900">{pool.pool_name}</span>
+                  <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+                    <span>{pool.player_count} players</span>
+                    <span className="text-gray-200">|</span>
+                    <span>${pool.buy_in} buy-in</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {pool.setup_complete ? (
-                      <span className="text-[10px] bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-semibold">Live</span>
-                    ) : (
-                      <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-semibold">Draft</span>
-                    )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {isOver ? (
+                    <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-semibold">Completed</span>
+                  ) : pool.setup_complete ? (
+                    <span className="text-[10px] bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-semibold">Live</span>
+                  ) : (
+                    <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-semibold">Draft</span>
+                  )}
+                  {!isOver && (
                     <svg className="w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
-                  </div>
-                </div>
-              </Link>
-              {/* Share link */}
-              {pool.setup_complete && (
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(`https://tourneypools.com/pool/${pool.slug}`);
-                    setCopied(pool.id);
-                    setTimeout(() => setCopied(null), 2000);
-                  }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-tp-accent border-t border-tp-bg-dark active:bg-tp-accent/5 transition-colors"
-                >
-                  {copied === pool.id ? (
-                    <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Link Copied!</>
-                  ) : (
-                    <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg> Copy Invite Link</>
                   )}
-                </button>
-              )}
-              {/* Pool actions */}
-              <div className="flex border-t border-tp-bg-dark">
-                <Link
-                  href={`/pool/${pool.slug}`}
-                  className="flex-1 text-center py-2.5 text-xs font-semibold text-tp-primary active:bg-tp-primary/5 transition-colors"
-                >
-                  View
-                </Link>
-                <div className="w-px bg-tp-bg-dark" />
-                <Link
-                  href={`/pool/${pool.slug}/scores`}
-                  className="flex-1 text-center py-2.5 text-xs font-semibold text-tp-primary active:bg-tp-primary/5 transition-colors"
-                >
-                  Scores
-                </Link>
-                <div className="w-px bg-tp-bg-dark" />
-                {pool.setup_complete ? (
-                  <span className="flex-1 text-center py-2.5 text-xs font-semibold text-gray-300 cursor-not-allowed">
-                    Edit
-                  </span>
+                </div>
+              </div>
+            );
+            return (
+              <div key={pool.id} className={cardClass}>
+                {isOver ? (
+                  <div className="block p-4">{headerInner}</div>
                 ) : (
-                  <Link
-                    href={`/pool/${pool.slug}/setup`}
-                    className="flex-1 text-center py-2.5 text-xs font-semibold text-tp-primary active:bg-tp-primary/5 transition-colors"
-                  >
-                    Edit
+                  <Link href={pool.setup_complete ? `/pool/${pool.slug}` : `/pool/${pool.slug}/setup`} className="block p-4 active:bg-tp-bg/40 transition-colors">
+                    {headerInner}
                   </Link>
                 )}
-                <div className="w-px bg-tp-bg-dark" />
-                <button
-                  onClick={() => setDeleteModal({ id: pool.id, name: pool.pool_name })}
-                  className="flex-1 text-center py-2.5 text-xs font-semibold text-red-400 active:bg-red-50 transition-colors"
-                >
-                  Delete
-                </button>
+                {/* Share link — hidden for completed pools */}
+                {pool.setup_complete && !isOver && (
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`https://tourneypools.com/pool/${pool.slug}`);
+                      setCopied(pool.id);
+                      setTimeout(() => setCopied(null), 2000);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-tp-accent border-t border-tp-bg-dark active:bg-tp-accent/5 transition-colors"
+                  >
+                    {copied === pool.id ? (
+                      <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Link Copied!</>
+                    ) : (
+                      <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg> Copy Invite Link</>
+                    )}
+                  </button>
+                )}
+                {/* Pool actions */}
+                <div className="flex border-t border-tp-bg-dark">
+                  {isOver ? (
+                    <span className="flex-1 text-center py-2.5 text-xs font-semibold text-gray-300 cursor-not-allowed">View</span>
+                  ) : (
+                    <Link href={`/pool/${pool.slug}`} className="flex-1 text-center py-2.5 text-xs font-semibold text-tp-primary active:bg-tp-primary/5 transition-colors">View</Link>
+                  )}
+                  <div className="w-px bg-tp-bg-dark" />
+                  {isOver ? (
+                    <span className="flex-1 text-center py-2.5 text-xs font-semibold text-gray-300 cursor-not-allowed">Scores</span>
+                  ) : (
+                    <Link href={`/pool/${pool.slug}/scores`} className="flex-1 text-center py-2.5 text-xs font-semibold text-tp-primary active:bg-tp-primary/5 transition-colors">Scores</Link>
+                  )}
+                  <div className="w-px bg-tp-bg-dark" />
+                  {isOver || pool.setup_complete ? (
+                    <span className="flex-1 text-center py-2.5 text-xs font-semibold text-gray-300 cursor-not-allowed">Edit</span>
+                  ) : (
+                    <Link href={`/pool/${pool.slug}/setup`} className="flex-1 text-center py-2.5 text-xs font-semibold text-tp-primary active:bg-tp-primary/5 transition-colors">Edit</Link>
+                  )}
+                  <div className="w-px bg-tp-bg-dark" />
+                  <button
+                    onClick={() => setDeleteModal({ id: pool.id, name: pool.pool_name })}
+                    className="flex-1 text-center py-2.5 text-xs font-semibold text-red-400 active:bg-red-50 transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

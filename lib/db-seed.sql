@@ -69,6 +69,7 @@ CREATE TABLE tournament_golfers (
   world_ranking INTEGER,
   odds_api_id TEXT,
   status TEXT DEFAULT 'active',
+  manual_override BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );

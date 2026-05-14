@@ -144,6 +144,41 @@ export interface LeaderboardResult {
   golfers: LeaderboardGolfer[];
 }
 
+// Parse a slashgolf score-to-par string ("-5" → -5, "E" → 0, "+3" → 3, "" → null)
+export function parseScore(s: string | null | undefined): number | null {
+  if (!s) return null;
+  if (s === "E") return 0;
+  const n = Number(s);
+  return isNaN(n) ? null : n;
+}
+
+// Pull r1-r4 scores from a leaderboard golfer.
+// For ACTIVE (mid-round) players, derives the in-progress round score from `total`
+// since the API leaves scoreToPar empty until the round is complete.
+export function extractRoundScores(g: LeaderboardGolfer): {
+  r1: number | null; r2: number | null; r3: number | null; r4: number | null;
+} {
+  const r1 = parseScore(g.rounds.find((r) => r.roundId === 1)?.scoreToPar);
+  const r2 = parseScore(g.rounds.find((r) => r.roundId === 2)?.scoreToPar);
+  const r3 = parseScore(g.rounds.find((r) => r.roundId === 3)?.scoreToPar);
+  const r4 = parseScore(g.rounds.find((r) => r.roundId === 4)?.scoreToPar);
+  const out = { r1, r2, r3, r4 };
+
+  if (g.status !== "active") return out;
+  const total = parseScore(g.total);
+  if (total === null) return out;
+
+  const completedSum = (r1 ?? 0) + (r2 ?? 0) + (r3 ?? 0) + (r4 ?? 0);
+  const inRound = total - completedSum;
+  const cur = g.currentRound;
+  // Only fill the slot for the round actually being played, and only if not already final
+  if (cur === 1 && r1 === null) out.r1 = inRound;
+  else if (cur === 2 && r2 === null) out.r2 = inRound;
+  else if (cur === 3 && r3 === null) out.r3 = inRound;
+  else if (cur === 4 && r4 === null) out.r4 = inRound;
+  return out;
+}
+
 export async function fetchLeaderboard(tournId: string, year: number, orgId = 1): Promise<LeaderboardResult> {
   const res = await fetch(`${BASE_URL}/leaderboard?orgId=${orgId}&tournId=${tournId}&year=${year}`, {
     headers: headers(),

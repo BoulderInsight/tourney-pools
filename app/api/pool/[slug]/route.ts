@@ -2,19 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { PoolConfig, CommissionerSettings } from "@/lib/types";
 import { DEFAULT_SETTINGS } from "@/lib/pool";
-import { fetchLeaderboard } from "@/lib/golf-api";
+import { fetchLeaderboard, extractRoundScores } from "@/lib/golf-api";
 
 export const dynamic = "force-dynamic";
 
 const SYNC_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
-
-// Parse score-to-par strings (e.g. "-5" → -5, "E" → 0, "+3" → 3)
-function parseScore(s: string): number | null {
-  if (!s || s === "") return null;
-  if (s === "E") return 0;
-  const n = Number(s);
-  return isNaN(n) ? null : n;
-}
 
 export async function GET(
   req: NextRequest,
@@ -51,18 +43,15 @@ export async function GET(
           const leaderboard = await fetchLeaderboard(t.api_tournament_id, t.year);
 
           for (const golfer of leaderboard.golfers) {
-            const r1 = golfer.rounds.find((r) => r.roundId === 1);
-            const r2 = golfer.rounds.find((r) => r.roundId === 2);
-            const r3 = golfer.rounds.find((r) => r.roundId === 3);
-            const r4 = golfer.rounds.find((r) => r.roundId === 4);
-            const madeCut = golfer.status === "cut" ? false : golfer.status === "active" && (r3 || r4) ? true : null;
+            const { r1, r2, r3, r4 } = extractRoundScores(golfer);
+            const madeCut = golfer.status === "cut" ? false : golfer.status === "active" && (r3 !== null || r4 !== null) ? true : null;
 
             await sql`
               UPDATE tournament_golfers SET
-                r1 = COALESCE(${parseScore(r1?.scoreToPar || "")}, r1),
-                r2 = COALESCE(${parseScore(r2?.scoreToPar || "")}, r2),
-                r3 = COALESCE(${parseScore(r3?.scoreToPar || "")}, r3),
-                r4 = COALESCE(${parseScore(r4?.scoreToPar || "")}, r4),
+                r1 = COALESCE(${r1}, r1),
+                r2 = COALESCE(${r2}, r2),
+                r3 = COALESCE(${r3}, r3),
+                r4 = COALESCE(${r4}, r4),
                 made_cut = COALESCE(${madeCut}, made_cut),
                 status = ${golfer.status},
                 updated_at = now()
@@ -81,8 +70,9 @@ export async function GET(
 
         // Update last_sync_at for this pool
         await sql`UPDATE pools SET last_sync_at = now() WHERE id = ${pool.id}`;
-      } catch {
-        // Sync failure shouldn't block page load
+      } catch (err) {
+        // Sync failure shouldn't block page load — but log it so it surfaces in Vercel
+        console.error(`[pool/${params.slug}] auto-sync failed:`, err);
       }
     }
   }
