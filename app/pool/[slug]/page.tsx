@@ -55,9 +55,22 @@ function GolferDetail({ golfer, counted, totalScore, penaltyScore }: {
   return (
     <div
       className={`flex items-center justify-between rounded-xl px-3 py-3 text-sm
-        ${counted ? "bg-white border border-tp-bg-dark" : "bg-tp-bg/60 opacity-60"}`}
+        ${counted ? "bg-white border border-tp-bg-dark" : "bg-tp-bg/60"}`}
     >
       <div className="flex items-center gap-2.5 min-w-0 flex-1">
+        {counted ? (
+          <span
+            className="flex-shrink-0 flex items-center justify-center w-4 h-4 rounded-full bg-tp-accent"
+            title="Counts toward total"
+            aria-label="Counts toward total"
+          >
+            <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </span>
+        ) : (
+          <span className="w-4 flex-shrink-0" aria-hidden="true" />
+        )}
         <RoundDots golfer={golfer} />
         {golfer.worldRanking && (
           <span className="text-[10px] text-gray-400 font-mono flex-shrink-0">#{golfer.worldRanking}</span>
@@ -66,11 +79,6 @@ function GolferDetail({ golfer, counted, totalScore, penaltyScore }: {
         {golfer.madeCut === false && (
           <span className="text-[10px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0">
             MC
-          </span>
-        )}
-        {!counted && (
-          <span className="text-[10px] bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-full font-medium flex-shrink-0">
-            bench
           </span>
         )}
       </div>
