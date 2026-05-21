@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { fetchLeaderboard, extractRoundScores } from "@/lib/golf-api";
+import {
+  fetchLeaderboard,
+  extractRoundScores,
+  normalizeName,
+} from "@/lib/golf-api";
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
@@ -11,6 +15,15 @@ export async function GET(req: NextRequest) {
   const sql = getDb();
   const results: { tournament: string; updated: number; status: string }[] = [];
   const errors: string[] = [];
+
+  // Promote tournaments whose start date has arrived (scheduled → in_progress).
+  // Nothing else does this — without it a tournament is never synced on day one.
+  await sql`
+    UPDATE tournaments SET status = 'in_progress', updated_at = now()
+    WHERE status = 'scheduled'
+      AND start_date <= CURRENT_DATE
+      AND end_date >= CURRENT_DATE
+  `;
 
   // Find all in-progress tournaments with an API source
   const tournaments = await sql`
@@ -26,6 +39,24 @@ export async function GET(req: NextRequest) {
         tournament.year
       );
 
+      // Index this tournament's golfers. Pools created through the setup
+      // wizard store golfers by name with no odds_api_id, so we match on
+      // odds_api_id first, then fall back to a unique normalized name —
+      // backfilling the id so future syncs are an exact match.
+      const dbGolfers = await sql`
+        SELECT id, name, odds_api_id
+        FROM tournament_golfers
+        WHERE tournament_id = ${tournament.id}
+      `;
+      const byApiId = new Map<string, string>();
+      const byName = new Map<string, string | null>();
+      for (const g of dbGolfers) {
+        if (g.odds_api_id) byApiId.set(String(g.odds_api_id), g.id);
+        const nm = normalizeName(g.name);
+        // null marks an ambiguous name shared by 2+ golfers — never match it
+        byName.set(nm, byName.has(nm) ? null : g.id);
+      }
+
       let updated = 0;
 
       for (const golfer of leaderboard.golfers) {
@@ -37,6 +68,20 @@ export async function GET(req: NextRequest) {
           ? true
           : null;
 
+        // Resolve the row: API id, then unique normalized name.
+        let targetId = byApiId.get(golfer.playerId);
+        let backfillId = false;
+        if (!targetId) {
+          const named = byName.get(
+            normalizeName(`${golfer.firstName} ${golfer.lastName}`)
+          );
+          if (named) {
+            targetId = named;
+            backfillId = true;
+          }
+        }
+        if (!targetId) continue;
+
         // Update tournament_golfers, skip manual overrides
         const result = await sql`
           UPDATE tournament_golfers SET
@@ -45,10 +90,10 @@ export async function GET(req: NextRequest) {
             r3 = COALESCE(${r3}, r3),
             r4 = COALESCE(${r4}, r4),
             made_cut = COALESCE(${madeCut}, made_cut),
+            odds_api_id = COALESCE(odds_api_id, ${backfillId ? golfer.playerId : null}),
             status = ${golfer.status},
             updated_at = now()
-          WHERE tournament_id = ${tournament.id}
-            AND odds_api_id = ${golfer.playerId}
+          WHERE id = ${targetId}
             AND (manual_override IS NULL OR manual_override = false)
           RETURNING id
         `;

@@ -152,6 +152,15 @@ export function parseScore(s: string | null | undefined): number | null {
   return isNaN(n) ? null : n;
 }
 
+// Normalize a golfer name for fuzzy matching: strip accents, lowercase,
+// keep letters only. Lets API players match wizard-entered names that differ
+// by accents, punctuation, or spacing ("José Mª" ↔ "Jose Maria").
+export function normalizeName(name: string): string {
+  const decomposed = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const fixed = decomposed.replace(/ø/gi, "o");
+  return fixed.toLowerCase().replace(/[^a-z]/g, "");
+}
+
 // Pull r1-r4 scores from a leaderboard golfer.
 // For ACTIVE (mid-round) players, derives the in-progress round score from `total`
 // since the API leaves scoreToPar empty until the round is complete.
