@@ -167,6 +167,8 @@ export default function PoolSetupPage() {
   const [fieldText, setFieldText] = useState(
     DEFAULT_FIELD.map(e => e.ranking ? `${e.name} (#${e.ranking})` : e.name).join("\n")
   );
+  const [fieldLoading, setFieldLoading] = useState(false);
+  const [fieldFromTournament, setFieldFromTournament] = useState(false);
 
   // Draft results
   const [assignments, setAssignments] = useState<ReturnType<typeof draftGolfers>>([]);
@@ -217,6 +219,28 @@ export default function PoolSetupPage() {
     }
     loadPool();
   }, [slug]);
+
+  // When a tournament with an official field is selected, draft from that
+  // field instead of the generic default list.
+  useEffect(() => {
+    if (!selectedTournamentId) return;
+    let cancelled = false;
+    setFieldLoading(true);
+    fetch(`/api/tournaments/${selectedTournamentId}/field`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        if (data.hasField && data.golfers?.length > 0) {
+          setFieldText(data.golfers.map((g: { name: string }) => g.name).join("\n"));
+          setFieldFromTournament(true);
+        } else {
+          setFieldFromTournament(false);
+        }
+      })
+      .catch(() => { /* keep the default field */ })
+      .finally(() => { if (!cancelled) setFieldLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedTournamentId]);
 
   // When a tournament is selected, auto-set pool name
   const selectedTournament = tournaments.find(t => t.id === selectedTournamentId);
@@ -763,7 +787,11 @@ export default function PoolSetupPage() {
           <div>
             <h2 className="font-serif text-lg text-tp-primary mb-1 font-bold">Golfer Field</h2>
             <p className="text-xs text-gray-500 mb-5">
-              {selectedTournament ? `${selectedTournament.name} ${selectedTournament.year}` : "Tournament"} field: {golferCount} golfers sorted by world ranking.
+              {fieldLoading
+                ? "Loading the official tournament field…"
+                : fieldFromTournament
+                ? `Official field for ${selectedTournament?.name ?? "this tournament"} — ${golferCount} golfers.`
+                : `${golferCount} golfers (default list — not linked to a tournament with live scoring).`}
             </p>
 
             <div className="rounded-xl border-2 border-tp-bg-dark bg-tp-bg/30 p-3 font-mono text-xs leading-relaxed overflow-y-auto" style={{ maxHeight: 320 }}>
