@@ -116,6 +116,35 @@ CREATE INDEX idx_tournaments_slug ON tournaments(slug);
 CREATE INDEX idx_tournaments_status ON tournaments(status);
 CREATE INDEX idx_tournament_golfers_tournament ON tournament_golfers(tournament_id);
 
+CREATE TABLE people (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  chairman_id UUID NOT NULL REFERENCES chairmen(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  venmo_handle TEXT,
+  cashapp_handle TEXT,
+  paypal_handle TEXT,
+  preferred_method TEXT
+    CHECK (preferred_method IN ('venmo', 'cashapp', 'paypal') OR preferred_method IS NULL),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE collection_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  token TEXT UNIQUE NOT NULL,
+  person_id UUID NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+  pool_id UUID NOT NULL REFERENCES pools(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  submitted_at TIMESTAMPTZ
+);
+
+ALTER TABLE players ADD COLUMN person_id UUID REFERENCES people(id) ON DELETE SET NULL;
+
+CREATE INDEX idx_people_chairman ON people(chairman_id);
+CREATE INDEX idx_collection_requests_token ON collection_requests(token);
+CREATE INDEX idx_collection_requests_person ON collection_requests(person_id);
+CREATE INDEX idx_collection_requests_pool ON collection_requests(pool_id);
+CREATE INDEX idx_players_person ON players(person_id);
+
 -- Seed 2026 major tournaments
 INSERT INTO tournaments (name, slug, course_name, location, start_date, end_date, year, status, logo_url) VALUES
   ('The Masters', 'masters-2026', 'Augusta National Golf Club', 'Augusta, GA', '2026-04-09', '2026-04-12', 2026, 'scheduled', '/tournaments/masters.png'),
