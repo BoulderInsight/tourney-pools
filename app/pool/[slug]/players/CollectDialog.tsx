@@ -220,7 +220,7 @@ export default function CollectDialog({
                 {copyState === "copied" ? "Copied!" : "Copy link"}
               </button>
               <a
-                href={`sms:?&body=${smsBody}`}
+                href={`sms:?body=${smsBody}`}
                 className="py-3 rounded-xl text-sm font-semibold bg-tp-primary text-white text-center active:bg-tp-primary/90"
               >
                 Text it

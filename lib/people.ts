@@ -29,6 +29,30 @@ export async function createPerson(
   return rowToPerson(rows[0]);
 }
 
+/**
+ * Find an existing Person owned by this chairman with this name, or create a new one.
+ * Preserves payment handles across re-runs of the setup wizard (typo fixes, late entrants,
+ * settings changes) so collected data is not silently lost.
+ *
+ * Matching is by exact name. Renaming a player ("John" -> "John Smith") will not match;
+ * the chairman will need to re-collect that player. This is acceptable for Phase 1.
+ */
+export async function findOrCreatePerson(
+  sql: Sql,
+  chairmanId: string,
+  name: string,
+): Promise<Person> {
+  const rows = await sql`
+    SELECT id, chairman_id, name, venmo_handle, cashapp_handle, paypal_handle, preferred_method
+    FROM people
+    WHERE chairman_id = ${chairmanId} AND name = ${name}
+    ORDER BY created_at ASC
+    LIMIT 1
+  `;
+  if (rows.length > 0) return rowToPerson(rows[0]);
+  return createPerson(sql, chairmanId, name);
+}
+
 /** Get a single Person owned by the given chairman, or null if not found / not owned. */
 export async function getPersonForChairman(
   sql: Sql,

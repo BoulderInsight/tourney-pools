@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { draftGolfers } from "@/lib/pool";
-import { createPerson } from "@/lib/people";
+import { findOrCreatePerson } from "@/lib/people";
 
 export async function POST(
   req: NextRequest,
@@ -52,13 +52,14 @@ export async function POST(
     WHERE id = ${poolId}
   `;
 
-  // Insert players. For each typed name, create a Person owned by this chairman and
-  // link the player to it via person_id. This is what makes payment handles durable
-  // across pools the same chairman runs.
+  // Insert players. For each typed name, find or create a Person owned by this
+  // chairman and link the player to it via person_id. Using findOrCreatePerson
+  // preserves handles across re-runs of the setup wizard, so a typo fix or a
+  // settings change does not silently lose collected payment data.
   const insertedPlayers = [];
   for (let i = 0; i < players.length; i++) {
     const p = players[i];
-    const person = await createPerson(sql, session.chairmanId, p.name);
+    const person = await findOrCreatePerson(sql, session.chairmanId, p.name);
     const result = await sql`
       INSERT INTO players (pool_id, name, pick_order, person_id)
       VALUES (${poolId}, ${p.name}, ${i}, ${person.id})

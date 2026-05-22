@@ -83,6 +83,12 @@ export async function PATCH(
     return NextResponse.json({ error: "Link not found" }, { status: 404 });
   }
 
+  // A link is single-use. Once submitted, reject further writes so a leaked token
+  // cannot be used to overwrite the recipient's handles with someone else's.
+  if (ctx.submittedAt) {
+    return NextResponse.json({ error: "This link has already been used. Ask the chairman for a new one." }, { status: 409 });
+  }
+
   const body = await req.json();
   await setPersonHandles(sql, ctx.personId, {
     venmoHandle: cleanHandle(body.venmoHandle),
