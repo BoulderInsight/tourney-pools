@@ -639,6 +639,7 @@ export default function PoolLeaderboardPage() {
   const [isOwner, setIsOwner] = useState(false);
   const [awaitingField, setAwaitingField] = useState(false);
   const [awaitingInfo, setAwaitingInfo] = useState<{ name: string; status: string | null; startDate: string | null }>({ name: "", status: null, startDate: null });
+  const [tournamentName, setTournamentName] = useState("");
 
   const fetchPool = useCallback(async () => {
     try {
@@ -662,6 +663,7 @@ export default function PoolLeaderboardPage() {
           status: data.tournamentStatus || null,
           startDate: data.tournamentStartDate || null,
         });
+        setTournamentName(data.tournamentName || "");
         // Check if current user is chairman
         try {
           const meRes = await fetch("/api/auth/me");
@@ -739,6 +741,11 @@ export default function PoolLeaderboardPage() {
         <h1 className="font-serif text-2xl font-bold text-tp-primary leading-tight text-center">
           {config.poolName || "Golf Pool"}
         </h1>
+        {tournamentName && (
+          <p className="text-center text-sm font-medium text-tp-accent mt-0.5">
+            {tournamentName}
+          </p>
+        )}
         <div className="flex items-center justify-center gap-3 mt-1.5 text-xs text-gray-500">
           <span className="flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-tp-accent" />
