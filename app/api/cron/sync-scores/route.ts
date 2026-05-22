@@ -5,6 +5,7 @@ import {
   extractRoundScores,
   normalizeName,
 } from "@/lib/golf-api";
+import { importTournamentField, draftPoolFromField } from "@/lib/draft-pool";
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
@@ -120,9 +121,51 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Unlock pools waiting on a field that has now been published.
+  let unlocked = 0;
+  const awaitingPools = await sql`
+    SELECT p.id, p.settings, t.id AS tournament_id,
+           t.api_tournament_id, t.year
+    FROM pools p
+    JOIN tournaments t ON t.id = p.tournament_id
+    WHERE p.awaiting_field = true
+      AND t.api_source = 'slashgolf'
+      AND t.api_tournament_id IS NOT NULL
+  `;
+  const handledTournaments = new Set<string>();
+  for (const pool of awaitingPools) {
+    if (handledTournaments.has(pool.tournament_id)) continue;
+    handledTournaments.add(pool.tournament_id);
+    try {
+      const field = await importTournamentField(
+        pool.tournament_id,
+        pool.api_tournament_id,
+        pool.year
+      );
+      if (!field) continue; // field still not published — try again next run
+
+      for (const p of awaitingPools.filter((x) => x.tournament_id === pool.tournament_id)) {
+        const draftType = p.settings?.draftType || "auto-snake";
+        const { drafted } = await draftPoolFromField(p.id, draftType, field);
+        await sql`
+          UPDATE pools SET
+            awaiting_field = false,
+            draft_complete = ${drafted},
+            last_sync_at = now()
+          WHERE id = ${p.id}
+        `;
+        unlocked++;
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      errors.push(`awaiting-field unlock: ${message}`);
+    }
+  }
+
   return NextResponse.json({
     synced: results.length,
     results,
+    unlocked,
     errors: errors.length > 0 ? errors : undefined,
   });
 }

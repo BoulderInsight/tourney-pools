@@ -15,10 +15,12 @@ export async function GET(
   const sql = getDb();
 
   const poolRows = await sql`
-    SELECT p.id, p.slug, p.pool_name, p.buy_in, p.settings, p.setup_complete, p.draft_complete, p.chairman_id, p.last_sync_at, p.tournament_id,
-           c.name as chairman_name, c.tier, c.custom_ad_image, c.custom_ad_url, c.custom_ad_headline, c.custom_ad_description, c.ad_removed
+    SELECT p.id, p.slug, p.pool_name, p.buy_in, p.settings, p.setup_complete, p.draft_complete, p.awaiting_field, p.chairman_id, p.last_sync_at, p.tournament_id,
+           c.name as chairman_name, c.tier, c.custom_ad_image, c.custom_ad_url, c.custom_ad_headline, c.custom_ad_description, c.ad_removed,
+           t.name as tournament_name, t.status as tournament_status, t.start_date as tournament_start_date
     FROM pools p
     JOIN chairmen c ON c.id = p.chairman_id
+    LEFT JOIN tournaments t ON t.id = p.tournament_id
     WHERE p.slug = ${params.slug}
   `;
   if (poolRows.length === 0) {
@@ -138,7 +140,11 @@ export async function GET(
     customAdDescription: pool.custom_ad_description,
     adRemoved: pool.ad_removed,
     draftComplete: pool.draft_complete,
+    awaitingField: pool.awaiting_field,
     lastSyncAt: pool.last_sync_at,
     tournamentId: pool.tournament_id,
+    tournamentName: pool.tournament_name,
+    tournamentStatus: pool.tournament_status,
+    tournamentStartDate: pool.tournament_start_date,
   });
 }

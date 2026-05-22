@@ -45,6 +45,7 @@ CREATE TABLE pools (
   settings JSONB NOT NULL DEFAULT '{}',
   setup_complete BOOLEAN DEFAULT false,
   draft_complete BOOLEAN DEFAULT false,
+  awaiting_field BOOLEAN NOT NULL DEFAULT false,
   tournament_id UUID REFERENCES tournaments(id),
   last_sync_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now()

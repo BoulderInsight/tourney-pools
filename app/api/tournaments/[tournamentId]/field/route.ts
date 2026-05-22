@@ -22,7 +22,7 @@ export async function GET(
 
   // Not an API-backed tournament — the wizard falls back to the default field
   if (t.api_source !== "slashgolf" || !t.api_tournament_id) {
-    return NextResponse.json({ hasField: false, golfers: [] });
+    return NextResponse.json({ apiBacked: false, hasField: false, golfers: [] });
   }
 
   try {
@@ -37,13 +37,15 @@ export async function GET(
       .map((g) => ({ name: g.name }));
 
     return NextResponse.json({
+      apiBacked: true,
       hasField: golfers.length > 0,
       tournamentName: t.name,
       golfers,
     });
   } catch (err) {
-    // A field-fetch failure must not break the wizard — fall back to default
-    console.error(`[tournaments/${params.tournamentId}/field] fetch failed:`, err);
-    return NextResponse.json({ hasField: false, golfers: [] });
+    // The field isn't published yet (the API returns 400 pre-tournament) —
+    // report it as API-backed so the wizard enters "awaiting field" mode.
+    console.error(`[tournaments/${params.tournamentId}/field] field not available:`, err);
+    return NextResponse.json({ apiBacked: true, hasField: false, golfers: [] });
   }
 }

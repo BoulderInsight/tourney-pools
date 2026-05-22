@@ -11,7 +11,7 @@ export async function GET() {
 
   const sql = getDb();
   const pools = await sql`
-    SELECT p.id, p.slug, p.pool_name, p.buy_in, p.setup_complete, p.created_at,
+    SELECT p.id, p.slug, p.pool_name, p.buy_in, p.setup_complete, p.awaiting_field, p.created_at,
            t.status AS tournament_status,
            (SELECT COUNT(*) FROM players WHERE pool_id = p.id) as player_count
     FROM pools p

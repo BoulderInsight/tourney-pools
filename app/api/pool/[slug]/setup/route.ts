@@ -24,7 +24,7 @@ export async function POST(
   const poolId = poolRows[0].id;
 
   const body = await req.json();
-  const { poolName, players, golferEntries, golferNames, buyIn, settings, tournamentId } = body;
+  const { poolName, players, golferEntries, golferNames, buyIn, settings, tournamentId, awaitingField } = body;
 
   // Support both new format (golferEntries with rankings) and legacy (golferNames)
   const entries: { name: string; ranking: number | null }[] = golferEntries
@@ -42,7 +42,11 @@ export async function POST(
       buy_in = ${buyIn},
       settings = ${JSON.stringify(settings)},
       setup_complete = true,
-      draft_complete = ${settings.draftType === "random" || settings.draftType === "auto-snake"},
+      draft_complete = ${
+        !awaitingField &&
+        (settings.draftType === "random" || settings.draftType === "auto-snake")
+      },
+      awaiting_field = ${awaitingField === true},
       tournament_id = ${tournamentId || null}
     WHERE id = ${poolId}
   `;
@@ -57,6 +61,13 @@ export async function POST(
       RETURNING id, name
     `;
     insertedPlayers.push({ id: result[0].id, name: result[0].name });
+  }
+
+  // Awaiting-field pool: the field isn't published yet, so save the players
+  // and rules but skip golfers + drafting. The cron drafts it once the field
+  // publishes.
+  if (awaitingField) {
+    return NextResponse.json({ ok: true, awaitingField: true });
   }
 
   // Insert golfers with rankings, linked to shared tournament_golfers

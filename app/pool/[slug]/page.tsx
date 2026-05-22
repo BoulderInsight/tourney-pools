@@ -584,6 +584,43 @@ function SettingsPill({ label, info }: { label: string; info: string }) {
   );
 }
 
+function AwaitingFieldState({ info }: {
+  info: { name: string; status: string | null; startDate: string | null };
+}) {
+  const started =
+    info.status === "in_progress" ||
+    info.status === "completed" ||
+    (info.startDate ? new Date(info.startDate) <= new Date() : false);
+  const startLabel = info.startDate
+    ? new Date(info.startDate).toLocaleDateString("en-US", { month: "long", day: "numeric" })
+    : null;
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <img src="/logo.png" alt="TourneyPools" className="h-10 mx-auto mb-3" />
+      {started ? (
+        <>
+          <h1 className="font-serif text-2xl font-bold text-tp-primary mb-2">Draft Not Ready</h1>
+          <p className="text-gray-500 text-sm mb-2 max-w-xs leading-relaxed">
+            We haven&apos;t been able to load {info.name || "the tournament"}&apos;s field yet.
+          </p>
+          <p className="text-gray-400 text-xs max-w-xs leading-relaxed">
+            This usually resolves on its own within a few minutes. If it doesn&apos;t, contact support.
+          </p>
+        </>
+      ) : (
+        <>
+          <h1 className="font-serif text-2xl font-bold text-tp-primary mb-2">Draft Pending</h1>
+          <p className="text-gray-500 text-sm max-w-xs leading-relaxed">
+            Waiting for {info.name || "the tournament"}&apos;s field to be announced
+            {startLabel ? ` — the tournament starts ${startLabel}` : ""}. The field is usually
+            published a few days before play begins, and the draft runs as soon as it&apos;s out.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function PoolLeaderboardPage() {
   const { slug } = useParams();
   const [config, setConfig] = useState<PoolConfig | null>(null);
@@ -600,6 +637,8 @@ export default function PoolLeaderboardPage() {
   const [adRemoved, setAdRemoved] = useState(false);
   const [draftComplete, setDraftComplete] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
+  const [awaitingField, setAwaitingField] = useState(false);
+  const [awaitingInfo, setAwaitingInfo] = useState<{ name: string; status: string | null; startDate: string | null }>({ name: "", status: null, startDate: null });
 
   const fetchPool = useCallback(async () => {
     try {
@@ -617,6 +656,12 @@ export default function PoolLeaderboardPage() {
         if (data.customAdDescription) setCustomAdDescription(data.customAdDescription);
         if (data.adRemoved) setAdRemoved(data.adRemoved);
         setDraftComplete(data.draftComplete !== false);
+        setAwaitingField(!!data.awaitingField);
+        setAwaitingInfo({
+          name: data.tournamentName || "",
+          status: data.tournamentStatus || null,
+          startDate: data.tournamentStartDate || null,
+        });
         // Check if current user is chairman
         try {
           const meRes = await fetch("/api/auth/me");
@@ -675,6 +720,10 @@ export default function PoolLeaderboardPage() {
         </p>
       </div>
     );
+  }
+
+  if (awaitingField) {
+    return <AwaitingFieldState info={awaitingInfo} />;
   }
 
   const totalPurse = config.players.length * config.buyIn;

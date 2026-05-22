@@ -12,6 +12,7 @@ interface Pool {
   pool_name: string;
   buy_in: number;
   setup_complete: boolean;
+  awaiting_field: boolean;
   player_count: number;
   created_at: string;
   tournament_status: string | null;
@@ -314,6 +315,8 @@ function DashboardContent() {
                 <div className="flex items-center gap-2">
                   {isOver ? (
                     <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-semibold">Completed</span>
+                  ) : pool.awaiting_field ? (
+                    <span className="text-[10px] bg-tp-accent/15 text-tp-accent px-2 py-0.5 rounded-full font-semibold">Awaiting field</span>
                   ) : pool.setup_complete ? (
                     <span className="text-[10px] bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-semibold">Live</span>
                   ) : (

@@ -169,6 +169,7 @@ export default function PoolSetupPage() {
   );
   const [fieldLoading, setFieldLoading] = useState(false);
   const [fieldFromTournament, setFieldFromTournament] = useState(false);
+  const [fieldAwaiting, setFieldAwaiting] = useState(false);
 
   // Draft results
   const [assignments, setAssignments] = useState<ReturnType<typeof draftGolfers>>([]);
@@ -233,8 +234,15 @@ export default function PoolSetupPage() {
         if (data.hasField && data.golfers?.length > 0) {
           setFieldText(data.golfers.map((g: { name: string }) => g.name).join("\n"));
           setFieldFromTournament(true);
-        } else {
+          setFieldAwaiting(false);
+        } else if (data.apiBacked) {
+          // API-backed tournament whose field hasn't been published yet
           setFieldFromTournament(false);
+          setFieldAwaiting(true);
+        } else {
+          // Not linked to a tournament with live data — use the default field
+          setFieldFromTournament(false);
+          setFieldAwaiting(false);
         }
       })
       .catch(() => { /* keep the default field */ })
@@ -325,6 +333,7 @@ export default function PoolSetupPage() {
       buyIn,
       settings: finalSettings,
       tournamentId: selectedTournamentId,
+      awaitingField: fieldAwaiting,
     };
   }
 
@@ -376,9 +385,13 @@ export default function PoolSetupPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h2 className="font-serif text-2xl text-tp-primary mb-2 font-bold">Pool is Live!</h2>
+        <h2 className="font-serif text-2xl text-tp-primary mb-2 font-bold">
+          {fieldAwaiting ? "Pool Created!" : "Pool is Live!"}
+        </h2>
         <p className="text-gray-500 text-sm mb-8 max-w-xs">
-          Share the leaderboard link with your players. Scores can be entered as rounds are played.
+          {fieldAwaiting
+            ? `Your pool is set up. ${settings.draftType === "snake" ? "You'll be able to run your draft" : "Your draft will run automatically"} once ${selectedTournament?.name ?? "the tournament"}'s field is announced — usually a few days before it starts.`
+            : "Share the leaderboard link with your players. Scores can be entered as rounds are played."}
         </p>
         <a href={"/pool/" + slug} className="btn-green inline-block">View Leaderboard</a>
       </div>
@@ -786,57 +799,86 @@ export default function PoolSetupPage() {
         {step === 3 && (
           <div>
             <h2 className="font-serif text-lg text-tp-primary mb-1 font-bold">Golfer Field</h2>
-            <p className="text-xs text-gray-500 mb-5">
-              {fieldLoading
-                ? "Loading the official tournament field…"
-                : fieldFromTournament
-                ? `Official field for ${selectedTournament?.name ?? "this tournament"} — ${golferCount} golfers.`
-                : `${golferCount} golfers (default list — not linked to a tournament with live scoring).`}
-            </p>
 
-            <div className="rounded-xl border-2 border-tp-bg-dark bg-tp-bg/30 p-3 font-mono text-xs leading-relaxed overflow-y-auto" style={{ maxHeight: 320 }}>
-              {parseFieldEntries().map((e, i) => (
-                <div key={i} className="py-0.5 text-gray-700">
-                  {e.ranking ? <span className="text-gray-400">#{e.ranking} </span> : null}{e.name}
+            {fieldAwaiting ? (
+              <>
+                <div className="rounded-xl border-2 border-tp-accent/30 bg-tp-accent/5 p-4 mt-2">
+                  <p className="text-sm font-semibold text-tp-primary mb-2">
+                    The field hasn&apos;t been announced yet
+                  </p>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    {selectedTournament?.name ?? "This tournament"}&apos;s field is usually
+                    published a few days before play begins. Finish setting up your pool now —
+                    {settings.draftType === "snake"
+                      ? " you'll be able to run your draft as soon as the field is announced."
+                      : " your draft will run automatically as soon as the field is announced."}
+                  </p>
                 </div>
-              ))}
-            </div>
 
-            <p className="text-xs text-gray-400 mt-2">
-              {golferCount} golfers · {validPlayers.length} players
-              {golferCount > 0 && validPlayers.length > 0
-                ? (() => {
-                    const perPlayer = Math.floor(golferCount / validPlayers.length);
-                    const unused = golferCount % validPlayers.length;
-                    return ` · ${perPlayer} golfers per player${unused > 0 ? ` (${unused} unused)` : ""}`;
-                  })()
-                : ""}
-            </p>
+                <div className="flex justify-between mt-6">
+                  <button type="button" onClick={() => setStep(2)} className="text-sm text-gray-400 font-medium px-4 py-3">
+                    Back
+                  </button>
+                  <button type="button" onClick={() => setStep(5)} className="btn-green">
+                    Finish Setup
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-gray-500 mb-5">
+                  {fieldLoading
+                    ? "Loading the official tournament field…"
+                    : fieldFromTournament
+                    ? `Official field for ${selectedTournament?.name ?? "this tournament"} — ${golferCount} golfers.`
+                    : `${golferCount} golfers (default list — not linked to a tournament with live scoring).`}
+                </p>
 
-            <div className="flex justify-between mt-6">
-              <button type="button" onClick={() => setStep(2)} className="text-sm text-gray-400 font-medium px-4 py-3">
-                Back
-              </button>
-              {settings.draftType === "snake" ? (
-                <button
-                  type="button"
-                  onClick={launchLiveDraft}
-                  disabled={golferCount < validPlayers.length || saving}
-                  className="btn-green disabled:opacity-40"
-                >
-                  {saving ? "Saving..." : "Next: Draft"}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={runDraft}
-                  disabled={golferCount < validPlayers.length}
-                  className="btn-green disabled:opacity-40"
-                >
-                  Run Auto Draft
-                </button>
-              )}
-            </div>
+                <div className="rounded-xl border-2 border-tp-bg-dark bg-tp-bg/30 p-3 font-mono text-xs leading-relaxed overflow-y-auto" style={{ maxHeight: 320 }}>
+                  {parseFieldEntries().map((e, i) => (
+                    <div key={i} className="py-0.5 text-gray-700">
+                      {e.ranking ? <span className="text-gray-400">#{e.ranking} </span> : null}{e.name}
+                    </div>
+                  ))}
+                </div>
+
+                <p className="text-xs text-gray-400 mt-2">
+                  {golferCount} golfers · {validPlayers.length} players
+                  {golferCount > 0 && validPlayers.length > 0
+                    ? (() => {
+                        const perPlayer = Math.floor(golferCount / validPlayers.length);
+                        const unused = golferCount % validPlayers.length;
+                        return ` · ${perPlayer} golfers per player${unused > 0 ? ` (${unused} unused)` : ""}`;
+                      })()
+                    : ""}
+                </p>
+
+                <div className="flex justify-between mt-6">
+                  <button type="button" onClick={() => setStep(2)} className="text-sm text-gray-400 font-medium px-4 py-3">
+                    Back
+                  </button>
+                  {settings.draftType === "snake" ? (
+                    <button
+                      type="button"
+                      onClick={launchLiveDraft}
+                      disabled={golferCount < validPlayers.length || saving}
+                      className="btn-green disabled:opacity-40"
+                    >
+                      {saving ? "Saving..." : "Next: Draft"}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={runDraft}
+                      disabled={golferCount < validPlayers.length}
+                      className="btn-green disabled:opacity-40"
+                    >
+                      Run Auto Draft
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -911,10 +953,11 @@ export default function PoolSetupPage() {
                 { label: "Pool Name", value: poolName },
                 { label: "Players", value: `${validPlayers.length} (${validPlayers.map(p => p.name).join(", ")})` },
                 { label: "Buy-in", value: `$${buyIn}/player · $${validPlayers.length * buyIn} total` },
-                { label: "Golfers", value: `${golferCount} in field` },
+                { label: "Golfers", value: fieldAwaiting ? "Field not announced yet" : `${golferCount} in field` },
                 {
                   label: "Draft",
-                  value: settings.draftType === "snake" ? "Live Snake Draft" : settings.draftType === "auto-snake" ? "Auto Snake Draft" : "Pure Random",
+                  value: (settings.draftType === "snake" ? "Live Snake Draft" : settings.draftType === "auto-snake" ? "Auto Snake Draft" : "Pure Random")
+                    + (fieldAwaiting ? " — after the field is announced" : ""),
                 },
                 {
                   label: "Missed Cut",
@@ -960,7 +1003,7 @@ export default function PoolSetupPage() {
             {error && <p className="text-red-500 text-sm mt-4">{error}</p>}
 
             <div className="flex justify-between mt-6">
-              <button type="button" onClick={() => setStep(4)} className="text-sm text-gray-400 font-medium px-4 py-3">
+              <button type="button" onClick={() => setStep(fieldAwaiting ? 3 : 4)} className="text-sm text-gray-400 font-medium px-4 py-3">
                 Back
               </button>
               <button
@@ -969,7 +1012,7 @@ export default function PoolSetupPage() {
                 disabled={saving}
                 className="btn-gold disabled:opacity-60"
               >
-                {saving ? "Saving..." : "Launch Pool"}
+                {saving ? "Saving..." : fieldAwaiting ? "Create Pool" : "Launch Pool"}
               </button>
             </div>
           </div>
