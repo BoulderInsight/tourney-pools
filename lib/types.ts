@@ -63,3 +63,31 @@ export interface PlayerStanding {
   prize: number;
   golfers: GolferStanding[];
 }
+
+export type PaymentMethod = "venmo" | "cashapp" | "paypal";
+
+export interface Person {
+  id: string;
+  chairmanId: string;
+  name: string;
+  venmoHandle: string | null;
+  cashappHandle: string | null;
+  paypalHandle: string | null;
+  preferredMethod: PaymentMethod | null;
+}
+
+export interface PlayerWithPerson {
+  id: string;          // player id
+  name: string;        // player name (used in pool standings)
+  personId: string;
+  person: Person;
+}
+
+export interface CollectionRequest {
+  id: string;
+  token: string;
+  personId: string;
+  poolId: string;
+  createdAt: string;
+  submittedAt: string | null;
+}
