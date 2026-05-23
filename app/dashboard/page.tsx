@@ -226,6 +226,12 @@ function DashboardContent() {
               </Link>
             )}
             <Link
+              href="/groups"
+              className="text-sm font-semibold text-tp-primary active:underline"
+            >
+              My Groups &rarr;
+            </Link>
+            <Link
               href="/account"
               className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${
                 isPro

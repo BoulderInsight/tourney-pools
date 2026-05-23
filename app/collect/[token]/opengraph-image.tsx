@@ -4,7 +4,7 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 
 export const runtime = "nodejs";
-export const alt = "Payment info request on TourneyPools";
+export const alt = "Enter your payment info on TourneyPools";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -78,18 +78,19 @@ export default async function OGImage({ params }: { params: { token: string } })
           <div
             style={{
               display: "flex",
-              fontSize: 84,
+              fontSize: 96,
               fontWeight: 800,
               color: "#1a365d",
-              lineHeight: 1.05,
+              lineHeight: 1.0,
               fontFamily: "serif",
               maxWidth: "100%",
             }}
           >
-            {commissionerName} needs your payment info
+            Enter Payment Info
           </div>
           <div style={{ display: "flex", width: 96, height: 6, background: "#d4a843", marginTop: 28, marginBottom: 22 }} />
-          <div style={{ display: "flex", fontSize: 32, color: "#5a5a5a" }}>{poolName}</div>
+          <div style={{ display: "flex", fontSize: 32, color: "#5a5a5a" }}>for {commissionerName}</div>
+          <div style={{ display: "flex", fontSize: 32, color: "#5a5a5a", marginTop: 4 }}>{poolName}</div>
           {tournamentName && (
             <div style={{ display: "flex", fontSize: 32, color: "#5a5a5a", marginTop: 4 }}>{tournamentName}</div>
           )}

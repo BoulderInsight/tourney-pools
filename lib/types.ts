@@ -91,3 +91,20 @@ export interface CollectionRequest {
   createdAt: string;
   submittedAt: string | null;
 }
+
+export interface Group {
+  id: string;
+  chairmanId: string;
+  name: string;
+  createdAt: string;
+}
+
+/** A group with a member count, used in list views. */
+export interface GroupSummary extends Group {
+  memberCount: number;
+}
+
+/** A group with its full member list. Each member is a Person from Phase 1. */
+export interface GroupWithMembers extends Group {
+  members: Person[];
+}
