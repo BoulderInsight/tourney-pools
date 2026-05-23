@@ -34,8 +34,12 @@ export async function createPerson(
  * Preserves payment handles across re-runs of the setup wizard (typo fixes, late entrants,
  * settings changes) so collected data is not silently lost.
  *
- * Matching is by exact name. Renaming a player ("John" -> "John Smith") will not match;
- * the chairman will need to re-collect that player. This is acceptable for Phase 1.
+ * Matching is by exact name. When more than one Person matches (e.g. a legacy empty
+ * backfill row coexists with a handle-bearing row added later from a Group), we
+ * prefer the row that has at least one payment handle set, then by oldest.
+ *
+ * Renaming a player ("John" -> "John Smith") will not match; the chairman will need
+ * to re-collect that player.
  */
 export async function findOrCreatePerson(
   sql: Sql,
@@ -46,7 +50,9 @@ export async function findOrCreatePerson(
     SELECT id, chairman_id, name, venmo_handle, cashapp_handle, paypal_handle, preferred_method
     FROM people
     WHERE chairman_id = ${chairmanId} AND name = ${name}
-    ORDER BY created_at ASC
+    ORDER BY
+      (CASE WHEN venmo_handle IS NULL AND cashapp_handle IS NULL AND paypal_handle IS NULL THEN 1 ELSE 0 END),
+      created_at ASC
     LIMIT 1
   `;
   if (rows.length > 0) return rowToPerson(rows[0]);
@@ -97,10 +103,11 @@ export async function setPersonHandles(
 }
 
 /**
- * For each player in the pool that has no linked Person, create one (owned by the
- * pool's chairman, name copied from the player) and link it. Safe to re-run
- * sequentially: subsequent calls touch zero rows. Concurrent calls may produce
- * orphaned Person rows; this is acceptable for the backfill's intent.
+ * For each player in the pool that has no linked Person, link to one owned by the
+ * chairman with a matching name (creating a fresh empty Person only if no match
+ * exists). Uses `findOrCreatePerson` so a player named "Brack" picks up the handles
+ * already collected for "Brack" via a Group, instead of getting a separate empty
+ * row that orphans those handles. Safe to re-run; subsequent calls touch zero rows.
  * Returns the count of backfilled players.
  */
 export async function backfillPeopleForPool(sql: Sql, poolId: string): Promise<number> {
@@ -112,11 +119,69 @@ export async function backfillPeopleForPool(sql: Sql, poolId: string): Promise<n
   `;
   let count = 0;
   for (const r of rows) {
-    const person = await createPerson(sql, r.chairman_id as string, r.name as string);
+    const person = await findOrCreatePerson(sql, r.chairman_id as string, r.name as string);
     await sql`UPDATE players SET person_id = ${person.id} WHERE id = ${r.id}`;
     count++;
   }
   return count;
+}
+
+/**
+ * For each player in the pool currently linked to a handle-less Person, look for
+ * another Person owned by the same chairman with the same name that DOES have at
+ * least one handle. If found, relink the player to it. Fixes pools where an earlier
+ * buggy backfill created empty Person rows that orphaned the handles a chairman
+ * later collected via a Group or another pool. Returns the count of relinked players.
+ *
+ * Idempotent: a second call after the first one converged touches zero rows.
+ * Does NOT delete the now-orphaned empty Person rows; they're harmless and a
+ * future cleanup can sweep them.
+ */
+export async function reconcilePoolPersonsByName(
+  sql: Sql,
+  poolId: string,
+): Promise<number> {
+  // Find candidates: players whose currently-linked Person has no handles, and where
+  // another same-name Person owned by the same chairman has at least one handle.
+  const candidates = await sql`
+    WITH pool_chairman AS (
+      SELECT id, chairman_id FROM pools WHERE id = ${poolId}
+    ),
+    handled AS (
+      SELECT DISTINCT name
+      FROM people
+      WHERE chairman_id = (SELECT chairman_id FROM pool_chairman)
+        AND (venmo_handle IS NOT NULL OR cashapp_handle IS NOT NULL OR paypal_handle IS NOT NULL)
+    )
+    SELECT pl.id AS player_id, pl.name AS player_name, pc.chairman_id
+    FROM players pl
+    JOIN pool_chairman pc ON true
+    LEFT JOIN people cur ON cur.id = pl.person_id
+    WHERE pl.pool_id = ${poolId}
+      AND pl.name IN (SELECT name FROM handled)
+      AND (
+        pl.person_id IS NULL
+        OR (cur.venmo_handle IS NULL AND cur.cashapp_handle IS NULL AND cur.paypal_handle IS NULL)
+      )
+  `;
+
+  let relinked = 0;
+  for (const c of candidates) {
+    const best = await findOrCreatePerson(
+      sql,
+      c.chairman_id as string,
+      c.player_name as string,
+    );
+    // findOrCreatePerson picked the handled row by ORDER BY; relink if it's a change.
+    const updated = await sql`
+      UPDATE players
+      SET person_id = ${best.id}
+      WHERE id = ${c.player_id} AND (person_id IS DISTINCT FROM ${best.id})
+      RETURNING id
+    `;
+    if (updated.length > 0) relinked += 1;
+  }
+  return relinked;
 }
 
 /** Return the pool's roster with each player's linked Person. Assumes backfill already ran. */

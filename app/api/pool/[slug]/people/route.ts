@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { backfillPeopleForPool, getPlayersWithPeople } from "@/lib/people";
+import {
+  backfillPeopleForPool,
+  getPlayersWithPeople,
+  reconcilePoolPersonsByName,
+} from "@/lib/people";
 
 export const dynamic = "force-dynamic";
 
@@ -24,8 +28,12 @@ export async function GET(
   }
   const poolId = poolRows[0].id as string;
 
-  // Backfill any legacy player that lacks a person_id. Idempotent.
+  // First link any player that lacks a person_id (legacy pools), then reconcile
+  // players currently linked to a handle-less Person back to the chairman's
+  // handle-bearing Person of the same name (fixes pools where an earlier buggy
+  // backfill orphaned handles later collected via a Group). Both idempotent.
   await backfillPeopleForPool(sql, poolId);
+  await reconcilePoolPersonsByName(sql, poolId);
 
   const players = await getPlayersWithPeople(sql, poolId);
   return NextResponse.json({ players });
