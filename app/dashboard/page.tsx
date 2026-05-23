@@ -393,12 +393,13 @@ function DashboardContent() {
                 <Link href={pool.setup_complete ? `/pool/${pool.slug}` : `/pool/${pool.slug}/setup`} className="block p-4 active:bg-tp-bg/40 transition-colors">
                   {headerInner}
                 </Link>
-                {/* Invite link stays available for completed pools so players can revisit
-                    the leaderboard and tap one-tap pay buttons post-tournament. */}
+                {/* Invite link goes to /join so invitees land on the RSVP page first.
+                    Once the draft is complete, the /join page surfaces a link onward
+                    to the leaderboard, so this single URL covers the whole lifecycle. */}
                 {pool.setup_complete && (
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(`https://tourneypools.com/pool/${pool.slug}`);
+                      navigator.clipboard.writeText(`https://tourneypools.com/join/${pool.slug}`);
                       setCopied(pool.id);
                       setTimeout(() => setCopied(null), 2000);
                     }}
