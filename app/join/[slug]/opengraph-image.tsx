@@ -21,21 +21,23 @@ async function getImageDataUri(filename: string): Promise<string | null> {
 
 /**
  * Dynamic share card for /join/[slug]. Whoever pastes the link into iMessage or
- * Slack sees the chairman's name and the pool/tournament they're inviting to,
- * which is the friendly "what is this?" answer the unfurl needs to provide.
+ * Slack sees the chairman's name front and center, so the unfurl answers the
+ * "what is this?" question at a glance.
  *
- * Same photo-backgrounded design language as the collect link's OG, with a dark
- * right-side gradient under right-aligned text.
+ * Four big stacked lines on a photo-backgrounded card:
+ *   {Chairman}
+ *   has invited you
+ *   to join a
+ *   TourneyPool
  */
 export default async function OGImage({ params }: { params: { slug: string } }) {
   const sql = getDb();
   const bgSrc = await getImageDataUri("OGImage.jpeg");
 
   const poolRows = await sql`
-    SELECT p.pool_name, c.name AS chairman_name, t.name AS tournament_name
+    SELECT c.name AS chairman_name
     FROM pools p
     JOIN chairmen c ON c.id = p.chairman_id
-    LEFT JOIN tournaments t ON t.id = p.tournament_id
     WHERE p.slug = ${params.slug}
   `;
 
@@ -54,10 +56,13 @@ export default async function OGImage({ params }: { params: { slug: string } }) 
     );
   }
 
-  const pool = poolRows[0];
-  const chairman = (pool.chairman_name as string) || "A friend";
-  const poolName = (pool.pool_name as string) || "Golf Pool";
-  const tournamentName = pool.tournament_name as string | null;
+  const chairman = (poolRows[0].chairman_name as string) || "A friend";
+
+  // Tuned for the 640px right column. Names up to ~12 characters fit on one
+  // line at 80pt; longer names will wrap, which we accept.
+  const NAME_SIZE = 80;
+  const CONNECTOR_SIZE = 52;
+  const BRAND_SIZE = 80;
 
   return new ImageResponse(
     (
@@ -70,7 +75,7 @@ export default async function OGImage({ params }: { params: { slug: string } }) 
           />
         )}
 
-        {/* Heavy gradient on the right where text lives so any background photo stays legible */}
+        {/* Heavy gradient on the right so any background photo stays legible behind text */}
         <div
           style={{
             display: "flex",
@@ -80,10 +85,8 @@ export default async function OGImage({ params }: { params: { slug: string } }) 
           }}
         />
 
-        {/* Right column with a hard max-width so even a long tournament name
-            can't push left into the TOURNEYPOOLS logo area on the background.
-            Each line is its own element on its own row, so nothing wraps
-            into a multi-line block that bleeds left. */}
+        {/* Right column, hard-capped width so even long names stay clear of
+            the TOURNEYPOOLS logo on the background photo's left side. */}
         <div
           style={{
             display: "flex",
@@ -98,91 +101,70 @@ export default async function OGImage({ params }: { params: { slug: string } }) 
             right: 60,
           }}
         >
-          {/* Kicker */}
+          {/* Line 1: Chairman name */}
           <div
             style={{
               display: "flex",
-              fontSize: 24,
-              fontWeight: 600,
-              color: "#d4a843",
-              letterSpacing: "4px",
-              textTransform: "uppercase",
-              marginBottom: 12,
-              textShadow: "0 2px 12px rgba(0,0,0,0.6)",
-            }}
-          >
-            You&apos;re invited
-          </div>
-
-          {/* Chairman name */}
-          <div
-            style={{
-              display: "flex",
-              fontSize: 64,
+              fontSize: NAME_SIZE,
               fontWeight: 800,
-              color: "white",
+              color: "#d4a843",
               lineHeight: 1.0,
-              letterSpacing: "-1.5px",
-              textShadow: "0 4px 20px rgba(0,0,0,0.5)",
-              textAlign: "right",
+              letterSpacing: "-2px",
+              textShadow: "0 4px 20px rgba(0,0,0,0.6)",
               justifyContent: "flex-end",
             }}
           >
             {chairman}
           </div>
 
-          {/* Connector — small, two words, never wraps */}
+          {/* Line 2 */}
           <div
             style={{
               display: "flex",
-              fontSize: 26,
-              fontWeight: 500,
+              fontSize: CONNECTOR_SIZE,
+              fontWeight: 600,
               color: "white",
-              marginTop: 10,
-              opacity: 0.85,
-              textShadow: "0 3px 16px rgba(0,0,0,0.6)",
+              lineHeight: 1.05,
+              marginTop: 18,
+              textShadow: "0 3px 16px rgba(0,0,0,0.65)",
               justifyContent: "flex-end",
             }}
           >
-            invited you to
+            has invited you
           </div>
 
-          {/* Pool name in gold */}
+          {/* Line 3 */}
           <div
             style={{
               display: "flex",
-              fontSize: 48,
+              fontSize: CONNECTOR_SIZE,
+              fontWeight: 600,
+              color: "white",
+              lineHeight: 1.05,
+              marginTop: 6,
+              textShadow: "0 3px 16px rgba(0,0,0,0.65)",
+              justifyContent: "flex-end",
+            }}
+          >
+            to join a
+          </div>
+
+          {/* Line 4: brand */}
+          <div
+            style={{
+              display: "flex",
+              fontSize: BRAND_SIZE,
               fontWeight: 800,
               color: "#d4a843",
-              lineHeight: 1.05,
-              letterSpacing: "-0.5px",
-              marginTop: 12,
-              textShadow: "0 3px 16px rgba(0,0,0,0.6)",
-              textAlign: "right",
+              lineHeight: 1.0,
+              letterSpacing: "-1.5px",
+              marginTop: 18,
+              textShadow: "0 4px 20px rgba(0,0,0,0.6)",
               justifyContent: "flex-end",
             }}
           >
-            {poolName}
+            TourneyPool
           </div>
-
-          {/* Tournament line — small enough that even long names fit */}
-          {tournamentName && (
-            <div
-              style={{
-                display: "flex",
-                fontSize: 24,
-                fontWeight: 500,
-                color: "white",
-                marginTop: 14,
-                opacity: 0.75,
-                textShadow: "0 2px 10px rgba(0,0,0,0.6)",
-                textAlign: "right",
-                justifyContent: "flex-end",
-              }}
-            >
-              for the {tournamentName}
-            </div>
-          )}
         </div>
       </div>
     ),
