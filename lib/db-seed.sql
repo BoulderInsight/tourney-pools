@@ -9,6 +9,7 @@ CREATE TABLE chairmen (
   verification_token TEXT,
   is_super_admin BOOLEAN DEFAULT false,
   tier TEXT DEFAULT 'free',
+  pro_until TIMESTAMPTZ,
   stripe_customer_id TEXT,
   custom_ad_image TEXT,
   custom_ad_url TEXT,

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ConfirmModal from "@/app/components/confirm-modal";
+import { isPromoActive, formatPromoExpiry } from "@/lib/tier";
 
 interface Chairman {
   id: string;
@@ -12,6 +13,7 @@ interface Chairman {
   email_verified: boolean;
   is_super_admin: boolean;
   tier: string;
+  pro_until: string | null;
   created_at: string;
   pool_count: number;
 }
@@ -67,6 +69,9 @@ export default function AdminPage() {
   }, [fetchData]);
 
   const [modal, setModal] = useState<{ type: "chairman" | "pool"; id: string; label: string } | null>(null);
+  const [promoModal, setPromoModal] = useState<{ id: string; name: string; email: string } | null>(null);
+  const [promoBusy, setPromoBusy] = useState(false);
+  const [promoFlash, setPromoFlash] = useState<{ id: string; text: string; tone: "ok" | "warn" } | null>(null);
 
   async function confirmDelete() {
     if (!modal) return;
@@ -86,6 +91,29 @@ export default function AdminPage() {
       body: JSON.stringify({ id, action, value }),
     });
     fetchData();
+  }
+
+  async function confirmGrantPromo() {
+    if (!promoModal) return;
+    setPromoBusy(true);
+    const res = await fetch("/api/admin", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: promoModal.id, action: "grant_promo" }),
+    });
+    setPromoBusy(false);
+    const data = await res.json().catch(() => ({}));
+    const idForFlash = promoModal.id;
+    setPromoModal(null);
+    if (!res.ok) {
+      setPromoFlash({ id: idForFlash, text: data?.error || "Could not apply promo.", tone: "warn" });
+    } else if (data?.emailSent === false) {
+      setPromoFlash({ id: idForFlash, text: "Promo applied, but the email failed to send.", tone: "warn" });
+    } else {
+      setPromoFlash({ id: idForFlash, text: "Promo applied and email sent.", tone: "ok" });
+    }
+    fetchData();
+    setTimeout(() => setPromoFlash(null), 6000);
   }
 
   if (loading) {
@@ -169,9 +197,16 @@ export default function AdminPage() {
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5">{c.email}</p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
                     {(c.tier === "pro" || c.tier === "paid") ? (
                       <span className="text-[10px] bg-tp-accent/20 text-tp-accent-dark px-2 py-0.5 rounded-full font-semibold">Pro</span>
+                    ) : isPromoActive(c.tier, c.pro_until) ? (
+                      <span
+                        className="text-[10px] bg-tp-accent/15 text-tp-accent-dark px-2 py-0.5 rounded-full font-semibold"
+                        title={`Promo Pro through ${formatPromoExpiry(c.pro_until)}`}
+                      >
+                        Promo · until {formatPromoExpiry(c.pro_until)}
+                      </span>
                     ) : (
                       <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-semibold">Free</span>
                     )}
@@ -187,6 +222,15 @@ export default function AdminPage() {
                   <span className="text-gray-200">|</span>
                   <span>Joined {new Date(c.created_at).toLocaleDateString()}</span>
                 </div>
+                {promoFlash && promoFlash.id === c.id && (
+                  <p
+                    className={`mt-2 text-[11px] font-semibold ${
+                      promoFlash.tone === "ok" ? "text-green-600" : "text-amber-600"
+                    }`}
+                  >
+                    {promoFlash.text}
+                  </p>
+                )}
               </div>
               {/* Actions */}
               <div className="flex border-t border-tp-bg-dark text-xs font-semibold">
@@ -222,6 +266,33 @@ export default function AdminPage() {
                   Delete
                 </button>
               </div>
+              {/* Thank+Promo row: eligibility = free, verified, 0-1 pools,
+                  no active promo. We always show the button but disable it
+                  with a tooltip when the chairman doesn't qualify, so the
+                  reason is visible at a glance. */}
+              {(() => {
+                const isPaidPro = c.tier === "pro" || c.tier === "paid";
+                const hasPromo = isPromoActive(c.tier, c.pro_until);
+                const reasons: string[] = [];
+                if (isPaidPro) reasons.push("already Pro");
+                if (hasPromo) reasons.push("already on promo");
+                if (!c.email_verified) reasons.push("email not verified");
+                if (c.pool_count > 1) reasons.push("more than 1 pool");
+                const eligible = reasons.length === 0;
+                return (
+                  <div className="flex border-t border-tp-bg-dark text-xs font-semibold">
+                    <button
+                      type="button"
+                      disabled={!eligible}
+                      onClick={() => setPromoModal({ id: c.id, name: c.name, email: c.email })}
+                      title={eligible ? "Grant 2 weeks of Pro and send thank-you email" : `Not eligible: ${reasons.join(", ")}`}
+                      className="flex-1 text-center py-2.5 text-tp-primary active:bg-tp-primary/5 transition-colors disabled:text-gray-300 disabled:cursor-not-allowed disabled:active:bg-transparent"
+                    >
+                      Thank + 2wk Pro
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
           ))}
         </div>
@@ -351,6 +422,19 @@ export default function AdminPage() {
         danger
         onConfirm={confirmDelete}
         onCancel={() => setModal(null)}
+      />
+
+      <ConfirmModal
+        open={!!promoModal}
+        title={promoModal ? `Thank ${promoModal.name}?` : ""}
+        message={
+          promoModal
+            ? `Apply 2 weeks of Pro and send a thank-you email to ${promoModal.email}. They can re-engage with everything we've added, then drop back to Free automatically when the promo ends.`
+            : ""
+        }
+        confirmLabel={promoBusy ? "Sending..." : "Send + Apply Promo"}
+        onConfirm={confirmGrantPromo}
+        onCancel={() => (promoBusy ? null : setPromoModal(null))}
       />
     </div>
     </main>

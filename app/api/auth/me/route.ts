@@ -11,8 +11,11 @@ export async function GET() {
   }
 
   const sql = getDb();
-  const rows = await sql`SELECT tier FROM chairmen WHERE id = ${session.chairmanId}`;
+  const rows = await sql`
+    SELECT tier, pro_until FROM chairmen WHERE id = ${session.chairmanId}
+  `;
   const tier = rows[0]?.tier || "free";
+  const proUntil = rows[0]?.pro_until ?? null;
 
-  return NextResponse.json({ ...session, tier });
+  return NextResponse.json({ ...session, tier, proUntil });
 }
