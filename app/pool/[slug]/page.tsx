@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { PoolConfig, PlayerStanding, PayoutTransfer } from "@/lib/types";
+import { PoolConfig, PlayerStanding, PayoutTransfer, PaymentHandle } from "@/lib/types";
 import { computeLeaderboard, computePaymentPlan, formatScore, scoreColorClass } from "@/lib/pool";
 import { buildPaymentLink, paymentMethodLabel } from "@/lib/payment-links";
 import Link from "next/link";
 import { SponsorBanner } from "@/app/components/sponsor-banner";
+import { TipTheCommish } from "@/app/components/tip-the-commish";
 
 function LoadingState() {
   return (
@@ -703,6 +704,9 @@ export default function PoolLeaderboardPage() {
   const [awaitingField, setAwaitingField] = useState(false);
   const [awaitingInfo, setAwaitingInfo] = useState<{ name: string; status: string | null; startDate: string | null }>({ name: "", status: null, startDate: null });
   const [tournamentName, setTournamentName] = useState("");
+  const [tournamentStatus, setTournamentStatus] = useState<string | null>(null);
+  const [tournamentEndDate, setTournamentEndDate] = useState<string | null>(null);
+  const [chairmanPaymentInfo, setChairmanPaymentInfo] = useState<PaymentHandle | null>(null);
 
   const fetchPool = useCallback(async () => {
     try {
@@ -727,6 +731,9 @@ export default function PoolLeaderboardPage() {
           startDate: data.tournamentStartDate || null,
         });
         setTournamentName(data.tournamentName || "");
+        setTournamentStatus(data.tournamentStatus || null);
+        setTournamentEndDate(data.tournamentEndDate || null);
+        setChairmanPaymentInfo(data.chairmanPaymentInfo ?? null);
         // Check if current user is chairman
         try {
           const meRes = await fetch("/api/auth/me");
@@ -889,8 +896,31 @@ export default function PoolLeaderboardPage() {
         />
       </div>
 
-      {/* Sponsor banner */}
-      <SponsorBanner tier={chairmanTier} adRemoved={adRemoved} customAdImage={customAdImage} customAdUrl={customAdUrl} customAdHeadline={customAdHeadline} customAdDescription={customAdDescription} />
+      {/* Same slot, three states:
+            - tournament_status completed AND chairman has a payment handle → Tip the Commish
+            - >30 days past tournament_end_date → render nothing (pool is a static archive)
+            - everything else → existing sponsor ad
+          The 30-day cutoff is independent of status so a stale completed pool still archives. */}
+      {(() => {
+        const ARCHIVE_AFTER_DAYS = 30;
+        if (tournamentEndDate) {
+          const daysSinceEnd = (Date.now() - new Date(tournamentEndDate).getTime()) / (1000 * 60 * 60 * 24);
+          if (daysSinceEnd > ARCHIVE_AFTER_DAYS) return null;
+        }
+        if (tournamentStatus === "completed" && chairmanPaymentInfo) {
+          return <TipTheCommish chairmanName={chairmanName} paymentInfo={chairmanPaymentInfo} />;
+        }
+        return (
+          <SponsorBanner
+            tier={chairmanTier}
+            adRemoved={adRemoved}
+            customAdImage={customAdImage}
+            customAdUrl={customAdUrl}
+            customAdHeadline={customAdHeadline}
+            customAdDescription={customAdDescription}
+          />
+        );
+      })()}
 
       {/* Refresh button */}
       <div className="flex justify-between items-center mb-4">

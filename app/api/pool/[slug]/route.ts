@@ -18,7 +18,10 @@ export async function GET(
   const poolRows = await sql`
     SELECT p.id, p.slug, p.pool_name, p.buy_in, p.settings, p.setup_complete, p.draft_complete, p.awaiting_field, p.chairman_id, p.last_sync_at, p.tournament_id,
            c.name as chairman_name, c.tier, c.custom_ad_image, c.custom_ad_url, c.custom_ad_headline, c.custom_ad_description, c.ad_removed,
-           t.name as tournament_name, t.status as tournament_status, t.start_date as tournament_start_date
+           c.venmo_handle as chairman_venmo_handle, c.cashapp_handle as chairman_cashapp_handle,
+           c.paypal_handle as chairman_paypal_handle, c.preferred_method as chairman_preferred_method,
+           t.name as tournament_name, t.status as tournament_status,
+           t.start_date as tournament_start_date, t.end_date as tournament_end_date
     FROM pools p
     JOIN chairmen c ON c.id = p.chairman_id
     LEFT JOIN tournaments t ON t.id = p.tournament_id
@@ -149,11 +152,22 @@ export async function GET(
     })),
   };
 
+  // Compute the chairman's picked payment handle once, server-side. Powers the
+  // Tip the Commish card on the public pool page (which renders only when the
+  // chairman has at least one handle on file).
+  const chairmanPaymentInfo = pickHandleForPerson({
+    venmoHandle: (pool.chairman_venmo_handle as string | null) ?? null,
+    cashappHandle: (pool.chairman_cashapp_handle as string | null) ?? null,
+    paypalHandle: (pool.chairman_paypal_handle as string | null) ?? null,
+    preferredMethod: (pool.chairman_preferred_method as PaymentMethod | null) ?? null,
+  });
+
   return NextResponse.json({
     ...config,
     chairmanId: pool.chairman_id,
     chairmanName: pool.chairman_name,
     chairmanTier: pool.tier || "free",
+    chairmanPaymentInfo,
     customAdImage: pool.custom_ad_image,
     customAdUrl: pool.custom_ad_url,
     customAdHeadline: pool.custom_ad_headline,
@@ -166,5 +180,6 @@ export async function GET(
     tournamentName: pool.tournament_name,
     tournamentStatus: pool.tournament_status,
     tournamentStartDate: pool.tournament_start_date,
+    tournamentEndDate: pool.tournament_end_date,
   });
 }
