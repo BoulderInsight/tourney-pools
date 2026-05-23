@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import type { GroupWithMembers, PaymentMethod, Person } from "@/lib/types";
+import CollectDialog from "@/app/pool/[slug]/players/CollectDialog";
+import TopNav from "@/app/components/top-nav";
 
 const METHOD_LABEL: Record<PaymentMethod, string> = {
   venmo: "Venmo",
@@ -35,6 +37,7 @@ export default function GroupEditPage() {
   const [newMemberName, setNewMemberName] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [collectingPersonId, setCollectingPersonId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/groups/${groupId}`);
@@ -128,12 +131,7 @@ export default function GroupEditPage() {
 
   return (
     <main className="px-4 pt-4 pb-12 max-w-lg mx-auto">
-      <div className="flex items-center justify-between mb-4 -mt-1">
-        <img src="/logo.png" alt="TourneyPools" className="h-12" />
-        <Link href="/groups" className="text-xs text-tp-primary font-semibold active:underline">
-          All groups
-        </Link>
-      </div>
+      <TopNav active="groups" />
 
       {/* Editable name */}
       {editingName ? (
@@ -186,19 +184,48 @@ export default function GroupEditPage() {
                   <p className="text-xs text-gray-400 mt-0.5">No handle on file</p>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={() => handleRemoveMember(m.id)}
-                disabled={saving}
-                className="text-xs text-red-400 font-semibold active:text-red-600 ml-2 flex-shrink-0 disabled:opacity-50"
-                aria-label={`Remove ${m.name} from group`}
-              >
-                Remove
-              </button>
+              <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setCollectingPersonId(m.id)}
+                  disabled={saving}
+                  className={`text-xs font-semibold rounded-full px-3 py-1.5 disabled:opacity-50 ${
+                    handle
+                      ? "text-tp-primary border border-tp-bg-dark active:bg-tp-bg/60"
+                      : "text-white bg-tp-accent active:opacity-90"
+                  }`}
+                  aria-label={handle ? `Edit ${m.name}'s payment info` : `Collect ${m.name}'s payment info`}
+                >
+                  {handle ? "Edit" : "Collect"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveMember(m.id)}
+                  disabled={saving}
+                  className="text-xs text-red-400 font-semibold active:text-red-600 disabled:opacity-50"
+                  aria-label={`Remove ${m.name} from group`}
+                >
+                  Remove
+                </button>
+              </div>
             </div>
           );
         })}
       </div>
+
+      {(() => {
+        const collecting = collectingPersonId
+          ? group.members.find((m) => m.id === collectingPersonId)
+          : null;
+        if (!collecting) return null;
+        return (
+          <CollectDialog
+            person={collecting}
+            onClose={() => setCollectingPersonId(null)}
+            onSaved={async () => { await load(); setCollectingPersonId(null); }}
+          />
+        );
+      })()}
 
       {/* Add member */}
       <div className="bg-white rounded-2xl p-4 mb-4">

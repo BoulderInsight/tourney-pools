@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { GroupSummary } from "@/lib/types";
+import TopNav from "@/app/components/top-nav";
 
 interface PoolSummary {
   id: string;
@@ -71,14 +72,9 @@ export default function GroupsPage() {
 
   return (
     <main className="px-4 pt-4 pb-12 max-w-lg mx-auto">
-      <div className="flex items-center justify-between mb-4 -mt-1">
-        <img src="/logo.png" alt="TourneyPools" className="h-12" />
-        <Link href="/dashboard" className="text-xs text-tp-primary font-semibold active:underline">
-          My Pools
-        </Link>
-      </div>
+      <TopNav active="groups" />
 
-      <h1 className="font-serif text-2xl font-bold text-tp-primary mb-1">My Groups</h1>
+      <h1 className="font-serif text-2xl font-bold text-tp-primary mb-1">Groups</h1>
       <p className="text-xs text-gray-400 mb-5">
         A group is a saved set of players. Reuse them when you start a new pool so you don&rsquo;t retype names every time.
       </p>

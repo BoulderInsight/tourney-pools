@@ -287,6 +287,7 @@ export default function PoolScoresPage() {
 
   return (
     <div>
+      <h1 className="font-serif text-2xl font-bold text-tp-primary mb-3">Score Entry</h1>
       {/* Sticky search + filters */}
       <div className="sticky top-0 z-40 -mx-4 px-4 pt-2 pb-3 bg-tp-bg/95 backdrop-blur-sm space-y-3">
         {syncMsg && (
