@@ -35,21 +35,17 @@ export function formatUsPhoneDisplay(e164: string | null | undefined): string {
  * pre-addressed. Returns null when no E.164 recipients were supplied so the caller
  * can hide the button rather than render a no-op link.
  *
- * Format choice: for a single recipient we use the RFC 5724 form `sms:+1...`. For
- * multiple, we use the iOS-friendly `sms:/open?addresses=...` variant, which is the
- * one form that reliably opens a fresh group MMS composition on iOS instead of
- * joining an existing thread with whichever number it parses first. Android's
- * native SMS apps treat the path as opaque and tend to honor the comma list too.
- *
- * The leading `+` of each E.164 number is URL-encoded as `%2B` so the query parser
- * doesn't turn it into a space.
+ * RFC 5724 form `sms:phone1,phone2`. Plus signs are literals in the URL path so
+ * they pass through untouched. iOS Messages will match this recipient set to an
+ * existing group thread when one exists with those exact people, which is what
+ * a chairman re-texting the same pool actually wants. We previously used the
+ * iOS-specific `sms:/open?addresses=` form, but that always opens a fresh
+ * composition rather than threading into the existing conversation.
  */
 export function buildSmsLink(phones: (string | null | undefined)[]): string | null {
   const valid = phones.filter(
     (p): p is string => typeof p === "string" && p.startsWith("+") && p.length >= 8,
   );
   if (valid.length === 0) return null;
-  if (valid.length === 1) return `sms:${valid[0]}`;
-  const encoded = valid.map(encodeURIComponent).join(",");
-  return `sms:/open?addresses=${encoded}`;
+  return `sms:${valid.join(",")}`;
 }
