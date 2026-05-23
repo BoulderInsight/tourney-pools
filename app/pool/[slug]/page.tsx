@@ -100,7 +100,18 @@ function GolferDetail({ golfer, counted, totalScore, penaltyScore }: {
   );
 }
 
-function PayoutInfo({ standing, buyIn, payoutMethod, chairmanName, poolName, paymentPlan }: {
+/** "$20" for whole dollars, "$20.50" otherwise. Avoids the noisy "$20.00" form. */
+function formatAmount(amount: number): string {
+  return amount % 1 === 0 ? `$${amount}` : `$${amount.toFixed(2)}`;
+}
+
+/**
+ * The "Owes" block that lives on the collapsed standing card so losers see who to
+ * pay without expanding. Honor-system pools render gold pill deep-links; chairman-
+ * collects pools render a plain "Pay [Chairman] $X" line. Renders nothing for
+ * winners or for losers who happen to owe no one.
+ */
+function OwesOnCard({ standing, buyIn, payoutMethod, chairmanName, poolName, paymentPlan }: {
   standing: PlayerStanding;
   buyIn: number;
   payoutMethod: string;
@@ -109,49 +120,33 @@ function PayoutInfo({ standing, buyIn, payoutMethod, chairmanName, poolName, pay
   paymentPlan: Map<string, PayoutTransfer[]>;
 }) {
   const isWinner = standing.prize > 0;
-  const netWin = standing.prize - buyIn;
+  if (isWinner) return null;
   const isChairmanCollects = payoutMethod === "chairman-collects";
 
-  if (isWinner && netWin > 0) {
+  if (isChairmanCollects) {
     return (
-      <div className="mb-3 bg-green-50 rounded-xl p-3">
-        <p className="text-xs font-semibold text-green-700">
-          {isChairmanCollects
-            ? `Receives $${standing.prize} from the Chairman`
-            : `Collects $${netWin} net ($${standing.prize} prize - $${buyIn} buy-in)`
-          }
+      <div className="border-t border-tp-bg-dark bg-red-50/50 px-4 py-3">
+        <p className="text-[10px] text-red-400 uppercase tracking-wider font-semibold mb-1">Owes</p>
+        <p className="text-xs font-medium text-red-700">
+          Pay {chairmanName || "the Chairman"} <strong>{formatAmount(buyIn)}</strong>
         </p>
       </div>
     );
   }
 
   const transfers = paymentPlan.get(standing.player.id) ?? [];
-  if (isWinner || transfers.length === 0) return null;
+  if (transfers.length === 0) return null;
 
-  if (isChairmanCollects) {
-    return (
-      <div className="mb-3 bg-red-50 rounded-xl p-3">
-        <p className="text-[10px] text-red-400 uppercase tracking-wider font-semibold mb-1.5">Owes</p>
-        <p className="text-xs font-medium text-red-700">
-          Pay {chairmanName || "the Chairman"} <strong>${buyIn.toFixed(2)}</strong>
-        </p>
-      </div>
-    );
-  }
-
-  // Honor system: render the netted transfers. The plan was computed once at the
-  // page level via `computePaymentPlan`, so most losers see a single button (one
-  // winner each); only the worst-finishing loser may see a split across two.
   const note = `${poolName} payout`;
   return (
-    <div className="mb-3 bg-red-50 rounded-xl p-3">
+    <div className="border-t border-tp-bg-dark bg-red-50/50 px-4 py-3">
       <p className="text-[10px] text-red-400 uppercase tracking-wider font-semibold mb-1.5">Owes</p>
       <div className="space-y-2">
         {transfers.map((t) => {
           if (!t.toPaymentInfo) {
             return (
               <div key={t.toPlayerId} className="text-xs font-medium text-red-700">
-                Pay {t.toPlayerName} <strong>${t.amount.toFixed(2)}</strong>
+                Pay {t.toPlayerName} <strong>{formatAmount(t.amount)}</strong>
                 <span className="block text-[10px] text-red-400 mt-0.5">
                   No handle on file. Ask {t.toPlayerName} for theirs.
                 </span>
@@ -168,11 +163,11 @@ function PayoutInfo({ standing, buyIn, payoutMethod, chairmanName, poolName, pay
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={`Pay ${t.toPlayerName} $${t.amount.toFixed(2)} via ${paymentMethodLabel(t.toPaymentInfo.method)}`}
+              aria-label={`Pay ${t.toPlayerName} ${formatAmount(t.amount)} via ${paymentMethodLabel(t.toPaymentInfo.method)}`}
               className="flex items-center justify-between bg-tp-accent text-tp-primary rounded-lg px-3 py-3 active:opacity-90 transition-opacity"
             >
               <span className="text-sm font-semibold">
-                Pay {t.toPlayerName} ${t.amount.toFixed(2)}
+                Pay {t.toPlayerName} {formatAmount(t.amount)}
               </span>
               <span className="text-[10px] uppercase tracking-wider font-bold opacity-80" aria-hidden="true">
                 via {paymentMethodLabel(t.toPaymentInfo.method)} &rarr;
@@ -181,6 +176,32 @@ function PayoutInfo({ standing, buyIn, payoutMethod, chairmanName, poolName, pay
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/**
+ * The winner's "Collects $X net" badge shown inside the expanded card.
+ * Losers see their pay buttons on the always-visible card via `OwesOnCard`,
+ * so this only fires for prize-earning players.
+ */
+function WinnerBadge({ standing, buyIn, payoutMethod }: {
+  standing: PlayerStanding;
+  buyIn: number;
+  payoutMethod: string;
+}) {
+  const isWinner = standing.prize > 0;
+  const netWin = standing.prize - buyIn;
+  if (!isWinner || netWin <= 0) return null;
+  const isChairmanCollects = payoutMethod === "chairman-collects";
+  return (
+    <div className="mb-3 bg-green-50 rounded-xl p-3">
+      <p className="text-xs font-semibold text-green-700">
+        {isChairmanCollects
+          ? `Receives ${formatAmount(standing.prize)} from the Chairman`
+          : `Collects ${formatAmount(netWin)} net (${formatAmount(standing.prize)} prize - ${formatAmount(buyIn)} buy-in)`
+        }
+      </p>
     </div>
   );
 }
@@ -264,19 +285,25 @@ function StandingCard({ standing, expanded, onToggle, index, buyIn, tournamentOv
         </svg>
       </button>
 
-      {/* Expanded view: payout summary first (most relevant once the tournament is
-          over), then the golfer-by-golfer score breakdown below the gold rule. */}
+      {/* Pay buttons live on the collapsed card so a loser doesn't have to expand
+          to see who they owe. Renders nothing for winners and pre-tournament-over. */}
+      {tournamentOver && (
+        <OwesOnCard
+          standing={standing}
+          buyIn={buyIn}
+          payoutMethod={payoutMethod}
+          chairmanName={chairmanNameForPayout}
+          poolName={poolName}
+          paymentPlan={paymentPlan}
+        />
+      )}
+
+      {/* Expanded view: the winner's collects badge (losers see their pay buttons
+          on the card above), then the golfer-by-golfer score breakdown. */}
       {expanded && (
         <div className="px-4 pb-4 animate-expand">
           {tournamentOver && (
-            <PayoutInfo
-              standing={standing}
-              buyIn={buyIn}
-              payoutMethod={payoutMethod}
-              chairmanName={chairmanNameForPayout}
-              poolName={poolName}
-              paymentPlan={paymentPlan}
-            />
+            <WinnerBadge standing={standing} buyIn={buyIn} payoutMethod={payoutMethod} />
           )}
           <div className="gold-rule mb-3" />
           <div className="space-y-2">
