@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import type { PaymentMethod } from "@/lib/types";
 
 export default function AccountPage() {
   const router = useRouter();
@@ -18,15 +19,27 @@ export default function AccountPage() {
   const [passSuccess, setPassSuccess] = useState(false);
   const [passSaving, setPassSaving] = useState(false);
 
+  // Payment handles (used by the Tip the Chairman button and chairman-collects deep links)
+  const [venmoHandle, setVenmoHandle] = useState("");
+  const [cashappHandle, setCashappHandle] = useState("");
+  const [paypalHandle, setPaypalHandle] = useState("");
+  const [preferredMethod, setPreferredMethod] = useState<PaymentMethod | null>(null);
+  const [paySaving, setPaySaving] = useState(false);
+  const [paySuccess, setPaySuccess] = useState(false);
+  const [payError, setPayError] = useState("");
+
   const isPro = tier === "pro" || tier === "paid";
 
   const fetchAccount = useCallback(async () => {
-    const res = await fetch("/api/auth/me");
-    if (!res.ok) {
+    const [meRes, acctRes] = await Promise.all([
+      fetch("/api/auth/me"),
+      fetch("/api/account"),
+    ]);
+    if (!meRes.ok) {
       router.push("/login");
       return;
     }
-    const me = await res.json();
+    const me = await meRes.json();
     if (!me) {
       router.push("/login");
       return;
@@ -34,8 +47,47 @@ export default function AccountPage() {
     setName(me.name || "");
     setEmail(me.email || "");
     setTier(me.tier || "free");
+    if (acctRes.ok) {
+      const acct = await acctRes.json();
+      setVenmoHandle(acct.venmo_handle || "");
+      setCashappHandle(acct.cashapp_handle || "");
+      setPaypalHandle(acct.paypal_handle || "");
+      setPreferredMethod(
+        acct.preferred_method === "venmo" || acct.preferred_method === "cashapp" || acct.preferred_method === "paypal"
+          ? acct.preferred_method
+          : null
+      );
+    }
     setLoading(false);
   }, [router]);
+
+  async function handleSavePayments() {
+    setPaySaving(true);
+    setPayError("");
+    setPaySuccess(false);
+    const res = await fetch("/api/account", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "save_payments",
+        venmoHandle,
+        cashappHandle,
+        paypalHandle,
+        preferredMethod,
+      }),
+    });
+    setPaySaving(false);
+    if (!res.ok) {
+      setPayError("Could not save. Try again.");
+      return;
+    }
+    setPaySuccess(true);
+    setTimeout(() => setPaySuccess(false), 2000);
+  }
+
+  function togglePreferred(m: PaymentMethod) {
+    setPreferredMethod((prev) => (prev === m ? null : m));
+  }
 
   useEffect(() => {
     fetchAccount();
@@ -174,6 +226,71 @@ export default function AccountPage() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Payment Info: chairman's own Venmo / Cash App / PayPal handles. Powers the
+          Tip the Chairman button on pool leaderboards (and chairman-collects deep
+          links once that flow ships). Star marks the preferred app. */}
+      <div className="card p-5 mb-4">
+        <h2 className="font-serif text-lg font-bold text-tp-primary mb-1">Payment Info</h2>
+        <p className="text-xs text-gray-400 mb-4">
+          Used for the Tip the Chairman button on your pools. Star your preferred app.
+          Leave any blank.
+        </p>
+
+        <div className="space-y-2.5 mb-4">
+          {([
+            { key: "venmo",   label: "Venmo",    value: venmoHandle,   setter: setVenmoHandle   },
+            { key: "cashapp", label: "Cash App", value: cashappHandle, setter: setCashappHandle },
+            { key: "paypal",  label: "PayPal",   value: paypalHandle,  setter: setPaypalHandle  },
+          ] as const).map((row) => {
+            const isPreferred = preferredMethod === row.key;
+            return (
+              <div key={row.key} className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400 w-16">
+                    {row.label}
+                  </span>
+                  <input
+                    type="text"
+                    value={row.value}
+                    onChange={(e) => row.setter(e.target.value)}
+                    placeholder="handle (no @ needed)"
+                    className="input-field pl-[5.25rem]"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    aria-label={`${row.label} handle`}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => togglePreferred(row.key)}
+                  disabled={!row.value && !isPreferred}
+                  title={isPreferred ? "Preferred app" : row.value ? "Set as preferred" : "Enter a handle first"}
+                  aria-label={isPreferred ? `${row.label} is preferred` : `Set ${row.label} as preferred`}
+                  className={`w-10 h-10 flex items-center justify-center rounded-xl flex-shrink-0 transition-colors
+                    ${isPreferred ? "text-tp-accent" : row.value ? "text-gray-300 active:text-tp-accent" : "text-gray-200 cursor-not-allowed"}`}
+                >
+                  <svg className="w-5 h-5" fill={isPreferred ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118L2.05 10.1c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.518-4.674z" />
+                  </svg>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {payError && <p className="text-red-500 text-xs mb-2">{payError}</p>}
+        {paySuccess && <p className="text-green-600 text-xs font-semibold mb-2">Saved.</p>}
+        <button
+          type="button"
+          onClick={handleSavePayments}
+          disabled={paySaving}
+          className="btn-gold w-full disabled:opacity-60"
+        >
+          {paySaving ? "Saving..." : "Save Payment Info"}
+        </button>
       </div>
 
       {/* Change password */}

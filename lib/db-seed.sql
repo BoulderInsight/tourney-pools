@@ -15,6 +15,11 @@ CREATE TABLE chairmen (
   custom_ad_headline TEXT,
   custom_ad_description TEXT,
   ad_removed BOOLEAN DEFAULT false,
+  venmo_handle TEXT,
+  cashapp_handle TEXT,
+  paypal_handle TEXT,
+  preferred_method TEXT
+    CHECK (preferred_method IN ('venmo', 'cashapp', 'paypal') OR preferred_method IS NULL),
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
