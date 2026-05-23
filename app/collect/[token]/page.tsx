@@ -7,23 +7,27 @@ export const dynamic = "force-dynamic";
 interface Context {
   personName: string;
   commissionerName: string;
-  poolName: string;
+  /** Null when the link was minted from the Groups view (no pool context). */
+  poolName: string | null;
   tournamentName: string | null;
   submitted: boolean;
 }
 
 async function loadContext(token: string): Promise<Context | null> {
   const sql = getDb();
+  // LEFT JOIN pools/chairmen/tournaments so a null pool_id still resolves the person
+  // and the commissioner (via people.chairman_id).
   const rows = await sql`
     SELECT cr.submitted_at,
            pe.name AS person_name,
            p.pool_name,
-           c.name AS commissioner_name,
+           COALESCE(c_pool.name, c_person.name) AS commissioner_name,
            t.name AS tournament_name
     FROM collection_requests cr
     JOIN people pe ON pe.id = cr.person_id
-    JOIN pools p ON p.id = cr.pool_id
-    JOIN chairmen c ON c.id = p.chairman_id
+    JOIN chairmen c_person ON c_person.id = pe.chairman_id
+    LEFT JOIN pools p ON p.id = cr.pool_id
+    LEFT JOIN chairmen c_pool ON c_pool.id = p.chairman_id
     LEFT JOIN tournaments t ON t.id = p.tournament_id
     WHERE cr.token = ${token}
   `;
@@ -32,7 +36,7 @@ async function loadContext(token: string): Promise<Context | null> {
   return {
     personName: r.person_name as string,
     commissionerName: r.commissioner_name as string,
-    poolName: r.pool_name as string,
+    poolName: (r.pool_name as string | null) ?? null,
     tournamentName: (r.tournament_name as string | null) ?? null,
     submitted: r.submitted_at !== null,
   };
@@ -42,7 +46,10 @@ export async function generateMetadata({ params }: { params: { token: string } }
   const ctx = await loadContext(params.token);
   if (!ctx) return { title: "TourneyPools" };
   const title = `Enter payment info for ${ctx.commissionerName} | TourneyPools`;
-  const description = `${ctx.poolName}${ctx.tournamentName ? ` for ${ctx.tournamentName}` : ""}`;
+  const descriptionParts: string[] = [];
+  if (ctx.poolName) descriptionParts.push(ctx.poolName);
+  if (ctx.tournamentName) descriptionParts.push(`for ${ctx.tournamentName}`);
+  const description = descriptionParts.length > 0 ? descriptionParts.join(" ") : "Add your payment info so the winners can be paid.";
   return {
     title,
     description,
@@ -74,9 +81,18 @@ export default async function CollectPage({ params }: { params: { token: string 
             Hi {ctx.personName}
           </h1>
           <p className="text-sm text-gray-600 mt-2">
-            <strong>{ctx.commissionerName}</strong> is running the <strong>{ctx.poolName}</strong> pool
-            {ctx.tournamentName ? <> for <strong>{ctx.tournamentName}</strong></> : null} and needs
-            your payment info so winners can be paid easily.
+            {ctx.poolName ? (
+              <>
+                <strong>{ctx.commissionerName}</strong> is running the <strong>{ctx.poolName}</strong> pool
+                {ctx.tournamentName ? <> for <strong>{ctx.tournamentName}</strong></> : null} and needs
+                your payment info so winners can be paid easily.
+              </>
+            ) : (
+              <>
+                <strong>{ctx.commissionerName}</strong> needs your payment info so winners can be paid
+                easily in future pools.
+              </>
+            )}
           </p>
         </div>
         <SelfServeForm token={params.token} initiallySubmitted={ctx.submitted} />

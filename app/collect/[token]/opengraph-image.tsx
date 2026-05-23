@@ -21,11 +21,17 @@ async function getImageDataUri(filename: string): Promise<string | null> {
 
 export default async function OGImage({ params }: { params: { token: string } }) {
   const sql = getDb();
+  // LEFT JOIN pools/chairmen/tournaments so a null pool_id (group-context links)
+  // still resolves the commissioner via people.chairman_id.
   const rows = await sql`
-    SELECT c.name AS commissioner_name, p.pool_name, t.name AS tournament_name
+    SELECT COALESCE(c_pool.name, c_person.name) AS commissioner_name,
+           p.pool_name,
+           t.name AS tournament_name
     FROM collection_requests cr
-    JOIN pools p ON p.id = cr.pool_id
-    JOIN chairmen c ON c.id = p.chairman_id
+    JOIN people pe ON pe.id = cr.person_id
+    JOIN chairmen c_person ON c_person.id = pe.chairman_id
+    LEFT JOIN pools p ON p.id = cr.pool_id
+    LEFT JOIN chairmen c_pool ON c_pool.id = p.chairman_id
     LEFT JOIN tournaments t ON t.id = p.tournament_id
     WHERE cr.token = ${params.token}
   `;
@@ -47,7 +53,7 @@ export default async function OGImage({ params }: { params: { token: string } })
 
   const r = rows[0];
   const commissionerName = r.commissioner_name as string;
-  const poolName = r.pool_name as string;
+  const poolName = (r.pool_name as string | null) ?? null;
   const tournamentName = (r.tournament_name as string | null) ?? null;
 
   return new ImageResponse(
@@ -90,7 +96,9 @@ export default async function OGImage({ params }: { params: { token: string } })
           </div>
           <div style={{ display: "flex", width: 96, height: 6, background: "#d4a843", marginTop: 28, marginBottom: 22 }} />
           <div style={{ display: "flex", fontSize: 32, color: "#5a5a5a" }}>for {commissionerName}</div>
-          <div style={{ display: "flex", fontSize: 32, color: "#5a5a5a", marginTop: 4 }}>{poolName}</div>
+          {poolName && (
+            <div style={{ display: "flex", fontSize: 32, color: "#5a5a5a", marginTop: 4 }}>{poolName}</div>
+          )}
           {tournamentName && (
             <div style={{ display: "flex", fontSize: 32, color: "#5a5a5a", marginTop: 4 }}>{tournamentName}</div>
           )}

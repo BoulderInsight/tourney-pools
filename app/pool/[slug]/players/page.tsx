@@ -86,7 +86,7 @@ export default function PlayersTabPage() {
     <div className="pt-2 pb-12">
       <h1 className="font-serif text-2xl font-bold text-tp-primary mb-1">Players</h1>
       <p className="text-xs text-gray-400 mb-5">
-        Collect each player&rsquo;s payment handle so the winners can be paid easily.
+        Save each player&rsquo;s payment info so the winners can be paid easily.
       </p>
 
       <div className="space-y-2">
@@ -119,7 +119,7 @@ export default function PlayersTabPage() {
               {handle ? (
                 <span className="text-xs font-semibold text-tp-primary flex-shrink-0">Edit</span>
               ) : (
-                <span className="text-xs font-semibold text-white bg-tp-accent rounded-full px-3 py-1.5 flex-shrink-0">Collect</span>
+                <span className="text-xs font-semibold text-white bg-tp-accent rounded-full px-3 py-1.5 flex-shrink-0">Payments</span>
               )}
             </button>
           );
