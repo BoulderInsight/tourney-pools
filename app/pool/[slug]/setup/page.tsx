@@ -159,6 +159,9 @@ export default function PoolSetupPage() {
     { id: "p0", name: "" },
   ]);
 
+  const [groups, setGroups] = useState<{ id: string; name: string; memberCount: number }[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string>("");
+
   // Chairman settings
   const [settings, setSettings] = useState<CommissionerSettings>(DEFAULT_SETTINGS);
   const [customDist, setCustomDist] = useState("100");
@@ -220,6 +223,12 @@ export default function PoolSetupPage() {
     }
     loadPool();
   }, [slug]);
+
+  useEffect(() => {
+    fetch("/api/groups")
+      .then((r) => (r.ok ? r.json() : { groups: [] }))
+      .then((data) => setGroups(data.groups || []));
+  }, []);
 
   // When a tournament with an official field is selected, draft from that
   // field instead of the generic default list.
@@ -292,6 +301,18 @@ export default function PoolSetupPage() {
 
   const updatePlayer = (id: string, name: string) =>
     setPlayers((p) => p.map((pl) => (pl.id === id ? { ...pl, name } : pl)));
+
+  async function loadFromGroup(groupId: string) {
+    setSelectedGroupId(groupId);
+    if (!groupId) return;
+    const res = await fetch(`/api/groups/${groupId}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const members: { id: string; name: string }[] = (data.group?.members ?? []).map(
+      (m: { name: string }, i: number) => ({ id: `g-${groupId}-${i}`, name: m.name }),
+    );
+    if (members.length > 0) setPlayers(members);
+  }
 
   function parseFieldEntries() {
     return fieldText.split("\n").map((line) => {
@@ -538,6 +559,29 @@ export default function PoolSetupPage() {
             </Section>
 
             <Section label={`Players (${validPlayers.length})`}>
+              {groups.length > 0 && (
+                <div className="mb-3">
+                  <label className="block text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-1.5">
+                    Start from a group (optional)
+                  </label>
+                  <select
+                    value={selectedGroupId}
+                    onChange={(e) => loadFromGroup(e.target.value)}
+                    className="input-field"
+                    aria-label="Use a saved group"
+                  >
+                    <option value="">Type players manually</option>
+                    {groups.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.name} ({g.memberCount})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    Picking a group fills the list below. You can still edit names before continuing.
+                  </p>
+                </div>
+              )}
               <div className="space-y-2.5">
                 {players.map((p) => (
                   <div key={p.id} className="flex items-center gap-2">
