@@ -11,12 +11,12 @@ import {
 } from "./types";
 
 export const DEFAULT_SETTINGS: CommissionerSettings = {
-  draftType: "random",
-  scoringType: "all",
-  bestN: 4,
-  missedCutRule: "penalty",
+  draftType: "auto-snake",
+  scoringType: "best-n",
+  bestN: 3,
+  missedCutRule: "zero",
   missedCutPenalty: 5,
-  purseType: "70-30",
+  purseType: "winner-take-all",
   purseDistribution: [],
 };
 

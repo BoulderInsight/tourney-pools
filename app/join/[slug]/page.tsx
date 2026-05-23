@@ -26,12 +26,45 @@ interface JoinData {
   } | null;
   players: JoinPlayer[];
   settings?: {
+    draftType?: string;
     purseType?: string;
     payoutMethod?: string;
     missedCutRule?: string;
     scoringType?: string;
     bestN?: number;
   };
+}
+
+function draftTypeLabel(t?: string): string {
+  switch (t) {
+    case "auto-snake": return "Auto Snake Draft";
+    case "random": return "Auto Random";
+    case "snake": return "Live Snake Draft";
+    default: return "Auto Snake Draft";
+  }
+}
+
+function draftTypeBlurb(t?: string): string {
+  switch (t) {
+    case "auto-snake":
+      return "Players are seeded randomly, then golfers are assigned by world ranking in snake order (1, 2, 3, then 3, 2, 1) so every team gets a fair mix of stars and longshots.";
+    case "random":
+      return "Every golfer in the field is shuffled and dealt out randomly. No picking, no order, no draft to schedule.";
+    case "snake":
+      return "The chairman draws for pick order, then players take turns picking golfers live. Order reverses each round so everyone gets a fair mix of early and late picks.";
+    default:
+      return "";
+  }
+}
+
+function purseSentence(t?: string): string {
+  switch (t) {
+    case "winner-take-all": return "and the entire purse goes to the winner";
+    case "70-30": return "and the purse splits 70 / 30 between the top two";
+    case "60-30-10": return "and the purse splits 60 / 30 / 10 between the top three";
+    case "custom": return "and the purse splits across the top finishers";
+    default: return "";
+  }
 }
 
 function formatDateRange(start: string | null, end: string | null): string {
@@ -44,14 +77,36 @@ function formatDateRange(start: string | null, end: string | null): string {
   return `${sStr} to ${eStr}`;
 }
 
-function purseLabel(t?: string): string {
-  switch (t) {
-    case "winner-take-all": return "Winner takes all";
-    case "70-30": return "70 / 30 split";
-    case "60-30-10": return "60 / 30 / 10 split";
-    case "custom": return "Custom split";
-    default: return "";
-  }
+/**
+ * Inline (i) trigger. Hover on desktop shows a tooltip; tap on mobile toggles
+ * a small popover under the icon. Keeps the explainer one line on desktop
+ * without forcing a 'Learn more' link.
+ */
+function DraftTypeInfo({ blurb }: { blurb: string }) {
+  const [open, setOpen] = useState(false);
+  if (!blurb) return null;
+  return (
+    <span className="relative inline-flex items-center align-middle">
+      <button
+        type="button"
+        onClick={(e) => { e.preventDefault(); setOpen((o) => !o); }}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-tp-primary/15 text-tp-primary text-[10px] font-bold leading-none active:bg-tp-primary/25"
+        aria-label="What is this draft type?"
+      >
+        i
+      </button>
+      {open && (
+        <span
+          role="tooltip"
+          className="absolute z-10 top-full mt-2 left-1/2 -translate-x-1/2 w-64 bg-tp-primary text-white text-xs leading-snug rounded-lg p-3 shadow-lg normal-case font-normal"
+        >
+          {blurb}
+        </span>
+      )}
+    </span>
+  );
 }
 
 export default function JoinPoolPage() {
@@ -141,44 +196,38 @@ export default function JoinPoolPage() {
         )}
       </div>
 
-      {/* Friendly explainer. Sets expectations for someone tapping a link they
-          got via text from a friend, especially if it's their first pool. The
-          scoring sentence is dynamic so 'best 3 of 4' pools tell their invitees
-          that not every golfer counts. */}
-      <div className="bg-tp-bg/60 border border-tp-bg-dark rounded-xl p-4 mb-5 text-center">
+      {/* Friendly explainer. The two paragraphs describe the format
+          generically, then drop in the specifics for this pool: tournament,
+          draft type (with an info popover), buy-in, purse split, chairman.
+          Warm cream background + gold left rail to feel like a card pulled
+          out of the rules, not just a callout. */}
+      <div
+        className="rounded-xl border-l-4 border-tp-accent bg-[#FFF8E8] p-4 mb-5"
+        style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}
+      >
         <p className="text-sm text-tp-primary leading-relaxed">
-          A <strong>golf pool</strong> is a friendly bet where each player drafts a roster of pro
-          golfers from {data.tournament ? `the ${data.tournament.name}` : "the tournament"} field.
+          A <strong>TourneyPool</strong> is a friendly bet between friends. Each player drafts a
+          roster of pros from the field, and{" "}
           {data.settings?.scoringType === "best-n" && data.settings?.bestN ? (
-            <> Your <strong>top {data.settings.bestN}</strong> golfers count toward your team&rsquo;s score, lowest combined wins the purse.</>
+            <>your best <strong>{data.settings.bestN}</strong> golfer scores combine to rank your team.</>
           ) : (
-            <> Lowest combined score wins the purse.</>
-          )}
+            <>all your golfer scores combine to rank your team.</>
+          )}{" "}
+          Lowest total wins.
         </p>
-        <p className="text-xs text-gray-500 leading-relaxed mt-2">
+        <p className="text-sm text-tp-primary leading-relaxed mt-3">
+          This pool runs on the <strong>{data.tournament?.name ?? "tournament"}</strong> with a{" "}
+          <span className="inline-flex items-baseline gap-1">
+            <strong>{draftTypeLabel(data.settings?.draftType)}</strong>
+            <DraftTypeInfo blurb={draftTypeBlurb(data.settings?.draftType)} />
+          </span>{" "}
+          format. Buy in is <strong>${data.buyIn}</strong>, {purseSentence(data.settings?.purseType)}.
+          Chairman is <strong>{data.chairmanName}</strong>.
+        </p>
+        <p className="text-xs text-gray-600 leading-relaxed mt-3">
           Tap your name below, hit <strong>I&rsquo;m In</strong> or <strong>I&rsquo;m Out</strong>,
           and you&rsquo;re set. The leaderboard updates live during the tournament so you can follow along.
         </p>
-      </div>
-
-      {/* Pool summary */}
-      <div className="card p-4 mb-5">
-        <div className="grid grid-cols-3 gap-3 text-center">
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Buy-in</p>
-            <p className="text-base font-bold text-tp-primary mt-0.5">${data.buyIn}</p>
-          </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Purse</p>
-            <p className="text-sm font-semibold text-tp-primary mt-0.5 leading-tight">
-              {purseLabel(data.settings?.purseType) || "TBD"}
-            </p>
-          </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Chairman</p>
-            <p className="text-sm font-semibold text-tp-primary mt-0.5 leading-tight">{data.chairmanName}</p>
-          </div>
-        </div>
       </div>
 
       {/* Roster-locked banner. Also links onward to the leaderboard so a late
