@@ -142,12 +142,18 @@ export default function JoinPoolPage() {
       </div>
 
       {/* Friendly explainer. Sets expectations for someone tapping a link they
-          got via text from a friend, especially if it's their first pool. */}
+          got via text from a friend, especially if it's their first pool. The
+          scoring sentence is dynamic so 'best 3 of 4' pools tell their invitees
+          that not every golfer counts. */}
       <div className="bg-tp-bg/60 border border-tp-bg-dark rounded-xl p-4 mb-5 text-center">
         <p className="text-sm text-tp-primary leading-relaxed">
           A <strong>golf pool</strong> is a friendly bet where each player drafts a roster of pro
           golfers from {data.tournament ? `the ${data.tournament.name}` : "the tournament"} field.
-          Lowest combined score wins the purse.
+          {data.settings?.scoringType === "best-n" && data.settings?.bestN ? (
+            <> Your <strong>top {data.settings.bestN}</strong> golfers count toward your team&rsquo;s score, lowest combined wins the purse.</>
+          ) : (
+            <> Lowest combined score wins the purse.</>
+          )}
         </p>
         <p className="text-xs text-gray-500 leading-relaxed mt-2">
           Tap your name below, hit <strong>I&rsquo;m In</strong> or <strong>I&rsquo;m Out</strong>,
