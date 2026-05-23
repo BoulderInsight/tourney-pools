@@ -123,8 +123,10 @@ export default function JoinPoolPage() {
       <img src="/logo.png" alt="TourneyPools" className="h-10 mx-auto mb-4" />
 
       {/* Pool header */}
-      <div className="text-center mb-6">
-        <p className="text-[11px] uppercase tracking-[0.2em] text-tp-accent font-bold mb-1">You&rsquo;re invited to</p>
+      <div className="text-center mb-5">
+        <p className="text-[11px] uppercase tracking-[0.2em] text-tp-accent font-bold mb-1">
+          {data.chairmanName} invited you to
+        </p>
         <h1 className="font-serif text-3xl font-bold text-tp-primary leading-tight">{data.poolName}</h1>
         {data.tournament && (
           <p className="text-sm text-tp-primary/70 font-semibold mt-1">{data.tournament.name}</p>
@@ -137,6 +139,20 @@ export default function JoinPoolPage() {
             {data.tournament.course}{data.tournament.location ? ` · ${data.tournament.location}` : ""}
           </p>
         )}
+      </div>
+
+      {/* Friendly explainer. Sets expectations for someone tapping a link they
+          got via text from a friend, especially if it's their first pool. */}
+      <div className="bg-tp-bg/60 border border-tp-bg-dark rounded-xl p-4 mb-5 text-center">
+        <p className="text-sm text-tp-primary leading-relaxed">
+          A <strong>golf pool</strong> is a friendly bet where each player drafts a roster of pro
+          golfers from {data.tournament ? `the ${data.tournament.name}` : "the tournament"} field.
+          Lowest combined score wins the purse.
+        </p>
+        <p className="text-xs text-gray-500 leading-relaxed mt-2">
+          Tap your name below, hit <strong>I&rsquo;m In</strong> or <strong>I&rsquo;m Out</strong>,
+          and you&rsquo;re set. The leaderboard updates live during the tournament so you can follow along.
+        </p>
       </div>
 
       {/* Pool summary */}
@@ -179,13 +195,13 @@ export default function JoinPoolPage() {
           <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold text-center mb-2">
             Tap your name
           </p>
-          <div className="space-y-2 mb-4">
-            {data.players.length === 0 ? (
-              <p className="text-center text-gray-400 italic text-sm py-6">
-                The chairman hasn&rsquo;t added anyone yet.
-              </p>
-            ) : (
-              data.players.map((p) => {
+          {data.players.length === 0 ? (
+            <p className="text-center text-gray-400 italic text-sm py-6">
+              The chairman hasn&rsquo;t added anyone yet.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              {data.players.map((p) => {
                 const isAccepted = p.rsvpStatus === "accepted";
                 const isDeclined = p.rsvpStatus === "declined";
                 return (
@@ -193,20 +209,20 @@ export default function JoinPoolPage() {
                     key={p.id}
                     type="button"
                     onClick={() => { setSelectedPlayerId(p.id); setRecentChoice(null); }}
-                    className="w-full flex items-center justify-between bg-white border border-tp-bg-dark rounded-xl px-4 py-3.5 text-left active:bg-tp-bg/60 transition-colors"
+                    className="flex items-center justify-between bg-white border border-tp-bg-dark rounded-xl px-3 py-3 text-left active:bg-tp-bg/60 transition-colors min-w-0"
                   >
-                    <span className="font-semibold text-tp-primary">{p.name}</span>
+                    <span className="font-semibold text-tp-primary truncate">{p.name}</span>
                     {isAccepted && (
-                      <span className="text-[11px] font-semibold text-green-600">✅ Already joined</span>
+                      <span className="text-green-600 text-base flex-shrink-0 ml-1" aria-label="Already joined">✅</span>
                     )}
                     {isDeclined && (
-                      <span className="text-[11px] font-semibold text-gray-400">Tap to change</span>
+                      <span className="text-red-500 text-base flex-shrink-0 ml-1" aria-label="Declined">❌</span>
                     )}
                   </button>
                 );
-              })
-            )}
-          </div>
+              })}
+            </div>
+          )}
           <div className="text-center mt-6">
             <p className="text-[11px] text-gray-400">
               Not on the list? <span className="text-tp-primary font-semibold">Contact the chairman</span> ({data.chairmanName}) to be added.
