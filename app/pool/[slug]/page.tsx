@@ -841,10 +841,17 @@ export default function PoolLeaderboardPage() {
           {currentRound > 0 && (
             <>
               <span className="text-gray-300">|</span>
-              <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                Rd {currentRound}
-              </span>
+              {tournamentStatus === "completed" ? (
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-tp-accent" />
+                  Complete
+                </span>
+              ) : (
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                  Rd {currentRound}
+                </span>
+              )}
             </>
           )}
         </div>
