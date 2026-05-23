@@ -284,8 +284,11 @@ function DashboardContent() {
       ) : (
         <div className="space-y-3">
           {pools.map((pool) => {
+            // Completed/cancelled pools stay fully usable: the invite link still resolves
+            // (players use it to access payout buttons post-tournament), and the chairman
+            // still needs View / Scores / Copy to administer their pool's afterlife. Only
+            // the status pill changes to signal "this season is done".
             const isOver = pool.tournament_status === "completed" || pool.tournament_status === "cancelled";
-            const cardClass = `card overflow-hidden${isOver ? " opacity-60" : ""}`;
             const headerInner = (
               <div className="flex items-center justify-between">
                 <div>
@@ -306,25 +309,20 @@ function DashboardContent() {
                   ) : (
                     <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-semibold">Draft</span>
                   )}
-                  {!isOver && (
-                    <svg className="w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  )}
+                  <svg className="w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </div>
               </div>
             );
             return (
-              <div key={pool.id} className={cardClass}>
-                {isOver ? (
-                  <div className="block p-4">{headerInner}</div>
-                ) : (
-                  <Link href={pool.setup_complete ? `/pool/${pool.slug}` : `/pool/${pool.slug}/setup`} className="block p-4 active:bg-tp-bg/40 transition-colors">
-                    {headerInner}
-                  </Link>
-                )}
-                {/* Share link — hidden for completed pools */}
-                {pool.setup_complete && !isOver && (
+              <div key={pool.id} className="card overflow-hidden">
+                <Link href={pool.setup_complete ? `/pool/${pool.slug}` : `/pool/${pool.slug}/setup`} className="block p-4 active:bg-tp-bg/40 transition-colors">
+                  {headerInner}
+                </Link>
+                {/* Invite link stays available for completed pools so players can revisit
+                    the leaderboard and tap one-tap pay buttons post-tournament. */}
+                {pool.setup_complete && (
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(`https://tourneypools.com/pool/${pool.slug}`);
@@ -340,21 +338,14 @@ function DashboardContent() {
                     )}
                   </button>
                 )}
-                {/* Pool actions */}
+                {/* Pool actions. Edit stays disabled once setup completes (whether or not
+                    the tournament is over) so a finalized pool can't be reconfigured. */}
                 <div className="flex border-t border-tp-bg-dark">
-                  {isOver ? (
-                    <span className="flex-1 text-center py-2.5 text-xs font-semibold text-gray-300 cursor-not-allowed">View</span>
-                  ) : (
-                    <Link href={`/pool/${pool.slug}`} className="flex-1 text-center py-2.5 text-xs font-semibold text-tp-primary active:bg-tp-primary/5 transition-colors">View</Link>
-                  )}
+                  <Link href={`/pool/${pool.slug}`} className="flex-1 text-center py-2.5 text-xs font-semibold text-tp-primary active:bg-tp-primary/5 transition-colors">View</Link>
                   <div className="w-px bg-tp-bg-dark" />
-                  {isOver ? (
-                    <span className="flex-1 text-center py-2.5 text-xs font-semibold text-gray-300 cursor-not-allowed">Scores</span>
-                  ) : (
-                    <Link href={`/pool/${pool.slug}/scores`} className="flex-1 text-center py-2.5 text-xs font-semibold text-tp-primary active:bg-tp-primary/5 transition-colors">Scores</Link>
-                  )}
+                  <Link href={`/pool/${pool.slug}/scores`} className="flex-1 text-center py-2.5 text-xs font-semibold text-tp-primary active:bg-tp-primary/5 transition-colors">Scores</Link>
                   <div className="w-px bg-tp-bg-dark" />
-                  {isOver || pool.setup_complete ? (
+                  {pool.setup_complete ? (
                     <span className="flex-1 text-center py-2.5 text-xs font-semibold text-gray-300 cursor-not-allowed">Edit</span>
                   ) : (
                     <Link href={`/pool/${pool.slug}/setup`} className="flex-1 text-center py-2.5 text-xs font-semibold text-tp-primary active:bg-tp-primary/5 transition-colors">Edit</Link>
