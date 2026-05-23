@@ -65,10 +65,11 @@ export default async function OGImage() {
             position: "relative",
           }}
         >
-          {/* Headline: white serif */}
+          {/* Headline: white serif, two lines so "Venmo" lands on its own */}
           <div
             style={{
               display: "flex",
+              flexDirection: "column",
               fontSize: 92,
               fontWeight: 800,
               color: "white",
@@ -77,10 +78,11 @@ export default async function OGImage() {
               textShadow: "0 4px 20px rgba(0,0,0,0.5)",
               maxWidth: "850px",
               textAlign: "right",
-              justifyContent: "flex-end",
+              alignItems: "flex-end",
             }}
           >
-            Drop your Venmo,
+            <div style={{ display: "flex" }}>Drop your</div>
+            <div style={{ display: "flex", marginTop: "6px" }}>Venmo,</div>
           </div>
 
           {/* Punchline: gold */}
