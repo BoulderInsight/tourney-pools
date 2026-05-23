@@ -159,10 +159,17 @@ export default function JoinPoolPage() {
         </div>
       </div>
 
-      {/* Roster-locked banner */}
+      {/* Roster-locked banner. Also links onward to the leaderboard so a late
+          tap of the invite link doesn't dead-end after the draft. */}
       {data.draftComplete && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-5 text-center">
           <p className="text-xs font-semibold text-amber-700">The draft has already happened. Roster is locked.</p>
+          <a
+            href={`/pool/${slug}`}
+            className="inline-block mt-2 text-xs font-bold text-tp-primary underline decoration-tp-accent underline-offset-4"
+          >
+            View live leaderboard →
+          </a>
         </div>
       )}
 
@@ -261,6 +268,20 @@ export default function JoinPoolPage() {
           >
             Not {selected.name}? Pick again
           </button>
+        </div>
+      )}
+
+      {/* Always-visible footer link to the live leaderboard. Useful for invitees
+          who've already RSVP'd and just want to peek at scores, especially after
+          the draft when this page is mostly the locked banner. */}
+      {!data.draftComplete && data.players.length > 0 && (
+        <div className="text-center mt-8">
+          <a
+            href={`/pool/${slug}`}
+            className="text-xs text-gray-400 active:text-tp-primary"
+          >
+            View live leaderboard →
+          </a>
         </div>
       )}
     </main>
