@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ConfirmModal from "@/app/components/confirm-modal";
 import { BoulderInsightAd, CustomAd } from "@/app/components/sponsor-banner";
+import TopNav from "@/app/components/top-nav";
 
 interface Pool {
   id: string;
@@ -27,7 +28,6 @@ function DashboardContent() {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [tier, setTier] = useState("free");
   const [customAdImage, setCustomAdImage] = useState<string | null>(null);
   const [customAdUrl, setCustomAdUrl] = useState<string | null>(null);
@@ -56,7 +56,6 @@ function DashboardContent() {
     if (poolRes.ok) setPools(await poolRes.json());
     if (meRes.ok) {
       const me = await meRes.json();
-      if (me?.isSuperAdmin) setIsSuperAdmin(true);
       if (me?.tier) setTier(me.tier);
     }
     if (acctRes.ok) {
@@ -210,40 +209,19 @@ function DashboardContent() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-start justify-between mb-6">
-        <img src="/logo.png" alt="TourneyPools" className="h-12" />
-        <div className="flex flex-col items-end gap-1">
-          <div className="flex items-center gap-3">
-            {isSuperAdmin && (
-              <Link href="/admin" className="text-xs text-purple-600 font-semibold">
-                Admin
-              </Link>
-            )}
-            {pools.length > 0 && (
-              <Link href={`/pool/${pools[0].slug}/scores`} className="text-xs text-tp-primary font-semibold">
-                Scores
-              </Link>
-            )}
-            <Link
-              href="/groups"
-              className="text-sm font-semibold text-tp-primary active:underline"
-            >
-              My Groups &rarr;
-            </Link>
-            <Link
-              href="/account"
-              className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${
-                isPro
-                  ? "bg-tp-accent/15 text-tp-accent-dark"
-                  : "bg-gray-100 text-gray-500"
-              }`}
-            >
-              {isPro ? "Pro" : "Free"}
-            </Link>
-          </div>
-          <h1 className="font-serif text-2xl font-bold text-tp-primary">My Pools</h1>
-        </div>
+      <TopNav active="pools" />
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="font-serif text-2xl font-bold text-tp-primary">Pools</h1>
+        <Link
+          href="/account"
+          className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${
+            isPro
+              ? "bg-tp-accent/15 text-tp-accent-dark"
+              : "bg-gray-100 text-gray-500"
+          }`}
+        >
+          {isPro ? "Pro" : "Free"}
+        </Link>
       </div>
 
       {/* Upgrade success */}

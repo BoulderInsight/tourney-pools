@@ -129,7 +129,8 @@ export default function PlayersTabPage() {
       {openPlayer && (
         <CollectDialog
           slug={slugStr}
-          player={openPlayer}
+          person={openPlayer.person}
+          displayName={openPlayer.name}
           onClose={() => setOpenPersonId(null)}
           onSaved={async () => { await load(); setOpenPersonId(null); }}
         />
