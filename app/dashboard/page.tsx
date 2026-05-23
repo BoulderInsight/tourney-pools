@@ -6,6 +6,7 @@ import Link from "next/link";
 import ConfirmModal from "@/app/components/confirm-modal";
 import { BoulderInsightAd, CustomAd } from "@/app/components/sponsor-banner";
 import TopNav from "@/app/components/top-nav";
+import { isProEffective, isPromoActive, formatPromoExpiry } from "@/lib/tier";
 
 interface Pool {
   id: string;
@@ -33,6 +34,7 @@ function DashboardContent() {
   const [newName, setNewName] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
   const [tier, setTier] = useState("free");
+  const [proUntil, setProUntil] = useState<string | null>(null);
   const [customAdImage, setCustomAdImage] = useState<string | null>(null);
   const [customAdUrl, setCustomAdUrl] = useState<string | null>(null);
   const [customAdHeadline, setCustomAdHeadline] = useState<string | null>(null);
@@ -48,7 +50,12 @@ function DashboardContent() {
   const [placeholder, setPlaceholder] = useState("Pool name (e.g. My Golf Pool)");
   const [search, setSearch] = useState("");
 
-  const isPro = tier === "pro" || tier === "paid"; // "paid" for backward compat
+  // isProEffective covers permanent Pro AND the temporary promo window
+  // (pro_until > now). Free behavior (1-pool cap, sponsor banner, 8-player
+  // cap) auto-resumes once the promo expires.
+  const isPro = isProEffective(tier, proUntil);
+  const promoExpiryLabel = formatPromoExpiry(proUntil);
+  const onPromo = isPromoActive(tier, proUntil);
   const canCreatePool = isPro || pools.length < 1;
 
   const fetchPools = useCallback(async () => {
@@ -62,6 +69,7 @@ function DashboardContent() {
     if (meRes.ok) {
       const me = await meRes.json();
       if (me?.tier) setTier(me.tier);
+      setProUntil(me?.proUntil ?? null);
     }
     if (acctRes.ok) {
       const acct = await acctRes.json();
@@ -224,8 +232,9 @@ function DashboardContent() {
               ? "bg-tp-accent/15 text-tp-accent-dark"
               : "bg-gray-100 text-gray-500"
           }`}
+          title={onPromo && promoExpiryLabel ? `Pro promo through ${promoExpiryLabel}` : undefined}
         >
-          {isPro ? "Pro" : "Free"}
+          {isPro ? (onPromo && promoExpiryLabel ? `Pro · until ${promoExpiryLabel}` : "Pro") : "Free"}
         </Link>
       </div>
 

@@ -25,7 +25,7 @@ export async function GET() {
 
   const sql = getDb();
   const rows = await sql`
-    SELECT tier, custom_ad_image, custom_ad_url, custom_ad_headline, custom_ad_description, ad_removed,
+    SELECT tier, pro_until, custom_ad_image, custom_ad_url, custom_ad_headline, custom_ad_description, ad_removed,
            venmo_handle, cashapp_handle, paypal_handle, preferred_method
     FROM chairmen WHERE id = ${session.chairmanId}
   `;

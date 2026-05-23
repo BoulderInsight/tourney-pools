@@ -4,12 +4,14 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { PaymentMethod } from "@/lib/types";
 import TopNav from "@/app/components/top-nav";
+import { isProEffective, isPromoActive, formatPromoExpiry } from "@/lib/tier";
 
 export default function AccountPage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [tier, setTier] = useState("free");
+  const [proUntil, setProUntil] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Password change
@@ -28,7 +30,9 @@ export default function AccountPage() {
   const [paySuccess, setPaySuccess] = useState(false);
   const [payError, setPayError] = useState("");
 
-  const isPro = tier === "pro" || tier === "paid";
+  const isPro = isProEffective(tier, proUntil);
+  const onPromo = isPromoActive(tier, proUntil);
+  const promoExpiryLabel = formatPromoExpiry(proUntil);
 
   const fetchAccount = useCallback(async () => {
     const [meRes, acctRes] = await Promise.all([
@@ -49,6 +53,7 @@ export default function AccountPage() {
     setTier(me.tier || "free");
     if (acctRes.ok) {
       const acct = await acctRes.json();
+      setProUntil(acct.pro_until ?? null);
       setVenmoHandle(acct.venmo_handle || "");
       setCashappHandle(acct.cashapp_handle || "");
       setPaypalHandle(acct.paypal_handle || "");
@@ -185,14 +190,24 @@ export default function AccountPage() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <span className="text-sm font-semibold text-gray-800">TourneyPools Pro</span>
-              <span className="text-[10px] bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-semibold">Active</span>
+              {onPromo ? (
+                <span className="text-[10px] bg-tp-accent/15 text-tp-accent-dark px-2 py-0.5 rounded-full font-semibold">
+                  Promo · until {promoExpiryLabel}
+                </span>
+              ) : (
+                <span className="text-[10px] bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-semibold">Active</span>
+              )}
             </div>
-            <p className="text-xs text-gray-400 mb-4">Unlimited pools, unlimited players, no ads, custom branding.</p>
+            <p className="text-xs text-gray-400 mb-4">
+              {onPromo
+                ? "All Pro features are unlocked until your promo ends. Upgrade to keep them after that."
+                : "Unlimited pools, unlimited players, no ads, custom branding."}
+            </p>
             <button
               onClick={handleManageSubscription}
               className="btn-outline w-full text-xs"
             >
-              Manage Subscription
+              {onPromo ? "Upgrade to Pro" : "Manage Subscription"}
             </button>
           </div>
         ) : (

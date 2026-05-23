@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { sendEarlyChairmanThankYou } from "@/lib/email";
+import { formatPromoExpiry } from "@/lib/tier";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +25,7 @@ export async function GET() {
 
   const chairmen = await sql`
     SELECT
-      c.id, c.email, c.name, c.email_verified, c.is_super_admin, c.tier, c.created_at,
+      c.id, c.email, c.name, c.email_verified, c.is_super_admin, c.tier, c.pro_until, c.created_at,
       (SELECT COUNT(*) FROM pools WHERE chairman_id = c.id) as pool_count
     FROM chairmen c
     ORDER BY c.created_at DESC
@@ -87,6 +89,37 @@ export async function PATCH(req: NextRequest) {
     await sql`UPDATE chairmen SET email_verified = ${value} WHERE id = ${id}`;
   } else if (action === "set_tier") {
     await sql`UPDATE chairmen SET tier = ${value} WHERE id = ${id}`;
+  } else if (action === "grant_promo") {
+    // Two-week Pro window + thank-you email in one click. Used for early
+    // chairmen who set up exactly one pool. We compute the timestamp here
+    // (rather than in SQL) so the same value goes into both the UPDATE and
+    // the email body.
+    const rows = await sql`SELECT email, name, pro_until FROM chairmen WHERE id = ${id}`;
+    if (rows.length === 0) {
+      return NextResponse.json({ error: "Chairman not found" }, { status: 404 });
+    }
+    const chairman = rows[0];
+    const expires = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+
+    // The DB write happens before the email send. If the email send fails
+    // we'd rather have the promo recorded than silently lose it; the admin
+    // can re-trigger the email on its own if needed.
+    await sql`UPDATE chairmen SET pro_until = ${expires.toISOString()} WHERE id = ${id}`;
+
+    try {
+      await sendEarlyChairmanThankYou(
+        chairman.email as string,
+        (chairman.name as string) || "",
+        formatPromoExpiry(expires),
+      );
+    } catch (err) {
+      console.error("[admin/grant_promo] email send failed:", err);
+      return NextResponse.json(
+        { ok: true, emailSent: false, error: "Promo applied but email send failed. Check SMTP." },
+        { status: 200 },
+      );
+    }
+    return NextResponse.json({ ok: true, emailSent: true, expiresAt: expires.toISOString() });
   } else {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   }

@@ -4,6 +4,7 @@ import { PoolConfig, CommissionerSettings, PaymentMethod } from "@/lib/types";
 import { DEFAULT_SETTINGS } from "@/lib/pool";
 import { fetchLeaderboard, extractRoundScores } from "@/lib/golf-api";
 import { pickHandleForPerson } from "@/lib/payment-links";
+import { isProEffective } from "@/lib/tier";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ export async function GET(
 
   const poolRows = await sql`
     SELECT p.id, p.slug, p.pool_name, p.buy_in, p.settings, p.setup_complete, p.draft_complete, p.awaiting_field, p.chairman_id, p.last_sync_at, p.tournament_id,
-           c.name as chairman_name, c.tier, c.custom_ad_image, c.custom_ad_url, c.custom_ad_headline, c.custom_ad_description, c.ad_removed,
+           c.name as chairman_name, c.tier, c.pro_until, c.custom_ad_image, c.custom_ad_url, c.custom_ad_headline, c.custom_ad_description, c.ad_removed,
            c.venmo_handle as chairman_venmo_handle, c.cashapp_handle as chairman_cashapp_handle,
            c.paypal_handle as chairman_paypal_handle, c.preferred_method as chairman_preferred_method,
            t.name as tournament_name, t.status as tournament_status,
@@ -170,7 +171,10 @@ export async function GET(
     ...config,
     chairmanId: pool.chairman_id,
     chairmanName: pool.chairman_name,
-    chairmanTier: pool.tier || "free",
+    // Compute effective tier server-side so the leaderboard sees the chairman
+    // as Pro during an active promo window without every client needing to
+    // know about pro_until.
+    chairmanTier: isProEffective(pool.tier, pool.pro_until) ? "pro" : (pool.tier || "free"),
     chairmanPaymentInfo,
     customAdImage: pool.custom_ad_image,
     customAdUrl: pool.custom_ad_url,
