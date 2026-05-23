@@ -49,7 +49,8 @@ async function loadContext(
 
 function cleanHandle(value: unknown): string | null {
   if (typeof value !== "string") return null;
-  const trimmed = value.trim().replace(/^@+/, "");
+  // Match the chairman-side normalization: strip leading @ or $ so storage stays bare.
+  const trimmed = value.trim().replace(/^[@$]+/, "");
   return trimmed.length === 0 ? null : trimmed;
 }
 

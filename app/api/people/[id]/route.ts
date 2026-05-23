@@ -6,7 +6,10 @@ import type { PaymentMethod } from "@/lib/types";
 
 function cleanHandle(value: unknown): string | null {
   if (typeof value !== "string") return null;
-  const trimmed = value.trim().replace(/^@+/, ""); // strip a leading @ if user typed one
+  // Tolerate both Twitter-style (@) and Cash App-style ($) sigils on input. Storage
+  // stays bare so display sites can prepend the sigil consistently and the payment
+  // URL builders don't double-encode it.
+  const trimmed = value.trim().replace(/^[@$]+/, "");
   return trimmed.length === 0 ? null : trimmed;
 }
 
