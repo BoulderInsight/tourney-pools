@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import type { PaymentMethod } from "@/lib/types";
+import TopNav from "@/app/components/top-nav";
 
 export default function AccountPage() {
   const router = useRouter();
@@ -153,17 +153,8 @@ export default function AccountPage() {
 
   return (
     <main className="px-4 pt-4 pb-safe max-w-lg mx-auto">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-6">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.png" alt="TourneyPools" className="h-12" />
-        <div className="flex flex-col items-end gap-1">
-          <Link href="/dashboard" className="text-xs text-tp-primary font-semibold">
-            My Pools
-          </Link>
-          <h1 className="font-serif text-2xl font-bold text-tp-primary">Account</h1>
-        </div>
-      </div>
+      <TopNav active="account" />
+      <h1 className="font-serif text-2xl font-bold text-tp-primary mb-4">Account</h1>
 
       {/* Profile info */}
       <div className="card p-5 mb-4">

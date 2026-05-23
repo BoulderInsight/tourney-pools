@@ -12,6 +12,7 @@ export interface PoolContext {
 export type TopNavActive =
   | "pools"
   | "groups"
+  | "account"
   | "admin"
   | "pool-scores"
   | "pool-players";
@@ -83,6 +84,9 @@ export default function TopNav({ active, pool }: TopNavProps) {
               Players
             </Link>
           </>
+        )}
+        {isLoggedIn && (
+          <Link href="/account" className={linkClass("account")}>Account</Link>
         )}
         {isLoggedIn && (
           <button
