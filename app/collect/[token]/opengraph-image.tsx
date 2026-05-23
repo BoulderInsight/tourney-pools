@@ -1,10 +1,9 @@
 import { ImageResponse } from "next/og";
-import { getDb } from "@/lib/db";
 import { readFile } from "fs/promises";
 import { join } from "path";
 
 export const runtime = "nodejs";
-export const alt = "Enter your payment info on TourneyPools";
+export const alt = "Drop your Venmo, for when, not if. (TourneyPools)";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -19,94 +18,84 @@ async function getImageDataUri(filename: string): Promise<string | null> {
   }
 }
 
-export default async function OGImage({ params }: { params: { token: string } }) {
-  const sql = getDb();
-  // LEFT JOIN pools/chairmen/tournaments so a null pool_id (group-context links)
-  // still resolves the commissioner via people.chairman_id.
-  const rows = await sql`
-    SELECT COALESCE(c_pool.name, c_person.name) AS commissioner_name,
-           p.pool_name,
-           t.name AS tournament_name
-    FROM collection_requests cr
-    JOIN people pe ON pe.id = cr.person_id
-    JOIN chairmen c_person ON c_person.id = pe.chairman_id
-    LEFT JOIN pools p ON p.id = cr.pool_id
-    LEFT JOIN chairmen c_pool ON c_pool.id = p.chairman_id
-    LEFT JOIN tournaments t ON t.id = p.tournament_id
-    WHERE cr.token = ${params.token}
-  `;
-
-  const logoSrc = await getImageDataUri("logo.png");
-
-  if (rows.length === 0) {
-    return new ImageResponse(
-      (
-        <div style={{ display: "flex", width: "100%", height: "100%", background: "#f7f5f2", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ display: "flex", fontSize: 64, fontWeight: 700, color: "#1a365d", fontFamily: "serif" }}>
-            TourneyPools
-          </div>
-        </div>
-      ),
-      { ...size }
-    );
-  }
-
-  const r = rows[0];
-  const commissionerName = r.commissioner_name as string;
-  const poolName = (r.pool_name as string | null) ?? null;
-  const tournamentName = (r.tournament_name as string | null) ?? null;
+/**
+ * Branded share card for the tokenized self-serve collect link. Matches the photo-
+ * backgrounded look of the pool OG image, with a witty pitch instead of pool stats:
+ * "Drop your Venmo, / for when, not if."
+ *
+ * Doesn't need to read the token: the image is the same for every collect link, which
+ * also avoids leaking who the link is for in a publicly cached preview thumbnail.
+ */
+export default async function OGImage() {
+  const bgSrc = await getImageDataUri("OGImage.jpeg");
 
   return new ImageResponse(
     (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          width: "100%",
-          height: "100%",
-          background: "#f7f5f2",
-          padding: "72px 86px",
-          boxSizing: "border-box",
-        }}
-      >
-        {/* Logo */}
-        {logoSrc ? (
-          <img src={logoSrc} alt="" style={{ height: 78, width: "auto" }} />
-        ) : (
-          <div style={{ display: "flex", fontSize: 36, fontWeight: 700, color: "#1a365d", fontFamily: "serif" }}>
-            TourneyPools
-          </div>
+      <div style={{ display: "flex", width: "100%", height: "100%", position: "relative" }}>
+        {/* Background image */}
+        {bgSrc && (
+          <img
+            src={bgSrc}
+            alt=""
+            style={{ position: "absolute", width: "100%", height: "100%", objectFit: "cover" }}
+          />
         )}
 
-        {/* Headline + meta */}
-        <div style={{ display: "flex", flexDirection: "column" }}>
+        {/* Dark gradient overlay: heavier on the right where text goes */}
+        <div
+          style={{
+            display: "flex",
+            position: "absolute",
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: "linear-gradient(to right, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 35%, rgba(0,0,0,0.78) 100%)",
+          }}
+        />
+
+        {/* Text content: right-aligned, matching the pool OG rhythm */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "flex-end",
+            textAlign: "right",
+            width: "100%",
+            height: "100%",
+            padding: "60px 72px",
+            position: "relative",
+          }}
+        >
+          {/* Headline: white serif */}
           <div
             style={{
               display: "flex",
-              fontSize: 96,
+              fontSize: 92,
               fontWeight: 800,
-              color: "#1a365d",
+              color: "white",
               lineHeight: 1.0,
-              fontFamily: "serif",
-              maxWidth: "100%",
+              letterSpacing: "-2px",
+              textShadow: "0 4px 20px rgba(0,0,0,0.5)",
+              maxWidth: "850px",
+              textAlign: "right",
+              justifyContent: "flex-end",
             }}
           >
-            Enter Payment Info
+            Drop your Venmo,
           </div>
-          <div style={{ display: "flex", width: 96, height: 6, background: "#d4a843", marginTop: 28, marginBottom: 22 }} />
-          <div style={{ display: "flex", fontSize: 32, color: "#5a5a5a" }}>for {commissionerName}</div>
-          {poolName && (
-            <div style={{ display: "flex", fontSize: 32, color: "#5a5a5a", marginTop: 4 }}>{poolName}</div>
-          )}
-          {tournamentName && (
-            <div style={{ display: "flex", fontSize: 32, color: "#5a5a5a", marginTop: 4 }}>{tournamentName}</div>
-          )}
-        </div>
 
-        {/* Domain */}
-        <div style={{ display: "flex", fontSize: 22, color: "#a8a8a8", letterSpacing: "0.06em" }}>
-          tourneypools.com
+          {/* Punchline: gold */}
+          <div
+            style={{
+              display: "flex",
+              fontSize: 60,
+              fontWeight: 700,
+              color: "#d4a843",
+              marginTop: "18px",
+              textShadow: "0 3px 16px rgba(0,0,0,0.6)",
+            }}
+          >
+            for when, not if.
+          </div>
         </div>
       </div>
     ),
