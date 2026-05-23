@@ -36,9 +36,8 @@ export function TipTheCommish({
       className="block rounded-xl overflow-hidden my-4 active:opacity-95 transition-opacity"
     >
       <div className="bg-gray-900 px-4 py-5 text-center">
-        <div className="inline-flex items-center gap-2.5 bg-tp-accent text-tp-primary font-bold px-5 py-2.5 rounded-full">
-          <span className="text-2xl leading-none" aria-hidden="true">🪙</span>
-          <span className="text-base">Tip the Commish</span>
+        <div className="inline-block bg-tp-accent text-tp-primary text-base font-bold px-5 py-2.5 rounded-full">
+          Tip the Commish
         </div>
         <p className="text-white/80 text-xs italic mt-3">
           ...you know, for the effort
