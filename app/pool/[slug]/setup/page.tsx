@@ -4,6 +4,7 @@ import { useState, useId, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { CommissionerSettings, PoolPlayer, DraftType, MissedCutRule, PurseType, PayoutMethod } from "@/lib/types";
 import { DEFAULT_SETTINGS, DEFAULT_FIELD, draftGolfers } from "@/lib/pool";
+import { formatUsPhoneDisplay } from "@/lib/phone";
 
 interface Tournament {
   id: string;
@@ -226,9 +227,12 @@ export default function PoolSetupPage() {
           const peopleRes = await fetch(`/api/pool/${slug}/people`);
           if (peopleRes.ok) {
             const { players: peopleRows } = await peopleRes.json();
+            // Store the pretty US format (e.g. "(919) 555-1234"), not the raw E.164,
+            // so the chairman sees something readable in the input. Server normalizes
+            // back to E.164 on save.
             const phoneByName = new Map<string, string>();
             for (const row of peopleRows as Array<{ name: string; person: { phone: string | null } }>) {
-              if (row.person?.phone) phoneByName.set(row.name, row.person.phone);
+              if (row.person?.phone) phoneByName.set(row.name, formatUsPhoneDisplay(row.person.phone));
             }
             setPlayers((prev) => prev.map((pl) => ({
               ...pl,
@@ -338,7 +342,7 @@ export default function PoolSetupPage() {
       (m: { name: string; phone?: string | null }, i: number) => ({
         id: `g-${groupId}-${i}`,
         name: m.name,
-        phone: m.phone ?? "",
+        phone: formatUsPhoneDisplay(m.phone),
       }),
     );
     setPlayers(members.length > 0 ? members : [{ id: `g-${groupId}-0`, name: "", phone: "" }]);
@@ -613,7 +617,7 @@ export default function PoolSetupPage() {
                   </p>
                 </div>
               )}
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {players.map((p) => (
                   <div key={p.id} className="flex items-start gap-2">
                     <div className="flex-1 space-y-1.5">
@@ -623,16 +627,27 @@ export default function PoolSetupPage() {
                         placeholder="Player name"
                         className="input-field w-full"
                       />
-                      <input
-                        type="tel"
-                        value={p.phone ?? ""}
-                        onChange={(e) => updatePlayerPhone(p.id, e.target.value)}
-                        placeholder="Phone (optional, US)"
-                        className="input-field w-full text-sm"
-                        autoComplete="tel-national"
-                        inputMode="tel"
-                        aria-label={`${p.name || "Player"} phone`}
-                      />
+                      {/* Phone nests under the name with a small left indent and a
+                          📱 icon inside the input so it visually subordinates to
+                          its player and signals "this is the phone, not another name". */}
+                      <div className="relative ml-6">
+                        <span
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none opacity-60"
+                          aria-hidden="true"
+                        >
+                          📱
+                        </span>
+                        <input
+                          type="tel"
+                          value={p.phone ?? ""}
+                          onChange={(e) => updatePlayerPhone(p.id, e.target.value)}
+                          placeholder="Phone (optional)"
+                          className="input-field w-full text-sm pl-10"
+                          autoComplete="tel-national"
+                          inputMode="tel"
+                          aria-label={`${p.name || "Player"} phone`}
+                        />
+                      </div>
                     </div>
                     {players.length > 1 && (
                       <button
