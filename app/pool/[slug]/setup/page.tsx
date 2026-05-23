@@ -311,7 +311,9 @@ export default function PoolSetupPage() {
     const members: { id: string; name: string }[] = (data.group?.members ?? []).map(
       (m: { name: string }, i: number) => ({ id: `g-${groupId}-${i}`, name: m.name }),
     );
-    if (members.length > 0) setPlayers(members);
+    // Replace the player list with the group's members. Empty groups reset to one blank
+    // row so the chairman doesn't see stale names from a previously selected group.
+    setPlayers(members.length > 0 ? members : [{ id: `g-${groupId}-0`, name: "" }]);
   }
 
   function parseFieldEntries() {
