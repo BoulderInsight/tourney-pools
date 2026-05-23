@@ -41,7 +41,7 @@ async function loadContext(token: string): Promise<Context | null> {
 export async function generateMetadata({ params }: { params: { token: string } }): Promise<Metadata> {
   const ctx = await loadContext(params.token);
   if (!ctx) return { title: "TourneyPools" };
-  const title = `${ctx.commissionerName} needs your payment info | TourneyPools`;
+  const title = `Enter payment info for ${ctx.commissionerName} | TourneyPools`;
   const description = `${ctx.poolName}${ctx.tournamentName ? ` for ${ctx.tournamentName}` : ""}`;
   return {
     title,
