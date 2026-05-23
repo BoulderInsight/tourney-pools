@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { PoolConfig, CommissionerSettings } from "@/lib/types";
+import { PoolConfig, CommissionerSettings, PaymentMethod } from "@/lib/types";
 import { DEFAULT_SETTINGS } from "@/lib/pool";
 import { fetchLeaderboard, extractRoundScores } from "@/lib/golf-api";
+import { pickHandleForPerson } from "@/lib/payment-links";
 
 export const dynamic = "force-dynamic";
 
@@ -79,8 +80,18 @@ export async function GET(
     }
   }
 
+  // The LEFT JOIN tolerates players with no linked Person (they get paymentInfo: null
+  // and no one-tap pay button, which is the right outcome). Population is handled by
+  // Phase 1's setup-time findOrCreatePerson, the commissioner-only /people backfill,
+  // and the /players page. Running backfill here too would add a DB round trip per
+  // poll on every viewer of every active leaderboard, which is the most-hit endpoint.
   const players = await sql`
-    SELECT id, name FROM players WHERE pool_id = ${pool.id} ORDER BY pick_order
+    SELECT pl.id, pl.name,
+           pe.venmo_handle, pe.cashapp_handle, pe.paypal_handle, pe.preferred_method
+    FROM players pl
+    LEFT JOIN people pe ON pe.id = pl.person_id
+    WHERE pl.pool_id = ${pool.id}
+    ORDER BY pl.pick_order
   `;
 
   const golfers = await sql`
@@ -106,7 +117,16 @@ export async function GET(
 
   const config: PoolConfig = {
     poolName: pool.pool_name,
-    players: players.map((p) => ({ id: p.id, name: p.name })),
+    players: players.map((p) => ({
+      id: p.id,
+      name: p.name,
+      paymentInfo: pickHandleForPerson({
+        venmoHandle: (p.venmo_handle as string | null) ?? null,
+        cashappHandle: (p.cashapp_handle as string | null) ?? null,
+        paypalHandle: (p.paypal_handle as string | null) ?? null,
+        preferredMethod: (p.preferred_method as PaymentMethod | null) ?? null,
+      }),
+    })),
     golfers: golfers.map((g) => ({
       id: g.id,
       name: g.name,
