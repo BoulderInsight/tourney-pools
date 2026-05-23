@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { PoolConfig, PlayerStanding } from "@/lib/types";
 import { computeLeaderboard, formatScore, scoreColorClass } from "@/lib/pool";
+import { buildPaymentLink, paymentMethodLabel } from "@/lib/payment-links";
 import Link from "next/link";
 import { SponsorBanner } from "@/app/components/sponsor-banner";
 
@@ -99,12 +100,13 @@ function GolferDetail({ golfer, counted, totalScore, penaltyScore }: {
   );
 }
 
-function PayoutInfo({ standing, buyIn, allStandings, payoutMethod, chairmanName }: {
+function PayoutInfo({ standing, buyIn, allStandings, payoutMethod, chairmanName, poolName }: {
   standing: PlayerStanding;
   buyIn: number;
   allStandings: PlayerStanding[];
   payoutMethod: string;
   chairmanName: string;
+  poolName: string;
 }) {
   const winners = allStandings.filter(s => s.prize > 0);
   const isWinner = standing.prize > 0;
@@ -136,21 +138,54 @@ function PayoutInfo({ standing, buyIn, allStandings, payoutMethod, chairmanName 
       );
     }
 
-    // Honor system: show individual payments to each winner
+    // Honor system: show individual payments to each winner, with one-tap pay buttons
+    // when the recipient has a handle on file.
     const totalPrize = winners.reduce((s, w) => s + w.prize, 0);
+    const note = `${poolName} payout`;
     const payments = winners.map(w => ({
       name: w.player.name,
       amount: Math.round((w.prize / totalPrize) * buyIn * 100) / 100,
+      paymentInfo: w.player.paymentInfo ?? null,
     }));
 
     return (
       <div className="mt-3 bg-red-50 rounded-xl p-3">
         <p className="text-[10px] text-red-400 uppercase tracking-wider font-semibold mb-1.5">Owes</p>
-        {payments.map(p => (
-          <p key={p.name} className="text-xs font-medium text-red-700">
-            Pay {p.name} <strong>${p.amount.toFixed(2)}</strong>
-          </p>
-        ))}
+        <div className="space-y-2">
+          {payments.map(p => {
+            if (!p.paymentInfo) {
+              return (
+                <div key={p.name} className="text-xs font-medium text-red-700">
+                  Pay {p.name} <strong>${p.amount.toFixed(2)}</strong>
+                  <span className="block text-[10px] text-red-400 mt-0.5">
+                    No handle on file. Ask {p.name} for theirs.
+                  </span>
+                </div>
+              );
+            }
+            const url = buildPaymentLink(p.paymentInfo.method, p.paymentInfo.handle, {
+              amount: p.amount,
+              note,
+            });
+            return (
+              <a
+                key={p.name}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Pay ${p.name} $${p.amount.toFixed(2)} via ${paymentMethodLabel(p.paymentInfo.method)}`}
+                className="flex items-center justify-between bg-tp-accent text-tp-primary rounded-lg px-3 py-3 active:opacity-90 transition-opacity"
+              >
+                <span className="text-sm font-semibold">
+                  Pay {p.name} ${p.amount.toFixed(2)}
+                </span>
+                <span className="text-[10px] uppercase tracking-wider font-bold opacity-80" aria-hidden="true">
+                  via {paymentMethodLabel(p.paymentInfo.method)} &rarr;
+                </span>
+              </a>
+            );
+          })}
+        </div>
       </div>
     );
   }
@@ -158,7 +193,7 @@ function PayoutInfo({ standing, buyIn, allStandings, payoutMethod, chairmanName 
   return null;
 }
 
-function StandingCard({ standing, expanded, onToggle, index, buyIn, allStandings, tournamentOver, payoutMethod, chairmanNameForPayout }: {
+function StandingCard({ standing, expanded, onToggle, index, buyIn, allStandings, tournamentOver, payoutMethod, chairmanNameForPayout, poolName }: {
   standing: PlayerStanding;
   expanded: boolean;
   onToggle: () => void;
@@ -168,6 +203,7 @@ function StandingCard({ standing, expanded, onToggle, index, buyIn, allStandings
   tournamentOver: boolean;
   payoutMethod: string;
   chairmanNameForPayout: string;
+  poolName: string;
 }) {
   const isLeader = standing.rank === 1 && standing.totalScore !== null;
   const hasRank = standing.rank > 0;
@@ -258,7 +294,7 @@ function StandingCard({ standing, expanded, onToggle, index, buyIn, allStandings
           </div>
 
           {/* Payout info when tournament is over */}
-          {tournamentOver && <PayoutInfo standing={standing} buyIn={buyIn} allStandings={allStandings} payoutMethod={payoutMethod} chairmanName={chairmanNameForPayout} />}
+          {tournamentOver && <PayoutInfo standing={standing} buyIn={buyIn} allStandings={allStandings} payoutMethod={payoutMethod} chairmanName={chairmanNameForPayout} poolName={poolName} />}
         </div>
       )}
     </div>
@@ -860,6 +896,7 @@ export default function PoolLeaderboardPage() {
                 tournamentOver={currentRound >= 4}
                 payoutMethod={config.settings.payoutMethod || "honor-system"}
                 chairmanNameForPayout={chairmanName}
+                poolName={config.poolName || "Golf Pool"}
               />
             ))}
           </div>

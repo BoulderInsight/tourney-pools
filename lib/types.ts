@@ -18,6 +18,14 @@ export interface CommissionerSettings {
 export interface PoolPlayer {
   id: string;
   name: string;
+  /**
+   * Server-attached payment info, used by the leaderboard's one-tap pay buttons.
+   * Resolved from the player's linked Person (handles + preferred method) at fetch time.
+   * `null` means the player has no handle on file yet. `undefined` means the server
+   * didn't attach it (e.g. an endpoint that doesn't resolve payment info, or a pool
+   * with no linked Persons).
+   */
+  paymentInfo?: PaymentHandle | null;
 }
 
 export interface Golfer {
@@ -65,6 +73,16 @@ export interface PlayerStanding {
 }
 
 export type PaymentMethod = "venmo" | "cashapp" | "paypal";
+
+/**
+ * The picked payment-app handle for a Person: which app to send via, and the bare
+ * handle (no leading sigil). Used by the public leaderboard's one-tap pay buttons
+ * and by any caller of `pickHandleForPerson`.
+ */
+export interface PaymentHandle {
+  method: PaymentMethod;
+  handle: string;
+}
 
 export interface Person {
   id: string;
