@@ -145,6 +145,23 @@ CREATE INDEX idx_collection_requests_person ON collection_requests(person_id);
 CREATE INDEX idx_collection_requests_pool ON collection_requests(pool_id);
 CREATE INDEX idx_players_person ON players(person_id);
 
+CREATE TABLE groups (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  chairman_id UUID NOT NULL REFERENCES chairmen(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE group_members (
+  group_id UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  person_id UUID NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+  added_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (group_id, person_id)
+);
+
+CREATE INDEX idx_groups_chairman ON groups(chairman_id);
+CREATE INDEX idx_group_members_person ON group_members(person_id);
+
 -- Seed 2026 major tournaments
 INSERT INTO tournaments (name, slug, course_name, location, start_date, end_date, year, status, logo_url) VALUES
   ('The Masters', 'masters-2026', 'Augusta National Golf Club', 'Augusta, GA', '2026-04-09', '2026-04-12', 2026, 'scheduled', '/tournaments/masters.png'),
