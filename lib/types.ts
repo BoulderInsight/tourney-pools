@@ -84,6 +84,18 @@ export interface PaymentHandle {
   handle: string;
 }
 
+/**
+ * One leg of an honor-system payout: a losing player owes `amount` to the winner
+ * identified by `toPlayerId`. Produced by `computePaymentPlan` so the UI can render
+ * a self-contained pay button per transfer without a second lookup.
+ */
+export interface PayoutTransfer {
+  toPlayerId: string;
+  toPlayerName: string;
+  toPaymentInfo: PaymentHandle | null;
+  amount: number;
+}
+
 export interface Person {
   id: string;
   chairmanId: string;

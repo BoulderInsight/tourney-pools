@@ -4,6 +4,7 @@ import {
   DraftType,
   Golfer,
   GolferStanding,
+  PayoutTransfer,
   PlayerStanding,
   PoolConfig,
   PoolPlayer,
@@ -319,6 +320,74 @@ export function computeLeaderboard(config: PoolConfig): PlayerStanding[] {
   }
 
   return standings;
+}
+
+/**
+ * Greedy minimum-transactions netting for honor-system payouts.
+ *
+ * Each losing player's full buy-in flows into a single bucket of receivables sorted
+ * by winner rank. The best-finishing loser pays first, draining the top winner's
+ * receivable before spilling to the next winner. The worst-finishing loser is the
+ * only player who might split one buy-in across two winners; every other loser
+ * pays exactly one winner.
+ *
+ * Returns a Map keyed by player id. Winners and unranked players get no entry.
+ */
+export function computePaymentPlan(
+  standings: PlayerStanding[],
+  buyIn: number,
+): Map<string, PayoutTransfer[]> {
+  const plan = new Map<string, PayoutTransfer[]>();
+  if (buyIn <= 0) return plan;
+
+  // Money math runs in integer cents to avoid floating-point drift.
+  const buyInCents = Math.round(buyIn * 100);
+  const winners = standings.filter((s) => s.prize > 0);
+  const losers = [...standings.filter((s) => s.prize === 0)].sort((a, b) => {
+    // Rank ascending; rank 0 (no score / DNF) sorts last so it pays last.
+    const ra = a.rank > 0 ? a.rank : Number.MAX_SAFE_INTEGER;
+    const rb = b.rank > 0 ? b.rank : Number.MAX_SAFE_INTEGER;
+    return ra - rb;
+  });
+  if (winners.length === 0 || losers.length === 0) return plan;
+
+  // Each winner is owed (their prize) minus (their own buy-in). They "pay themselves"
+  // by keeping their stake, so only the excess comes from losers. Summed across all
+  // winners this equals losers.length * buyIn, matching losers' total payable.
+  const receivable = winners.map((w) => ({
+    playerId: w.player.id,
+    playerName: w.player.name,
+    paymentInfo: w.player.paymentInfo ?? null,
+    remainingCents: Math.round(w.prize * 100) - buyInCents,
+  }));
+
+  let winnerIdx = 0;
+  for (const loser of losers) {
+    let remainingCents = buyInCents;
+    const transfers: PayoutTransfer[] = [];
+
+    while (remainingCents > 0 && winnerIdx < receivable.length) {
+      const w = receivable[winnerIdx];
+      if (w.remainingCents <= 0) {
+        winnerIdx += 1;
+        continue;
+      }
+      const payCents = Math.min(remainingCents, w.remainingCents);
+      transfers.push({
+        toPlayerId: w.playerId,
+        toPlayerName: w.playerName,
+        toPaymentInfo: w.paymentInfo,
+        amount: payCents / 100,
+      });
+      remainingCents -= payCents;
+      w.remainingCents -= payCents;
+      if (w.remainingCents <= 0) winnerIdx += 1;
+    }
+
+    plan.set(loser.player.id, transfers);
+  }
+
+  return plan;
 }
 
 export function draftGolfers(
