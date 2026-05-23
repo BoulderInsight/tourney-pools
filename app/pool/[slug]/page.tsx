@@ -720,6 +720,15 @@ export default function PoolLeaderboardPage() {
     return () => clearInterval(interval);
   }, [fetchPool]);
 
+  // Honor-system payout plan: must live above the early returns so the hook order
+  // stays stable across renders. `computePaymentPlan` returns an empty map for the
+  // pre-data case (no standings yet or buyIn = 0), so the conditional is safe.
+  const buyInForPlan = config?.buyIn ?? 0;
+  const paymentPlan = useMemo(
+    () => computePaymentPlan(standings, buyInForPlan),
+    [standings, buyInForPlan],
+  );
+
   if (loading) return <LoadingState />;
 
   if (!config) {
@@ -769,15 +778,6 @@ export default function PoolLeaderboardPage() {
     config.golfers.some(g => g[`r${r}` as keyof typeof g] !== null)
   );
   const currentRound = roundsWithData.length > 0 ? Math.max(...roundsWithData) : 0;
-
-  // Honor-system payout plan: a single netted map shared across every PayoutInfo
-  // so the worst-finishing loser carries any split (instead of each loser splitting
-  // independently). Memoized because the leaderboard polls every 30s and we don't
-  // want to re-walk standings on every refresh that doesn't change them.
-  const paymentPlan = useMemo(
-    () => computePaymentPlan(standings, config.buyIn),
-    [standings, config.buyIn],
-  );
 
   return (
     <div>
