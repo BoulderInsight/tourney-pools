@@ -32,13 +32,12 @@ function HandleRow({
     <div className="flex items-center gap-2">
       <div className="relative flex-1">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400 w-16">{label}</span>
-        <span className="absolute left-[5.5rem] top-1/2 -translate-y-1/2 text-gray-300">@</span>
         <input
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="handle"
-          className="input-field pl-[6.25rem]"
+          placeholder="handle (no @ needed)"
+          className="input-field pl-[5.25rem]"
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}
