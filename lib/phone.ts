@@ -35,14 +35,21 @@ export function formatUsPhoneDisplay(e164: string | null | undefined): string {
  * pre-addressed. Returns null when no E.164 recipients were supplied so the caller
  * can hide the button rather than render a no-op link.
  *
- * Comma-separated recipient lists are supported by iOS Messages and the native
- * SMS apps on Android. We do not include a body; group SMS composition is the
- * chairman's job once the app opens.
+ * Format choice: for a single recipient we use the RFC 5724 form `sms:+1...`. For
+ * multiple, we use the iOS-friendly `sms:/open?addresses=...` variant, which is the
+ * one form that reliably opens a fresh group MMS composition on iOS instead of
+ * joining an existing thread with whichever number it parses first. Android's
+ * native SMS apps treat the path as opaque and tend to honor the comma list too.
+ *
+ * The leading `+` of each E.164 number is URL-encoded as `%2B` so the query parser
+ * doesn't turn it into a space.
  */
 export function buildSmsLink(phones: (string | null | undefined)[]): string | null {
   const valid = phones.filter(
     (p): p is string => typeof p === "string" && p.startsWith("+") && p.length >= 8,
   );
   if (valid.length === 0) return null;
-  return `sms:${valid.join(",")}`;
+  if (valid.length === 1) return `sms:${valid[0]}`;
+  const encoded = valid.map(encodeURIComponent).join(",");
+  return `sms:/open?addresses=${encoded}`;
 }
