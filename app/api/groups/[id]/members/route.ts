@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { addMemberToGroup, getGroupForChairman } from "@/lib/groups";
-import { findOrCreatePerson } from "@/lib/people";
+import { findOrCreatePerson, setPersonPhone } from "@/lib/people";
+import { normalizeUsPhoneE164 } from "@/lib/phone";
 
 export async function POST(
   req: NextRequest,
@@ -36,6 +37,17 @@ export async function POST(
     personId = person.id;
   } else {
     return NextResponse.json({ error: "personId or name required" }, { status: 400 });
+  }
+
+  // Optional phone on creation. Validated to E.164; bad input returns 400 so
+  // the form can surface a "please re-enter" hint. Empty/missing is a no-op
+  // (we don't clobber an existing handle-bearing Person's phone).
+  if (typeof body.phone === "string" && body.phone.trim().length > 0) {
+    const e164 = normalizeUsPhoneE164(body.phone);
+    if (!e164) {
+      return NextResponse.json({ error: "Invalid US phone number" }, { status: 400 });
+    }
+    await setPersonPhone(sql, personId, e164);
   }
 
   await addMemberToGroup(sql, params.id, personId);

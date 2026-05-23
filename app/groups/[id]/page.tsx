@@ -36,6 +36,7 @@ export default function GroupEditPage() {
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [newMemberName, setNewMemberName] = useState("");
+  const [newMemberPhone, setNewMemberPhone] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [collectingPersonId, setCollectingPersonId] = useState<string | null>(null);
@@ -82,11 +83,16 @@ export default function GroupEditPage() {
     const res = await fetch(`/api/groups/${groupId}/members`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, phone: newMemberPhone.trim() || undefined }),
     });
     setSaving(false);
-    if (!res.ok) { setError("Could not add member."); return; }
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data?.error || "Could not add member.");
+      return;
+    }
     setNewMemberName("");
+    setNewMemberPhone("");
     await load();
   }
 
@@ -245,24 +251,40 @@ export default function GroupEditPage() {
       {/* Add member */}
       <div className="bg-white rounded-2xl p-4 mb-4">
         <h2 className="font-serif text-base font-bold text-tp-primary mb-2">Add a player</h2>
-        <div className="flex gap-2">
+        <div className="space-y-2">
           <input
             value={newMemberName}
             onChange={(e) => setNewMemberName(e.target.value)}
             placeholder="Player name"
-            className="input-field flex-1"
+            className="input-field"
             aria-label="New member name"
+            onKeyDown={(e) => { if (e.key === "Enter" && newMemberName.trim()) handleAddMember(); }}
           />
-          <button
-            type="button"
-            onClick={handleAddMember}
-            disabled={saving || !newMemberName.trim()}
-            className="btn-gold disabled:opacity-60"
-          >
-            Add
-          </button>
+          <div className="flex gap-2">
+            <input
+              type="tel"
+              value={newMemberPhone}
+              onChange={(e) => setNewMemberPhone(e.target.value)}
+              placeholder="Phone (optional)"
+              className="input-field flex-1"
+              aria-label="New member phone"
+              autoComplete="tel-national"
+              inputMode="tel"
+              onKeyDown={(e) => { if (e.key === "Enter" && newMemberName.trim()) handleAddMember(); }}
+            />
+            <button
+              type="button"
+              onClick={handleAddMember}
+              disabled={saving || !newMemberName.trim()}
+              className="btn-gold disabled:opacity-60"
+            >
+              Add
+            </button>
+          </div>
         </div>
+        {error && <p className="text-[11px] text-red-500 mt-2">{error}</p>}
         <p className="text-[11px] text-gray-400 mt-2">
+          Phone is chairman-only. Powers Text the Pool when you use this group in a pool.
           If the name matches an existing player you&rsquo;ve added before, their saved handles come with them.
         </p>
       </div>
