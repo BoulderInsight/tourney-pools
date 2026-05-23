@@ -708,9 +708,11 @@ export default function PoolLeaderboardPage() {
   const [tournamentStatus, setTournamentStatus] = useState<string | null>(null);
   const [tournamentEndDate, setTournamentEndDate] = useState<string | null>(null);
   const [chairmanPaymentInfo, setChairmanPaymentInfo] = useState<PaymentHandle | null>(null);
-  // Chairman-only: E.164 phones of players in this pool. Empty until the owner
-  // fetch resolves; never populated for non-owners.
-  const [playerPhones, setPlayerPhones] = useState<string[]>([]);
+  // Chairman-only: name + E.164 phone for players in this pool who have one on
+  // file. Empty until the owner fetch resolves; never populated for non-owners.
+  // Names let us show "On file: Brack, Chig, Jef" so the chairman can spot at a
+  // glance whether they've collected enough phones.
+  const [phoneRecipients, setPhoneRecipients] = useState<{ name: string; phone: string }[]>([]);
 
   const fetchPool = useCallback(async () => {
     try {
@@ -751,19 +753,19 @@ export default function PoolLeaderboardPage() {
           }
         } catch { /* not logged in */ }
 
-        // Owner-only: fetch player phone numbers via the chairman-scoped endpoint.
-        // The public /api/pool/[slug] response never carries phones, so non-owners
-        // can't see them under any circumstance. Failures here are silent; the
-        // Text the Pool button just won't render.
+        // Owner-only: fetch player names + phone numbers via the chairman-scoped
+        // endpoint. The public /api/pool/[slug] response never carries phones, so
+        // non-owners can't see them under any circumstance. Failures here are
+        // silent; the Text the Pool button just won't render.
         if (owner) {
           try {
             const peopleRes = await fetch(`/api/pool/${slug}/people`);
             if (peopleRes.ok) {
               const { players: peopleRows } = await peopleRes.json();
-              const phones = (peopleRows as Array<{ person?: { phone?: string | null } }>)
-                .map((r) => r.person?.phone ?? null)
-                .filter((p): p is string => typeof p === "string" && p.length > 0);
-              setPlayerPhones(phones);
+              const recipients = (peopleRows as Array<{ name?: string; person?: { phone?: string | null } }>)
+                .map((r) => ({ name: r.name ?? "", phone: r.person?.phone ?? "" }))
+                .filter((r) => r.phone.length > 0 && r.phone.startsWith("+"));
+              setPhoneRecipients(recipients);
             }
           } catch { /* the button just stays hidden */ }
         }
@@ -929,17 +931,22 @@ export default function PoolLeaderboardPage() {
       </div>
 
       {/* Chairman-only: Text the Pool. Renders only when the current viewer is the
-          chairman AND at least one player has a phone on file. The sms: URL opens
-          the device's native messaging app with everyone pre-addressed. */}
+          chairman AND at least one player has a phone on file. Listing the names
+          inline so the chairman can see at a glance who's getting the text and
+          who's still missing a phone. The sms: URL opens the device's native
+          messaging app with everyone pre-addressed. */}
       {isOwner && (() => {
-        const smsUrl = buildSmsLink(playerPhones);
+        const smsUrl = buildSmsLink(phoneRecipients.map((r) => r.phone));
         if (!smsUrl) return null;
-        const count = playerPhones.length;
+        const count = phoneRecipients.length;
+        const totalPlayers = config.players.length;
+        const missing = totalPlayers - count;
+        const nameList = phoneRecipients.map((r) => r.name).join(", ");
         return (
           <a
             href={smsUrl}
             className="block rounded-xl bg-tp-primary text-white px-4 py-3 my-4 active:opacity-95 transition-opacity"
-            aria-label={`Text all ${count} players with phone numbers on file`}
+            aria-label={`Text ${count} of ${totalPlayers} players: ${nameList}`}
           >
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
@@ -947,12 +954,17 @@ export default function PoolLeaderboardPage() {
                 <span className="text-sm font-semibold">Text the Pool</span>
               </div>
               <span className="text-[10px] text-white/60 uppercase tracking-wider">
-                {count} {count === 1 ? "player" : "players"}
+                {count} of {totalPlayers}
               </span>
             </div>
-            <p className="text-[11px] text-white/60 mt-0.5 ml-7">
-              Opens iMessage with all players
+            <p className="text-[11px] text-white/70 mt-1 ml-7 truncate">
+              {nameList}
             </p>
+            {missing > 0 && (
+              <p className="text-[10px] text-white/40 mt-0.5 ml-7">
+                {missing} {missing === 1 ? "player has" : "players have"} no phone on file
+              </p>
+            )}
           </a>
         );
       })()}
