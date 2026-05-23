@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { getPersonForChairman, setPersonHandles } from "@/lib/people";
+import { getPersonForChairman, setPersonHandles, setPersonPhone } from "@/lib/people";
+import { normalizeUsPhoneE164 } from "@/lib/phone";
 import type { PaymentMethod } from "@/lib/types";
 
 function cleanHandle(value: unknown): string | null {
@@ -41,5 +42,24 @@ export async function PATCH(
     preferredMethod: cleanPreferred(body.preferredMethod),
   });
 
-  return NextResponse.json({ person: updated });
+  // Phone is chairman-only: only update when the client explicitly sends the field.
+  // An empty string clears it; a non-empty string that can't be normalized to E.164
+  // is rejected (caller surfaces a "re-enter" hint). The public /collect endpoint
+  // never reaches this code path because it has its own handler.
+  if (typeof body.phone === "string") {
+    if (body.phone.trim() === "") {
+      await setPersonPhone(sql, params.id, null);
+    } else {
+      const e164 = normalizeUsPhoneE164(body.phone);
+      if (!e164) {
+        return NextResponse.json({ error: "Invalid US phone number" }, { status: 400 });
+      }
+      await setPersonPhone(sql, params.id, e164);
+    }
+  } else if (body.phone === null) {
+    await setPersonPhone(sql, params.id, null);
+  }
+
+  const refreshed = await getPersonForChairman(sql, params.id, session.chairmanId);
+  return NextResponse.json({ person: refreshed ?? updated });
 }

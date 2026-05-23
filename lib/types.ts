@@ -104,6 +104,12 @@ export interface Person {
   cashappHandle: string | null;
   paypalHandle: string | null;
   preferredMethod: PaymentMethod | null;
+  /**
+   * E.164 US phone (+1XXXXXXXXXX) or null. Chairman-only visibility: returned by
+   * the chairman-only /api/pool/[slug]/people and /api/groups/[id] endpoints; never
+   * by the public leaderboard endpoint; never logged; never in OG images.
+   */
+  phone: string | null;
 }
 
 export interface PlayerWithPerson {
