@@ -35,36 +35,75 @@ interface JoinData {
   };
 }
 
+// Display strings + plain-language explanations for each pool rule. Kept side
+// by side so the Pool Details card can pair each value with an info tooltip.
+
 function draftTypeLabel(t?: string): string {
   switch (t) {
     case "auto-snake": return "Auto Snake Draft";
-    case "random": return "Auto Random";
-    case "snake": return "Live Snake Draft";
+    case "random": return "Random Draft";
+    case "snake": return "Live Draft";
     default: return "Auto Snake Draft";
   }
 }
-
 function draftTypeBlurb(t?: string): string {
   switch (t) {
     case "auto-snake":
-      return "Players are seeded randomly, then golfers are assigned by world ranking in snake order (1, 2, 3, then 3, 2, 1) so every team gets a fair mix of stars and longshots.";
+      return "Players are seeded randomly, then take turns picking golfers in reverse order each round to keep it fair.";
     case "random":
-      return "Every golfer in the field is shuffled and dealt out randomly. No picking, no order, no draft to schedule.";
+      return "Golfers are randomly assigned to players. No picking required.";
     case "snake":
-      return "The chairman draws for pick order, then players take turns picking golfers live. Order reverses each round so everyone gets a fair mix of early and late picks.";
+      return "Players take turns picking in real time on draft day.";
     default:
       return "";
   }
 }
 
-function purseSentence(t?: string): string {
-  switch (t) {
-    case "winner-take-all": return "and the entire purse goes to the winner";
-    case "70-30": return "and the purse splits 70 / 30 between the top two";
-    case "60-30-10": return "and the purse splits 60 / 30 / 10 between the top three";
-    case "custom": return "and the purse splits across the top finishers";
+function scoringLabel(s?: string, bestN?: number): string {
+  if (s === "best-n") return `Best ${bestN ?? 3} golfers count`;
+  return "Count All Golfers";
+}
+function scoringBlurb(s?: string): string {
+  if (s === "best-n") return "Only your top N performers count. Reduces impact of one bad pick.";
+  return "Every golfer on your roster contributes to your team total.";
+}
+
+function missedCutLabel(m?: string): string {
+  switch (m) {
+    case "zero": return "Zero Contribution";
+    case "penalty": return "Fixed Penalty";
+    case "worst-made": return "Worst Made Score";
+    default: return "Zero Contribution";
+  }
+}
+function missedCutBlurb(m?: string): string {
+  switch (m) {
+    case "zero": return "Missed cut golfers stop counting. No penalty, no benefit.";
+    case "penalty": return "Missed cut golfers receive a set score per remaining round.";
+    case "worst-made": return "Missed cut golfers receive the total of the worst golfer who made the cut.";
     default: return "";
   }
+}
+
+function purseSplitLabel(p?: string): string {
+  switch (p) {
+    case "winner-take-all": return "100% to 1st";
+    case "70-30": return "70 / 30";
+    case "60-30-10": return "60 / 30 / 10";
+    case "custom": return "Custom";
+    default: return "100% to 1st";
+  }
+}
+
+// Categorization the Payout row shows: a binary "is this winner-take-all or a
+// split among multiple finishers?" view of the same purseType setting.
+function payoutLabel(p?: string): string {
+  return p === "winner-take-all" ? "Winner Take All" : "Standard Split";
+}
+function payoutBlurb(p?: string): string {
+  return p === "winner-take-all"
+    ? "First place takes the entire purse."
+    : "Purse is divided according to the configured percentages.";
 }
 
 function formatDateRange(start: string | null, end: string | null): string {
@@ -78,34 +117,74 @@ function formatDateRange(start: string | null, end: string | null): string {
 }
 
 /**
- * Inline (i) trigger. Hover on desktop shows a tooltip; tap on mobile toggles
- * a small popover under the icon. Keeps the explainer one line on desktop
- * without forcing a 'Learn more' link.
+ * Inline info trigger. Hover on desktop shows a tooltip; tap on mobile toggles
+ * a small popover under the icon. Used by both the intro paragraph and every
+ * label in the Pool Details card so all tooltips read and behave the same.
+ *
+ * `align` controls which side the popover anchors to; for rows that sit on the
+ * left edge of a card we anchor 'left' so the bubble doesn't clip the viewport.
  */
-function DraftTypeInfo({ blurb }: { blurb: string }) {
+function InfoTip({
+  blurb,
+  label,
+  align = "center",
+}: {
+  blurb: string;
+  label: string;
+  align?: "left" | "center";
+}) {
   const [open, setOpen] = useState(false);
   if (!blurb) return null;
+  const pos =
+    align === "left"
+      ? "left-0 -translate-x-0"
+      : "left-1/2 -translate-x-1/2";
   return (
     <span className="relative inline-flex items-center align-middle">
       <button
         type="button"
-        onClick={(e) => { e.preventDefault(); setOpen((o) => !o); }}
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen((o) => !o); }}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
-        className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-tp-primary/15 text-tp-primary text-[10px] font-bold leading-none active:bg-tp-primary/25"
-        aria-label="What is this draft type?"
+        className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 text-gray-500 text-[10px] font-bold leading-none active:bg-gray-300"
+        aria-label={`What is ${label}?`}
       >
         i
       </button>
       {open && (
         <span
           role="tooltip"
-          className="absolute z-10 top-full mt-2 left-1/2 -translate-x-1/2 w-64 bg-tp-primary text-white text-xs leading-snug rounded-lg p-3 shadow-lg normal-case font-normal"
+          className={`absolute z-10 top-full mt-2 ${pos} w-60 bg-tp-primary text-white text-xs leading-snug rounded-lg p-3 shadow-lg normal-case font-normal`}
         >
           {blurb}
         </span>
       )}
     </span>
+  );
+}
+
+/**
+ * One row in the Pool Details card. Label on the left (with optional info
+ * tooltip), value on the right in bold navy. Stays two-column on every screen
+ * size since each value is short.
+ */
+function DetailRow({
+  label,
+  value,
+  blurb,
+}: {
+  label: string;
+  value: string;
+  blurb?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-2.5 border-b border-gray-100 last:border-b-0">
+      <div className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-gray-500 font-semibold">
+        {label}
+        {blurb && <InfoTip blurb={blurb} label={label} align="left" />}
+      </div>
+      <div className="text-sm font-bold text-tp-primary text-right">{value}</div>
+    </div>
   );
 }
 
@@ -196,38 +275,66 @@ export default function JoinPoolPage() {
         )}
       </div>
 
-      {/* Friendly explainer. The two paragraphs describe the format
-          generically, then drop in the specifics for this pool: tournament,
-          draft type (with an info popover), buy-in, purse split, chairman.
-          Warm cream background + gold left rail to feel like a card pulled
-          out of the rules, not just a callout. */}
+      {/* Intro card. Warm cream + gold left rail, short copy that names the
+          three pool-shaping rules in bold (draft format, scoring, purse split)
+          and the chairman by name. Specifics live in the Pool Details card
+          below so this paragraph stays short and generic. */}
       <div
         className="rounded-xl border-l-4 border-tp-accent bg-[#FFF8E8] p-4 mb-5"
         style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}
       >
         <p className="text-sm text-tp-primary leading-relaxed">
           A <strong>TourneyPool</strong> is a friendly bet between friends. Each player drafts a
-          roster of pros from the field, and{" "}
-          {data.settings?.scoringType === "best-n" && data.settings?.bestN ? (
-            <>your best <strong>{data.settings.bestN}</strong> golfer scores combine to rank your team.</>
-          ) : (
-            <>all your golfer scores combine to rank your team.</>
-          )}{" "}
-          Lowest total wins.
-        </p>
-        <p className="text-sm text-tp-primary leading-relaxed mt-3">
-          This pool runs on the <strong>{data.tournament?.name ?? "tournament"}</strong> with a{" "}
-          <span className="inline-flex items-baseline gap-1">
-            <strong>{draftTypeLabel(data.settings?.draftType)}</strong>
-            <DraftTypeInfo blurb={draftTypeBlurb(data.settings?.draftType)} />
-          </span>{" "}
-          format. Buy in is <strong>${data.buyIn}</strong>, {purseSentence(data.settings?.purseType)}.
-          Chairman is <strong>{data.chairmanName}</strong>.
+          roster of pros from the field. The <strong>draft format</strong>, <strong>scoring</strong>,
+          and <strong>purse split</strong> are all up to your chairman,{" "}
+          <strong>{data.chairmanName}</strong>.
         </p>
         <p className="text-xs text-gray-600 leading-relaxed mt-3">
           Tap your name below, hit <strong>I&rsquo;m In</strong> or <strong>I&rsquo;m Out</strong>,
           and you&rsquo;re set. The leaderboard updates live during the tournament so you can follow along.
         </p>
+      </div>
+
+      {/* Pool Details card. White background, two-column rows, info tooltips
+          on the rule labels so invitees can dig in without leaving the page.
+          Rule values are dynamic from settings; defaults match DEFAULT_SETTINGS
+          if any field is missing on an older pool. */}
+      <div className="card p-4 mb-5">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-gray-400 font-bold mb-2">
+          Pool Details
+        </p>
+        <DetailRow
+          label="Draft"
+          value={draftTypeLabel(data.settings?.draftType)}
+          blurb={draftTypeBlurb(data.settings?.draftType)}
+        />
+        <DetailRow
+          label="Scoring"
+          value={scoringLabel(data.settings?.scoringType, data.settings?.bestN)}
+          blurb={scoringBlurb(data.settings?.scoringType)}
+        />
+        <DetailRow
+          label="Missed Cut"
+          value={missedCutLabel(data.settings?.missedCutRule)}
+          blurb={missedCutBlurb(data.settings?.missedCutRule)}
+        />
+        <DetailRow
+          label="Buy-in"
+          value={`$${data.buyIn}`}
+        />
+        <DetailRow
+          label="Purse Split"
+          value={purseSplitLabel(data.settings?.purseType)}
+        />
+        <DetailRow
+          label="Payout"
+          value={payoutLabel(data.settings?.purseType)}
+          blurb={payoutBlurb(data.settings?.purseType)}
+        />
+        <DetailRow
+          label="Chairman"
+          value={data.chairmanName}
+        />
       </div>
 
       {/* Roster-locked banner. Also links onward to the leaderboard so a late
