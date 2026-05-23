@@ -85,25 +85,32 @@ function missedCutBlurb(m?: string): string {
   }
 }
 
-function purseSplitLabel(p?: string): string {
+// Single Payout row covers both shapes of the prize: a 'Winner Take All'
+// label when the whole purse goes to first, or the actual percentage split
+// when multiple finishers cash. Tooltip text adapts to how many finishers
+// the split covers so it reads naturally.
+function payoutLabel(p?: string): string {
   switch (p) {
-    case "winner-take-all": return "100% to 1st";
+    case "winner-take-all": return "Winner Take All";
     case "70-30": return "70 / 30";
     case "60-30-10": return "60 / 30 / 10";
-    case "custom": return "Custom";
-    default: return "100% to 1st";
+    case "custom": return "Standard Split";
+    default: return "Winner Take All";
   }
 }
-
-// Categorization the Payout row shows: a binary "is this winner-take-all or a
-// split among multiple finishers?" view of the same purseType setting.
-function payoutLabel(p?: string): string {
-  return p === "winner-take-all" ? "Winner Take All" : "Standard Split";
-}
 function payoutBlurb(p?: string): string {
-  return p === "winner-take-all"
-    ? "First place takes the entire purse."
-    : "Purse is divided according to the configured percentages.";
+  switch (p) {
+    case "winner-take-all":
+      return "First place takes the entire purse.";
+    case "70-30":
+      return "The purse is divided between the top two finishers according to these percentages.";
+    case "60-30-10":
+      return "The purse is divided between the top three finishers according to these percentages.";
+    case "custom":
+      return "The purse is divided across the top finishers according to these percentages.";
+    default:
+      return "";
+  }
 }
 
 function formatDateRange(start: string | null, end: string | null): string {
@@ -323,17 +330,9 @@ export default function JoinPoolPage() {
           value={`$${data.buyIn}`}
         />
         <DetailRow
-          label="Purse Split"
-          value={purseSplitLabel(data.settings?.purseType)}
-        />
-        <DetailRow
           label="Payout"
           value={payoutLabel(data.settings?.purseType)}
           blurb={payoutBlurb(data.settings?.purseType)}
-        />
-        <DetailRow
-          label="Chairman"
-          value={data.chairmanName}
         />
       </div>
 
