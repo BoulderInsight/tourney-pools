@@ -12,6 +12,7 @@ function rowToPerson(row: Record<string, unknown>): Person {
     cashappHandle: (row.cashapp_handle as string | null) ?? null,
     paypalHandle: (row.paypal_handle as string | null) ?? null,
     preferredMethod: (row.preferred_method as PaymentMethod | null) ?? null,
+    phone: (row.phone as string | null) ?? null,
   };
 }
 
@@ -24,7 +25,7 @@ export async function createPerson(
   const rows = await sql`
     INSERT INTO people (chairman_id, name)
     VALUES (${chairmanId}, ${name})
-    RETURNING id, chairman_id, name, venmo_handle, cashapp_handle, paypal_handle, preferred_method
+    RETURNING id, chairman_id, name, venmo_handle, cashapp_handle, paypal_handle, preferred_method, phone
   `;
   return rowToPerson(rows[0]);
 }
@@ -47,7 +48,7 @@ export async function findOrCreatePerson(
   name: string,
 ): Promise<Person> {
   const rows = await sql`
-    SELECT id, chairman_id, name, venmo_handle, cashapp_handle, paypal_handle, preferred_method
+    SELECT id, chairman_id, name, venmo_handle, cashapp_handle, paypal_handle, preferred_method, phone
     FROM people
     WHERE chairman_id = ${chairmanId} AND name = ${name}
     ORDER BY
@@ -66,7 +67,7 @@ export async function getPersonForChairman(
   chairmanId: string,
 ): Promise<Person | null> {
   const rows = await sql`
-    SELECT id, chairman_id, name, venmo_handle, cashapp_handle, paypal_handle, preferred_method
+    SELECT id, chairman_id, name, venmo_handle, cashapp_handle, paypal_handle, preferred_method, phone
     FROM people WHERE id = ${personId} AND chairman_id = ${chairmanId}
   `;
   return rows.length > 0 ? rowToPerson(rows[0]) : null;
@@ -77,6 +78,20 @@ export async function getPersonForChairman(
  * self-serve form send the full intended state, including null where a previously
  * stored handle should be cleared.
  */
+/**
+ * Set a Person's phone in E.164 (or clear it with `null`). Separate from
+ * `setPersonHandles` because phone is chairman-only: it's not collected via the
+ * public self-serve form, and we don't want a leaky API surface to ever set it
+ * by accident. Only chairman-authenticated endpoints should call this.
+ */
+export async function setPersonPhone(
+  sql: Sql,
+  personId: string,
+  phone: string | null,
+): Promise<void> {
+  await sql`UPDATE people SET phone = ${phone} WHERE id = ${personId}`;
+}
+
 export async function setPersonHandles(
   sql: Sql,
   personId: string,
@@ -94,7 +109,7 @@ export async function setPersonHandles(
       paypal_handle   = ${handles.paypalHandle},
       preferred_method = ${handles.preferredMethod}
     WHERE id = ${personId}
-    RETURNING id, chairman_id, name, venmo_handle, cashapp_handle, paypal_handle, preferred_method
+    RETURNING id, chairman_id, name, venmo_handle, cashapp_handle, paypal_handle, preferred_method, phone
   `;
   if (rows.length === 0) {
     throw new Error(`setPersonHandles: person ${personId} not found`);
@@ -189,7 +204,7 @@ export async function getPlayersWithPeople(sql: Sql, poolId: string): Promise<Pl
   const rows = await sql`
     SELECT pl.id, pl.name, pl.person_id,
            p.chairman_id, p.name AS person_name,
-           p.venmo_handle, p.cashapp_handle, p.paypal_handle, p.preferred_method
+           p.venmo_handle, p.cashapp_handle, p.paypal_handle, p.preferred_method, p.phone
     FROM players pl
     JOIN people p ON p.id = pl.person_id
     WHERE pl.pool_id = ${poolId}
@@ -207,6 +222,7 @@ export async function getPlayersWithPeople(sql: Sql, poolId: string): Promise<Pl
       cashappHandle: (r.cashapp_handle as string | null) ?? null,
       paypalHandle: (r.paypal_handle as string | null) ?? null,
       preferredMethod: (r.preferred_method as PaymentMethod | null) ?? null,
+      phone: (r.phone as string | null) ?? null,
     },
   }));
 }

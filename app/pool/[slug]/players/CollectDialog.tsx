@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import type { PaymentMethod, Person } from "@/lib/types";
+import { formatUsPhoneDisplay } from "@/lib/phone";
 
 interface DialogState {
   venmoHandle: string;
   cashappHandle: string;
   paypalHandle: string;
   preferredMethod: PaymentMethod | null;
+  phone: string;
 }
 
 function initialState(person: Person): DialogState {
@@ -16,6 +18,8 @@ function initialState(person: Person): DialogState {
     cashappHandle: person.cashappHandle ?? "",
     paypalHandle: person.paypalHandle ?? "",
     preferredMethod: person.preferredMethod,
+    // Pretty-print the stored E.164 so the chairman sees (919) 555-1234, not +19195551234.
+    phone: formatUsPhoneDisplay(person.phone),
   };
 }
 
@@ -99,10 +103,15 @@ export default function CollectDialog({
         cashappHandle: state.cashappHandle,
         paypalHandle: state.paypalHandle,
         preferredMethod: state.preferredMethod,
+        phone: state.phone,
       }),
     });
     setSaving(false);
-    if (!res.ok) { setError("Could not save. Try again."); return; }
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data?.error || "Could not save. Try again.");
+      return;
+    }
     await onSaved();
   }
 
@@ -188,6 +197,28 @@ export default function CollectDialog({
             isPreferred={state.preferredMethod === "paypal"}
             onPrefer={() => set("preferredMethod", state.preferredMethod === "paypal" ? null : "paypal")}
           />
+        </div>
+
+        {/* Phone (chairman-only, US format). Powers the "Text the Pool" button on
+            the leaderboard. Never shown to other players; never returned by the
+            public pool API. Server normalizes to E.164 on save. */}
+        <div className="mb-4">
+          <label className="text-[11px] font-bold uppercase tracking-[0.15em] text-gray-400 mb-1.5 block">
+            Phone (just for you)
+          </label>
+          <input
+            type="tel"
+            value={state.phone}
+            onChange={(e) => set("phone", e.target.value)}
+            placeholder="(919) 555-1234"
+            className="input-field"
+            autoComplete="tel-national"
+            inputMode="tel"
+            aria-label={`${name}'s phone number`}
+          />
+          <p className="text-[10px] text-gray-400 mt-1.5">
+            Only visible to you. Powers Text the Pool. US numbers only for now.
+          </p>
         </div>
 
         <button

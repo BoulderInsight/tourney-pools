@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { PoolConfig, PlayerStanding, PayoutTransfer, PaymentHandle } from "@/lib/types";
 import { computeLeaderboard, computePaymentPlan, formatScore, scoreColorClass } from "@/lib/pool";
 import { buildPaymentLink, paymentMethodLabel } from "@/lib/payment-links";
+import { buildSmsLink } from "@/lib/phone";
 import Link from "next/link";
 import { SponsorBanner } from "@/app/components/sponsor-banner";
 import { TipTheCommish } from "@/app/components/tip-the-commish";
@@ -707,6 +708,9 @@ export default function PoolLeaderboardPage() {
   const [tournamentStatus, setTournamentStatus] = useState<string | null>(null);
   const [tournamentEndDate, setTournamentEndDate] = useState<string | null>(null);
   const [chairmanPaymentInfo, setChairmanPaymentInfo] = useState<PaymentHandle | null>(null);
+  // Chairman-only: E.164 phones of players in this pool. Empty until the owner
+  // fetch resolves; never populated for non-owners.
+  const [playerPhones, setPlayerPhones] = useState<string[]>([]);
 
   const fetchPool = useCallback(async () => {
     try {
@@ -735,13 +739,34 @@ export default function PoolLeaderboardPage() {
         setTournamentEndDate(data.tournamentEndDate || null);
         setChairmanPaymentInfo(data.chairmanPaymentInfo ?? null);
         // Check if current user is chairman
+        let owner = false;
         try {
           const meRes = await fetch("/api/auth/me");
           if (meRes.ok) {
             const me = await meRes.json();
-            if (me?.chairmanId === data.chairmanId) setIsOwner(true);
+            if (me?.chairmanId === data.chairmanId) {
+              owner = true;
+              setIsOwner(true);
+            }
           }
         } catch { /* not logged in */ }
+
+        // Owner-only: fetch player phone numbers via the chairman-scoped endpoint.
+        // The public /api/pool/[slug] response never carries phones, so non-owners
+        // can't see them under any circumstance. Failures here are silent; the
+        // Text the Pool button just won't render.
+        if (owner) {
+          try {
+            const peopleRes = await fetch(`/api/pool/${slug}/people`);
+            if (peopleRes.ok) {
+              const { players: peopleRows } = await peopleRes.json();
+              const phones = (peopleRows as Array<{ person?: { phone?: string | null } }>)
+                .map((r) => r.person?.phone ?? null)
+                .filter((p): p is string => typeof p === "string" && p.length > 0);
+              setPlayerPhones(phones);
+            }
+          } catch { /* the button just stays hidden */ }
+        }
       }
     } finally {
       setLoading(false);
@@ -902,6 +927,35 @@ export default function PoolLeaderboardPage() {
           }
         />
       </div>
+
+      {/* Chairman-only: Text the Pool. Renders only when the current viewer is the
+          chairman AND at least one player has a phone on file. The sms: URL opens
+          the device's native messaging app with everyone pre-addressed. */}
+      {isOwner && (() => {
+        const smsUrl = buildSmsLink(playerPhones);
+        if (!smsUrl) return null;
+        const count = playerPhones.length;
+        return (
+          <a
+            href={smsUrl}
+            className="block rounded-xl bg-tp-primary text-white px-4 py-3 my-4 active:opacity-95 transition-opacity"
+            aria-label={`Text all ${count} players with phone numbers on file`}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-base" aria-hidden="true">📱</span>
+                <span className="text-sm font-semibold">Text the Pool</span>
+              </div>
+              <span className="text-[10px] text-white/60 uppercase tracking-wider">
+                {count} {count === 1 ? "player" : "players"}
+              </span>
+            </div>
+            <p className="text-[11px] text-white/60 mt-0.5 ml-7">
+              Opens iMessage with all players
+            </p>
+          </a>
+        );
+      })()}
 
       {/* Same slot, three states:
             - tournament_status completed AND chairman has a payment handle → Tip the Commish

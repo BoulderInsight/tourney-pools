@@ -21,6 +21,7 @@ function rowToPerson(row: Record<string, unknown>): Person {
     cashappHandle: (row.cashapp_handle as string | null) ?? null,
     paypalHandle: (row.paypal_handle as string | null) ?? null,
     preferredMethod: (row.preferred_method as PaymentMethod | null) ?? null,
+    phone: (row.phone as string | null) ?? null,
   };
 }
 
@@ -51,7 +52,7 @@ export async function getGroupForChairman(
   `;
   if (groupRows.length === 0) return null;
   const memberRows = await sql`
-    SELECT pe.id, pe.chairman_id, pe.name, pe.venmo_handle, pe.cashapp_handle, pe.paypal_handle, pe.preferred_method
+    SELECT pe.id, pe.chairman_id, pe.name, pe.venmo_handle, pe.cashapp_handle, pe.paypal_handle, pe.preferred_method, pe.phone
     FROM group_members gm
     JOIN people pe ON pe.id = gm.person_id
     WHERE gm.group_id = ${groupId}

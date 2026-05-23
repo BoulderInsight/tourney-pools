@@ -130,6 +130,7 @@ CREATE TABLE people (
   paypal_handle TEXT,
   preferred_method TEXT
     CHECK (preferred_method IN ('venmo', 'cashapp', 'paypal') OR preferred_method IS NULL),
+  phone TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
