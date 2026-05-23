@@ -88,12 +88,16 @@ export async function GET(
   // Phase 1's setup-time findOrCreatePerson, the commissioner-only /people backfill,
   // and the /players page. Running backfill here too would add a DB round trip per
   // poll on every viewer of every active leaderboard, which is the most-hit endpoint.
+  // Public leaderboard: accepted invitees only. Pending players (added but
+  // haven't tapped the join link yet) and declined players are visible only on
+  // the chairman's roster. This prevents an unanswered invite from briefly
+  // appearing on the public pool then vanishing once they decline.
   const players = await sql`
     SELECT pl.id, pl.name,
            pe.venmo_handle, pe.cashapp_handle, pe.paypal_handle, pe.preferred_method
     FROM players pl
     LEFT JOIN people pe ON pe.id = pl.person_id
-    WHERE pl.pool_id = ${pool.id}
+    WHERE pl.pool_id = ${pool.id} AND pl.rsvp_status = 'accepted'
     ORDER BY pl.pick_order
   `;
 

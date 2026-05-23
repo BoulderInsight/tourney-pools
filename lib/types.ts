@@ -15,6 +15,14 @@ export interface CommissionerSettings {
   payoutMethod?: PayoutMethod;
 }
 
+/**
+ * Pool invitation states. A player row is the invitee record too.
+ *   pending  = chairman added them, waiting on their tap
+ *   accepted = on the leaderboard, in the draft, owes/collects payouts
+ *   declined = chairman-only visibility, hidden from the public pool
+ */
+export type RsvpStatus = "pending" | "accepted" | "declined";
+
 export interface PoolPlayer {
   id: string;
   name: string;
@@ -26,6 +34,13 @@ export interface PoolPlayer {
    * with no linked Persons).
    */
   paymentInfo?: PaymentHandle | null;
+  /**
+   * RSVP status, included by every endpoint that exposes PoolPlayer. The public
+   * leaderboard always filters to `accepted` so non-accepted players never reach
+   * non-chairman viewers, but the field is on the type so the chairman tools can
+   * surface it without a separate fetch.
+   */
+  rsvpStatus?: RsvpStatus;
 }
 
 export interface Golfer {
@@ -117,6 +132,9 @@ export interface PlayerWithPerson {
   name: string;        // player name (used in pool standings)
   personId: string;
   person: Person;
+  rsvpStatus: RsvpStatus;
+  /** ISO timestamp of the most recent invite text. null if never texted. */
+  invitedAt: string | null;
 }
 
 export interface CollectionRequest {

@@ -1,5 +1,5 @@
 import type { NeonQueryFunction } from "@neondatabase/serverless";
-import type { PaymentMethod, Person, PlayerWithPerson } from "@/lib/types";
+import type { PaymentMethod, Person, PlayerWithPerson, RsvpStatus } from "@/lib/types";
 
 type Sql = NeonQueryFunction<false, false>;
 
@@ -202,7 +202,7 @@ export async function reconcilePoolPersonsByName(
 /** Return the pool's roster with each player's linked Person. Assumes backfill already ran. */
 export async function getPlayersWithPeople(sql: Sql, poolId: string): Promise<PlayerWithPerson[]> {
   const rows = await sql`
-    SELECT pl.id, pl.name, pl.person_id,
+    SELECT pl.id, pl.name, pl.person_id, pl.rsvp_status, pl.invited_at,
            p.chairman_id, p.name AS person_name,
            p.venmo_handle, p.cashapp_handle, p.paypal_handle, p.preferred_method, p.phone
     FROM players pl
@@ -214,6 +214,8 @@ export async function getPlayersWithPeople(sql: Sql, poolId: string): Promise<Pl
     id: r.id as string,
     name: r.name as string,
     personId: r.person_id as string,
+    rsvpStatus: (r.rsvp_status as RsvpStatus) ?? "pending",
+    invitedAt: r.invited_at ? new Date(r.invited_at as string | Date).toISOString() : null,
     person: {
       id: r.person_id as string,
       chairmanId: r.chairman_id as string,

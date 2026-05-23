@@ -60,7 +60,10 @@ CREATE TABLE players (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   pool_id UUID NOT NULL REFERENCES pools(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
-  pick_order INTEGER
+  pick_order INTEGER,
+  rsvp_status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (rsvp_status IN ('pending', 'accepted', 'declined')),
+  invited_at TIMESTAMPTZ
 );
 
 CREATE TABLE tournament_golfers (
@@ -113,6 +116,7 @@ CREATE INDEX idx_pools_slug ON pools(slug);
 CREATE INDEX idx_pools_chairman ON pools(chairman_id);
 CREATE INDEX idx_pools_tournament ON pools(tournament_id);
 CREATE INDEX idx_players_pool ON players(pool_id);
+CREATE INDEX idx_players_pool_rsvp ON players(pool_id, rsvp_status);
 CREATE INDEX idx_golfers_pool ON golfers(pool_id);
 CREATE INDEX idx_golfers_tournament_golfer ON golfers(tournament_golfer_id);
 CREATE INDEX idx_assignments_pool ON assignments(pool_id);

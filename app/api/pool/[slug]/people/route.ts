@@ -20,13 +20,14 @@ export async function GET(
 
   const sql = getDb();
   const poolRows = await sql`
-    SELECT id FROM pools
+    SELECT id, pool_name, draft_complete FROM pools
     WHERE slug = ${params.slug} AND chairman_id = ${session.chairmanId}
   `;
   if (poolRows.length === 0) {
     return NextResponse.json({ error: "Pool not found" }, { status: 404 });
   }
-  const poolId = poolRows[0].id as string;
+  const pool = poolRows[0];
+  const poolId = pool.id as string;
 
   // First link any player that lacks a person_id (legacy pools), then reconcile
   // players currently linked to a handle-less Person back to the chairman's
@@ -36,5 +37,9 @@ export async function GET(
   await reconcilePoolPersonsByName(sql, poolId);
 
   const players = await getPlayersWithPeople(sql, poolId);
-  return NextResponse.json({ players });
+  return NextResponse.json({
+    players,
+    poolName: pool.pool_name,
+    draftComplete: !!pool.draft_complete,
+  });
 }
