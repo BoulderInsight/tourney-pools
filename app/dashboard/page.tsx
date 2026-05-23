@@ -16,6 +16,7 @@ interface Pool {
   awaiting_field: boolean;
   player_count: number;
   created_at: string;
+  tournament_name: string | null;
   tournament_status: string | null;
 }
 
@@ -42,6 +43,7 @@ function DashboardContent() {
   const [savingAd, setSavingAd] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [placeholder, setPlaceholder] = useState("Pool name (e.g. My Golf Pool)");
+  const [search, setSearch] = useState("");
 
   const isPro = tier === "pro" || tier === "paid"; // "paid" for backward compat
   const canCreatePool = isPro || pools.length < 1;
@@ -282,8 +284,46 @@ function DashboardContent() {
           <p className="font-serif italic text-gray-400 text-sm">No pools yet. Create your first one above.</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {pools.map((pool) => {
+        <>
+          {/* Search: pool name OR tournament name, case-insensitive substring. Only
+              surfaced when there are a few pools to wade through. */}
+          {pools.length > 2 && (
+            <div className="relative mb-3">
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 pointer-events-none"
+                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M11 19a8 8 0 110-16 8 8 0 010 16z" />
+              </svg>
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by pool or tournament"
+                aria-label="Search pools by name or tournament"
+                className="input-field pl-9"
+              />
+            </div>
+          )}
+          {(() => {
+            const q = search.trim().toLowerCase();
+            const filtered = q
+              ? pools.filter(
+                  (p) =>
+                    p.pool_name.toLowerCase().includes(q) ||
+                    (p.tournament_name?.toLowerCase().includes(q) ?? false),
+                )
+              : pools;
+            if (filtered.length === 0) {
+              return (
+                <div className="text-center py-8">
+                  <p className="font-serif italic text-gray-400 text-sm">No pools match &ldquo;{search}&rdquo;.</p>
+                </div>
+              );
+            }
+            return (
+              <div className="space-y-3">
+                {filtered.map((pool) => {
             // Completed/cancelled pools stay fully usable: the invite link still resolves
             // (players use it to access payout buttons post-tournament), and the chairman
             // still needs View / Scores / Copy to administer their pool's afterlife. Only
@@ -293,6 +333,11 @@ function DashboardContent() {
               <div className="flex items-center justify-between">
                 <div>
                   <span className="font-serif font-bold text-gray-900">{pool.pool_name}</span>
+                  {pool.tournament_name && (
+                    <div className="text-[11px] text-tp-primary/70 font-semibold mt-0.5 truncate">
+                      {pool.tournament_name}
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
                     <span>{pool.player_count} players</span>
                     <span className="text-gray-200">|</span>
@@ -361,7 +406,10 @@ function DashboardContent() {
               </div>
             );
           })}
-        </div>
+              </div>
+            );
+          })()}
+        </>
       )}
 
       {/* Ad Preview */}
