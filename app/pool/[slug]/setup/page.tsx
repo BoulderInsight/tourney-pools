@@ -255,6 +255,15 @@ export default function PoolSetupPage() {
       .then((data) => setGroups(data.groups || []));
   }, []);
 
+  // Scroll to top on step change. Without this, advancing past a long step
+  // (Players, Rules) leaves the next step scrolled mid-page, hiding its
+  // header and the first few options.
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
+  }, [step]);
+
   // When a tournament with an official field is selected, draft from that
   // field instead of the generic default list.
   useEffect(() => {
@@ -617,20 +626,21 @@ export default function PoolSetupPage() {
                   </p>
                 </div>
               )}
-              <div className="space-y-4">
+              {/* Player row layout: on small screens we stack name above phone
+                  so neither input gets squeezed; on sm:+ we sit them side by
+                  side to keep the wizard short on desktop. The 📱 icon sits
+                  inside the phone input either way. */}
+              <div className="space-y-2">
                 {players.map((p) => (
                   <div key={p.id} className="flex items-start gap-2">
-                    <div className="flex-1 space-y-1.5">
+                    <div className="flex-1 flex flex-col sm:flex-row gap-1.5 sm:gap-2">
                       <input
                         value={p.name}
                         onChange={(e) => updatePlayer(p.id, e.target.value)}
                         placeholder="Player name"
-                        className="input-field w-full"
+                        className="input-field w-full sm:flex-1"
                       />
-                      {/* Phone nests under the name with a small left indent and a
-                          📱 icon inside the input so it visually subordinates to
-                          its player and signals "this is the phone, not another name". */}
-                      <div className="relative ml-6">
+                      <div className="relative w-full sm:w-52">
                         <span
                           className="absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none opacity-60"
                           aria-hidden="true"
