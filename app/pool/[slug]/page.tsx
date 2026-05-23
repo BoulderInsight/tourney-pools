@@ -965,6 +965,13 @@ export default function PoolLeaderboardPage() {
                 {missing} {missing === 1 ? "player has" : "players have"} no phone on file
               </p>
             )}
+            {/* iOS quirk: a named/saved group thread (e.g. one you've titled
+                "Blue Rock Mafia") lives separately from any ad-hoc thread with
+                the same recipients, and sms: URLs can only target ad-hoc. Set
+                expectations so the chairman knows the fast path. */}
+            <p className="text-[10px] text-white/35 italic mt-2 ml-7">
+              iOS opens a new thread. To use a saved group, open Messages directly.
+            </p>
           </a>
         );
       })()}
