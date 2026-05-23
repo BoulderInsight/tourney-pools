@@ -14,7 +14,10 @@ interface Pool {
   buy_in: number;
   setup_complete: boolean;
   awaiting_field: boolean;
+  draft_complete: boolean;
   player_count: number;
+  pending_count: number;
+  accepted_count: number;
   created_at: string;
   tournament_name: string | null;
   tournament_status: string | null;
@@ -343,6 +346,31 @@ function DashboardContent() {
                     <span className="text-gray-200">|</span>
                     <span>${pool.buy_in} buy-in</span>
                   </div>
+                  {/* Pool readiness: rendered on the chairman dashboard so they
+                      can see at a glance which pools still need attention. */}
+                  {!isOver && (() => {
+                    const total = pool.player_count;
+                    const accepted = pool.accepted_count ?? 0;
+                    const pending = pool.pending_count ?? 0;
+                    const responded = total - pending;
+                    if (pool.draft_complete) return null;
+                    if (total === 0) return null;
+                    if (pending === 0 && accepted > 0) {
+                      return (
+                        <p className="text-[10px] text-green-600 font-semibold mt-1 uppercase tracking-wider">
+                          Ready to draft (all RSVPs in)
+                        </p>
+                      );
+                    }
+                    if (pending > 0) {
+                      return (
+                        <p className="text-[10px] text-amber-700 font-semibold mt-1 uppercase tracking-wider">
+                          Awaiting RSVPs ({responded} of {total} responded)
+                        </p>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
                 <div className="flex items-center gap-2">
                   {isOver ? (
