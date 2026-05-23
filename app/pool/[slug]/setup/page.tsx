@@ -723,20 +723,20 @@ export default function PoolSetupPage() {
             <Section label="Draft Type">
               <div className="space-y-2.5">
                 <OptionCard
+                  selected={settings.draftType === "auto-snake"}
+                  onClick={() => set("draftType", "auto-snake")}
+                  title="Auto Snake Draft"
+                  description="Randomized player order, golfers assigned by world ranking in snake format."
+                  badge="Recommended"
+                  info="Player order is randomized, then golfers are assigned automatically by world ranking in snake format: Player 1 gets the #1 seed, Player 2 gets #2, Player 3 gets #3, then it snakes back: Player 3 gets #4, Player 2 gets #5, Player 1 gets #6, and so on. Fair, balanced and no live draft coordination needed."
+                />
+                <OptionCard
                   selected={settings.draftType === "random"}
                   onClick={() => set("draftType", "random")}
                   title="Auto Random"
                   description="Golfers are shuffled and dealt out randomly. Fully automated, no picking required."
                   badge="Quick & Easy"
                   info="All golfers in the field are randomly shuffled, then automatically dealt out evenly to each player. No one picks. The app handles everything instantly. Great for casual pools or when you don't want to coordinate a live draft."
-                />
-                <OptionCard
-                  selected={settings.draftType === "auto-snake"}
-                  onClick={() => set("draftType", "auto-snake")}
-                  title="Auto Snake Draft"
-                  description="Randomized player order, golfers assigned by world ranking in snake format."
-                  badge="Best of Both"
-                  info="Player order is randomized, then golfers are assigned automatically by world ranking in snake format: Player 1 gets the #1 seed, Player 2 gets #2, Player 3 gets #3, then it snakes back: Player 3 gets #4, Player 2 gets #5, Player 1 gets #6, and so on. Fair, balanced and no live draft coordination needed."
                 />
                 <OptionCard
                   selected={settings.draftType === "snake"}
@@ -752,19 +752,19 @@ export default function PoolSetupPage() {
             <Section label="Missed Cut Rule">
               <div className="space-y-2.5">
                 <OptionCard
-                  selected={settings.missedCutRule === "penalty"}
-                  onClick={() => set("missedCutRule", "penalty")}
-                  title="Fixed Penalty"
-                  description="Missed cut golfers receive a set score per remaining round."
-                  badge="Recommended"
-                  info="When a golfer misses the cut (eliminated after Round 2), they receive a fixed penalty score for each remaining round they don't play. For example, with a +5 penalty: if a golfer shot +3 through 2 rounds then missed the cut, they'd get +5 added for Round 3 and +5 for Round 4, making their total +13. This discourages picking longshots who might miss the cut."
-                />
-                <OptionCard
                   selected={settings.missedCutRule === "zero"}
                   onClick={() => set("missedCutRule", "zero")}
                   title="Zero Contribution"
                   description="Missed cut golfers stop counting. No penalty, no benefit."
+                  badge="Recommended"
                   info="If a golfer misses the cut, their score simply stops accumulating. They keep whatever score they had through the rounds they played, but add nothing for the remaining rounds. This is the most forgiving option. A missed cut doesn't actively hurt your team, it just means you lose that golfer's potential for weekend improvement."
+                />
+                <OptionCard
+                  selected={settings.missedCutRule === "penalty"}
+                  onClick={() => set("missedCutRule", "penalty")}
+                  title="Fixed Penalty"
+                  description="Missed cut golfers receive a set score per remaining round."
+                  info="When a golfer misses the cut (eliminated after Round 2), they receive a fixed penalty score for each remaining round they don't play. For example, with a +5 penalty: if a golfer shot +3 through 2 rounds then missed the cut, they'd get +5 added for Round 3 and +5 for Round 4, making their total +13. This discourages picking longshots who might miss the cut."
                 />
                 <OptionCard
                   selected={settings.missedCutRule === "worst-made"}
@@ -797,19 +797,19 @@ export default function PoolSetupPage() {
             <Section label="Scoring">
               <div className="space-y-2.5">
                 <OptionCard
-                  selected={settings.scoringType === "all"}
-                  onClick={() => set("scoringType", "all")}
-                  title="Count All Golfers"
-                  description="Every golfer on your roster contributes to your total."
-                  badge="Recommended"
-                  info="Every golfer drafted to your team counts toward your total score. If you have 10 golfers, all 10 scores are added together. This rewards consistent drafting across your entire roster and makes every pick matter equally. It's the most common format for golf pools."
-                />
-                <OptionCard
                   selected={settings.scoringType === "best-n"}
                   onClick={() => set("scoringType", "best-n")}
                   title="Best N Golfers"
                   description="Only your top N performers count. Reduces impact of one bad pick."
+                  badge="Recommended"
                   info="Only your best-performing golfers count toward your total. For example, if set to 'Best 3', only your 3 lowest-scoring golfers are counted. The rest are benched. This reduces the pain of one bad pick and rewards players who draft a few elite golfers rather than a deep balanced roster."
+                />
+                <OptionCard
+                  selected={settings.scoringType === "all"}
+                  onClick={() => set("scoringType", "all")}
+                  title="Count All Golfers"
+                  description="Every golfer on your roster contributes to your total."
+                  info="Every golfer drafted to your team counts toward your total score. If you have 10 golfers, all 10 scores are added together. This rewards consistent drafting across your entire roster and makes every pick matter equally. It's the most common format for golf pools."
                 />
               </div>
 
