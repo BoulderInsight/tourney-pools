@@ -155,8 +155,10 @@ export default function PoolSetupPage() {
   // Pool info
   const [poolName, setPoolName] = useState("Golf Pool");
   const [buyIn, setBuyIn] = useState(20);
-  const [players, setPlayers] = useState<PoolPlayer[]>([
-    { id: "p0", name: "" },
+  // Local form shape adds an optional phone field. The save endpoint normalizes
+  // any non-empty phone to E.164 and saves it on the linked Person.
+  const [players, setPlayers] = useState<{ id: string; name: string; phone?: string }[]>([
+    { id: "p0", name: "", phone: "" },
   ]);
 
   const [groups, setGroups] = useState<{ id: string; name: string; memberCount: number }[]>([]);
@@ -211,10 +213,29 @@ export default function PoolSetupPage() {
         if (data?.poolName) setPoolName(data.poolName);
         if (data?.buyIn) setBuyIn(data.buyIn);
         if (data?.players?.length > 0) {
-          setPlayers(data.players.map((p: { id: string; name: string }) => ({ id: p.id, name: p.name })));
+          setPlayers(data.players.map((p: { id: string; name: string }) => ({ id: p.id, name: p.name, phone: "" })));
         }
         if (data?.settings) setSettings((prev) => ({ ...prev, ...data.settings }));
         if (data?.tournamentId) setSelectedTournamentId(data.tournamentId);
+
+        // Chairman-only secondary fetch: pull existing phones so the form
+        // pre-fills them instead of looking like blank fields the chairman
+        // would otherwise re-type. Public /api/pool/[slug] never carries
+        // phones; /people is auth-scoped to the chairman.
+        try {
+          const peopleRes = await fetch(`/api/pool/${slug}/people`);
+          if (peopleRes.ok) {
+            const { players: peopleRows } = await peopleRes.json();
+            const phoneByName = new Map<string, string>();
+            for (const row of peopleRows as Array<{ name: string; person: { phone: string | null } }>) {
+              if (row.person?.phone) phoneByName.set(row.name, row.person.phone);
+            }
+            setPlayers((prev) => prev.map((pl) => ({
+              ...pl,
+              phone: phoneByName.get(pl.name) ?? pl.phone ?? "",
+            })));
+          }
+        } catch { /* non-fatal; form just shows blank phones */ }
       }
       if (meRes.ok) {
         const me = await meRes.json();
@@ -294,7 +315,7 @@ export default function PoolSetupPage() {
 
   // Players
   const addPlayer = () =>
-    setPlayers((p) => [...p, { id: `p${Date.now()}`, name: "" }]);
+    setPlayers((p) => [...p, { id: `p${Date.now()}`, name: "", phone: "" }]);
 
   const removePlayer = (id: string) =>
     setPlayers((p) => p.filter((pl) => pl.id !== id));
@@ -302,18 +323,25 @@ export default function PoolSetupPage() {
   const updatePlayer = (id: string, name: string) =>
     setPlayers((p) => p.map((pl) => (pl.id === id ? { ...pl, name } : pl)));
 
+  const updatePlayerPhone = (id: string, phone: string) =>
+    setPlayers((p) => p.map((pl) => (pl.id === id ? { ...pl, phone } : pl)));
+
   async function loadFromGroup(groupId: string) {
     setSelectedGroupId(groupId);
     if (!groupId) return;
     const res = await fetch(`/api/groups/${groupId}`);
     if (!res.ok) return;
     const data = await res.json();
-    const members: { id: string; name: string }[] = (data.group?.members ?? []).map(
-      (m: { name: string }, i: number) => ({ id: `g-${groupId}-${i}`, name: m.name }),
+    // Pull each member's phone if already on file so the chairman sees it pre-filled
+    // (helps spot who still needs one). Leaves phone blank if the Group has none.
+    const members: { id: string; name: string; phone: string }[] = (data.group?.members ?? []).map(
+      (m: { name: string; phone?: string | null }, i: number) => ({
+        id: `g-${groupId}-${i}`,
+        name: m.name,
+        phone: m.phone ?? "",
+      }),
     );
-    // Replace the player list with the group's members. Empty groups reset to one blank
-    // row so the chairman doesn't see stale names from a previously selected group.
-    setPlayers(members.length > 0 ? members : [{ id: `g-${groupId}-0`, name: "" }]);
+    setPlayers(members.length > 0 ? members : [{ id: `g-${groupId}-0`, name: "", phone: "" }]);
   }
 
   function parseFieldEntries() {
@@ -585,20 +613,33 @@ export default function PoolSetupPage() {
                   </p>
                 </div>
               )}
-              <div className="space-y-2.5">
+              <div className="space-y-3">
                 {players.map((p) => (
-                  <div key={p.id} className="flex items-center gap-2">
-                    <input
-                      value={p.name}
-                      onChange={(e) => updatePlayer(p.id, e.target.value)}
-                      placeholder="Player name"
-                      className="input-field flex-1"
-                    />
+                  <div key={p.id} className="flex items-start gap-2">
+                    <div className="flex-1 space-y-1.5">
+                      <input
+                        value={p.name}
+                        onChange={(e) => updatePlayer(p.id, e.target.value)}
+                        placeholder="Player name"
+                        className="input-field w-full"
+                      />
+                      <input
+                        type="tel"
+                        value={p.phone ?? ""}
+                        onChange={(e) => updatePlayerPhone(p.id, e.target.value)}
+                        placeholder="Phone (optional, US)"
+                        className="input-field w-full text-sm"
+                        autoComplete="tel-national"
+                        inputMode="tel"
+                        aria-label={`${p.name || "Player"} phone`}
+                      />
+                    </div>
                     {players.length > 1 && (
                       <button
                         type="button"
                         onClick={() => removePlayer(p.id)}
-                        className="w-12 h-12 flex items-center justify-center text-gray-300 active:text-red-500 transition-colors rounded-xl"
+                        className="w-12 h-12 flex items-center justify-center text-gray-300 active:text-red-500 transition-colors rounded-xl flex-shrink-0"
+                        aria-label={`Remove ${p.name || "player"}`}
                       >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

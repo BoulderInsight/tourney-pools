@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { draftGolfers } from "@/lib/pool";
-import { findOrCreatePerson } from "@/lib/people";
+import { findOrCreatePerson, setPersonPhone } from "@/lib/people";
+import { normalizeUsPhoneE164 } from "@/lib/phone";
 
 export async function POST(
   req: NextRequest,
@@ -56,10 +57,23 @@ export async function POST(
   // chairman and link the player to it via person_id. Using findOrCreatePerson
   // preserves handles across re-runs of the setup wizard, so a typo fix or a
   // settings change does not silently lose collected payment data.
+  // Optional phone per player: validated to E.164. Bad input aborts the whole
+  // save with 400 so the chairman re-enters; we'd rather fail loud than store
+  // garbage. Empty/missing phone is a no-op (does not clobber existing).
   const insertedPlayers = [];
   for (let i = 0; i < players.length; i++) {
     const p = players[i];
     const person = await findOrCreatePerson(sql, session.chairmanId, p.name);
+    if (typeof p.phone === "string" && p.phone.trim().length > 0) {
+      const e164 = normalizeUsPhoneE164(p.phone);
+      if (!e164) {
+        return NextResponse.json(
+          { error: `Invalid US phone number for ${p.name}` },
+          { status: 400 },
+        );
+      }
+      await setPersonPhone(sql, person.id, e164);
+    }
     const result = await sql`
       INSERT INTO players (pool_id, name, pick_order, person_id)
       VALUES (${poolId}, ${p.name}, ${i}, ${person.id})
