@@ -1,48 +1,48 @@
-# Handoff: TourneyPools session, 2026-05-22
+# Handoff: TourneyPools session, 2026-05-23
 
-This doc lets a fresh session resume after a compaction. Read it first, then read the spec it points to.
+This doc lets a fresh session resume after a compaction. Read it first.
 
 ## Current task
 
-Building the **Player Payments** feature. The design is done and a spec is committed. The next step is to write the Phase 1 implementation plan, then implement it.
+Implementing **Phase 3 of Player Payments — one-tap pay buttons** on the post-tournament PayoutInfo block in the leaderboard. The plan is committed; execution hasn't started.
 
 ## Resume here
 
-1. **Read the spec:** `docs/superpowers/specs/2026-05-22-player-payments-design.md`. It is the source of truth for the feature.
-2. **Spec review is open.** The user was asked to review the spec but asked for this handoff before giving feedback. When resuming, ask the user if they want any spec changes, apply them, then continue.
-3. **After the user approves the spec:** invoke the `superpowers:writing-plans` skill to create the Phase 1 implementation plan. (This feature was designed via the `superpowers:brainstorming` skill; writing-plans is the next step in that flow.)
-4. **Then implement Phase 1**, the collect mechanic. Phase 1 scope is defined in the spec.
+1. **Branch:** `feature/player-payments-phase-3` (already checked out, rebased onto current main). It contains one commit beyond main: the plan doc.
+2. **Read the plan:** `docs/superpowers/plans/2026-05-23-player-payments-phase-3.md`. 5 tasks, ~30 min total, all UI/API/helpers — no new schema.
+3. **Spec:** `docs/superpowers/specs/2026-05-22-player-payments-design.md` (the "Phase 3, one-tap pay" section).
+4. **Execution:** dispatch via `superpowers:subagent-driven-development` (the user already chose this pattern for Phases 1 and 2). Pick up at Task 1 (lib/payment-links.ts).
+5. **After all 5 tasks pass spec + quality reviews:** open a PR via `gh pr create --base main --head feature/player-payments-phase-3`.
+6. **CRITICAL after merge:** `vercel --prod --yes` from a clean `main` checkout. Vercel does NOT auto-deploy from main on this project. See [vercel-no-auto-deploy memory](~/.claude/projects/-Users-chriscox--LOCAL-n8n-tourney-pools/memory/vercel-no-auto-deploy.md). The user noticed this gap mid-session; production was 15 hours stale until I ran the CLI manually.
 
-## How the feature was designed
+## What shipped earlier this session (live on tourneypools.com)
 
-Worked through it with the user via the brainstorming skill and the visual companion. Key decisions, all recorded in the spec:
+- **Phase 1 (PR #1, merge commit 3007629):** Player Payments collect mechanic. `people` and `collection_requests` tables, `players.person_id`, commissioner Players tab with Collect dialog, public `/collect/[token]` self-serve page, branded OG share image ("Enter Payment Info"), legacy-pool backfill.
+- **Phase 2 (PR #3, merge commit 64d6e0a; #2 auto-closed when base branch was deleted):** Groups. `groups`/`group_members` tables, `/groups` list + `/groups/[id]` edit pages, dashboard "Groups" link, setup wizard "Use a group" picker, Players-tab "Save roster as a group" button.
+- **Polish (PR #4, merge commit 21f9ab0):** Unified `app/components/top-nav.tsx`. Consistent `text-xs` link sizing across dashboard, groups, and pool pages. Dropped the fixed bottom tab nav; per-pool tabs (Leaderboard / Scores / Players / Setup) now live in the top nav. Renamed "My Pools" / "My Groups" to "Pools" / "Groups". Added a Collect/Edit button per member on `/groups/[id]` that opens the CollectDialog (slug-less mode, hides the send-self-serve-link path). Side cleanup: `.superpowers/` gitignored.
 
-- People (durable contacts: name + up to 3 payment handles + a preferred) and Groups (named, editable sets of people) as an address-book model.
-- Payment methods: Venmo, Cash App, PayPal. Zelle excluded (no universal payment link).
-- The Collect dialog: enter a handle yourself, or send a tokenized self-serve link.
-- A public self-serve page plus a branded Open Graph share image.
-- Phased build: Phase 1 collect mechanic, Phase 2 groups, Phase 3 one-tap pay screen.
+Both schema migrations already applied to prod Neon. Production deployed via `vercel --prod --yes` after each merge (build hash at time of polish merge: `dpl_6vzzByPoFZt4QCF9PnzbES7vbVGc`).
 
-Approved visual mockups persist at `.superpowers/brainstorm/96222-1779479718/content/` (gitignored): `collect-dialog-v3.html`, `self-serve-page-v2.html`, `share-image.html`. The companion server (was on port 54352) may have stopped; restart it only if new mockups are needed.
+## Phase 3 decisions locked in (in the plan)
 
-## Shipped earlier this session (all live in production on `main`)
+- Inline buttons in the existing PayoutInfo block. No dedicated payouts screen.
+- Honor-system only. Chairman-collects pools keep the text instruction (chairmen have no payment handles in Phases 1-2; out of scope here).
+- Public leaderboard JSON exposes each player's preferred-or-first handle and method. Documented privacy tradeoff.
+- URL formats: Venmo `venmo.com/{handle}?txn=pay&amount=X.XX&note=...`, Cash App `cash.app/${handle}/X.XX`, PayPal `paypal.me/{handle}/X.XX`.
+- Note prefilled: `"{poolName} payout"`.
+- Gold pill button styling (`bg-tp-accent`), shows "Pay X $Y" with small "via APP →" suffix.
 
-- Restored live score updates for THE CJ CUP Byron Nelson.
-- Bench display: counted golfers get a gold check; non-counted golfers are no longer faded or tagged.
-- Score sync cron interval changed from 15 minutes to 5.
-- Re-drafted the two CJ CUP pools off the real 147-player field (they had been drafted off a generic default field).
-- Setup wizard now loads the real tournament field from the API.
-- Deferred-draft / "awaiting field" flow: a pool created before its field is published parks, and the cron auto-drafts it when the field appears.
-- Tournament name now shows under the pool name on the leaderboard.
+## Project conventions
 
-## Project conventions and facts
+- Commit to feature branches and open PRs (do NOT push directly to main during multi-task work).
+- Vercel does NOT auto-deploy main; user runs `vercel --prod --yes` manually after each merge. Memorialized in memory.
+- No em-dashes anywhere (copy, UI strings, commit messages, replies).
+- The slashgolf golf API does not publish a tournament's field until tournament week.
+- `scripts/` is gitignored for local one-off scripts.
+- Stack: Next.js 14 App Router, Neon Postgres (raw SQL, no ORM), Tailwind, deployed on Vercel.
 
-- Commit to `main`; Vercel auto-deploys `main` to production (tourneypools.com).
-- No em-dashes anywhere: copy, UI strings, commit messages, replies to the user.
-- The slashgolf golf API does not publish a tournament's field until tournament week (it returns HTTP 400 before then).
-- `scripts/` is an untracked directory of local one-off diagnostic and migration scripts.
-- Stack: Next.js 14 App Router, Neon Postgres (raw SQL, no ORM), Tailwind, deployed on Vercel. See `CLAUDE.md`.
+## When Phase 3 is done
 
-## When the feature is done
-
-Delete this `HANDOFF.md`.
+- Open PR to main, dispatch a whole-branch reviewer first, then user merges.
+- Run `vercel --prod --yes` from main to deploy.
+- Delete this HANDOFF.md (it's just for the compact transition).
