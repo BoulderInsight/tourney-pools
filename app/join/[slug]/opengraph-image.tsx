@@ -80,6 +80,10 @@ export default async function OGImage({ params }: { params: { slug: string } }) 
           }}
         />
 
+        {/* Right column with a hard max-width so even a long tournament name
+            can't push left into the TOURNEYPOOLS logo area on the background.
+            Each line is its own element on its own row, so nothing wraps
+            into a multi-line block that bleeds left. */}
         <div
           style={{
             display: "flex",
@@ -87,39 +91,39 @@ export default async function OGImage({ params }: { params: { slug: string } }) 
             justifyContent: "center",
             alignItems: "flex-end",
             textAlign: "right",
-            width: "100%",
+            width: "640px",
             height: "100%",
-            padding: "60px 72px",
-            position: "relative",
+            position: "absolute",
+            top: 0,
+            right: 60,
           }}
         >
           {/* Kicker */}
           <div
             style={{
               display: "flex",
-              fontSize: 28,
+              fontSize: 24,
               fontWeight: 600,
               color: "#d4a843",
               letterSpacing: "4px",
               textTransform: "uppercase",
-              marginBottom: 14,
+              marginBottom: 12,
               textShadow: "0 2px 12px rgba(0,0,0,0.6)",
             }}
           >
             You&apos;re invited
           </div>
 
-          {/* Headline: chairman name */}
+          {/* Chairman name */}
           <div
             style={{
               display: "flex",
-              fontSize: 72,
+              fontSize: 64,
               fontWeight: 800,
               color: "white",
               lineHeight: 1.0,
               letterSpacing: "-1.5px",
               textShadow: "0 4px 20px rgba(0,0,0,0.5)",
-              maxWidth: "950px",
               textAlign: "right",
               justifyContent: "flex-end",
             }}
@@ -127,37 +131,58 @@ export default async function OGImage({ params }: { params: { slug: string } }) 
             {chairman}
           </div>
 
-          {/* Sub */}
+          {/* Connector — small, two words, never wraps */}
           <div
             style={{
               display: "flex",
-              fontSize: 40,
+              fontSize: 26,
               fontWeight: 500,
               color: "white",
-              marginTop: 12,
-              opacity: 0.92,
+              marginTop: 10,
+              opacity: 0.85,
               textShadow: "0 3px 16px rgba(0,0,0,0.6)",
-              maxWidth: "950px",
+              justifyContent: "flex-end",
+            }}
+          >
+            invited you to
+          </div>
+
+          {/* Pool name in gold */}
+          <div
+            style={{
+              display: "flex",
+              fontSize: 48,
+              fontWeight: 800,
+              color: "#d4a843",
+              lineHeight: 1.05,
+              letterSpacing: "-0.5px",
+              marginTop: 12,
+              textShadow: "0 3px 16px rgba(0,0,0,0.6)",
               textAlign: "right",
               justifyContent: "flex-end",
             }}
           >
-            is inviting you to{tournamentName ? ` a ${tournamentName} pool` : " a golf pool"}
-          </div>
-
-          {/* Pool name */}
-          <div
-            style={{
-              display: "flex",
-              fontSize: 34,
-              fontWeight: 700,
-              color: "#d4a843",
-              marginTop: 18,
-              textShadow: "0 2px 12px rgba(0,0,0,0.6)",
-            }}
-          >
             {poolName}
           </div>
+
+          {/* Tournament line — small enough that even long names fit */}
+          {tournamentName && (
+            <div
+              style={{
+                display: "flex",
+                fontSize: 24,
+                fontWeight: 500,
+                color: "white",
+                marginTop: 14,
+                opacity: 0.75,
+                textShadow: "0 2px 10px rgba(0,0,0,0.6)",
+                textAlign: "right",
+                justifyContent: "flex-end",
+              }}
+            >
+              for the {tournamentName}
+            </div>
+          )}
         </div>
       </div>
     ),
