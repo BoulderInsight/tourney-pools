@@ -100,7 +100,18 @@ export default function PlayersTabPage() {
               className="w-full flex items-center justify-between bg-white border border-tp-bg-dark rounded-xl px-4 py-3.5 text-left active:bg-tp-bg/60 transition-colors"
             >
               <div className="min-w-0 flex-1">
-                <p className="font-semibold text-gray-900 truncate">{p.name}</p>
+                <p className="font-semibold text-gray-900 truncate flex items-center gap-1.5">
+                  {p.name}
+                  {p.person.phone && (
+                    <span
+                      className="text-tp-accent text-sm flex-shrink-0"
+                      title="Phone on file"
+                      aria-label="Phone on file"
+                    >
+                      📱
+                    </span>
+                  )}
+                </p>
                 {handle ? (
                   <p className="text-xs text-gray-500 truncate mt-0.5">
                     <span className="inline-flex items-center gap-1">

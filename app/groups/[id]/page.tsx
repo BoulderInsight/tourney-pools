@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import type { GroupWithMembers, PaymentMethod, Person } from "@/lib/types";
 import CollectDialog from "@/app/pool/[slug]/players/CollectDialog";
 import TopNav from "@/app/components/top-nav";
+import { formatUsPhoneDisplay } from "@/lib/phone";
 
 const METHOD_LABEL: Record<PaymentMethod, string> = {
   venmo: "Venmo",
@@ -175,7 +176,21 @@ export default function GroupEditPage() {
               className="flex items-center justify-between bg-white border border-tp-bg-dark rounded-xl px-4 py-3"
             >
               <div className="min-w-0 flex-1">
-                <p className="font-semibold text-gray-900 truncate">{m.name}</p>
+                <p className="font-semibold text-gray-900 truncate flex items-center gap-1.5">
+                  {m.name}
+                  {/* Phone-on-file marker. Pretty US format on hover, hidden on
+                      narrow widths via the tooltip only. Renders even when no
+                      handle is set, since phone is independent of payment info. */}
+                  {m.phone && (
+                    <span
+                      className="text-tp-accent text-sm flex-shrink-0"
+                      title={`Phone on file: ${formatUsPhoneDisplay(m.phone)}`}
+                      aria-label={`Phone on file: ${formatUsPhoneDisplay(m.phone)}`}
+                    >
+                      📱
+                    </span>
+                  )}
+                </p>
                 {handle ? (
                   <p className="text-xs text-gray-500 truncate mt-0.5">
                     {METHOD_LABEL[handle.method]} &middot; @{handle.handle}
