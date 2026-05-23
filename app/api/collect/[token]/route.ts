@@ -9,7 +9,8 @@ interface TokenContext {
   personId: string;
   personName: string;
   commissionerName: string;
-  poolName: string;
+  /** Null when the link was minted from the Groups view (no pool context). */
+  poolName: string | null;
   tournamentName: string | null;
   submittedAt: string | null;
 }
@@ -18,16 +19,19 @@ async function loadContext(
   sql: ReturnType<typeof getDb>,
   token: string,
 ): Promise<TokenContext | null> {
+  // LEFT JOIN pools/chairmen/tournaments so a null pool_id still resolves the person
+  // and the commissioner (via people.chairman_id).
   const rows = await sql`
     SELECT cr.person_id, cr.submitted_at,
            pe.name AS person_name,
            p.pool_name,
-           c.name AS commissioner_name,
+           COALESCE(c_pool.name, c_person.name) AS commissioner_name,
            t.name AS tournament_name
     FROM collection_requests cr
     JOIN people pe ON pe.id = cr.person_id
-    JOIN pools p ON p.id = cr.pool_id
-    JOIN chairmen c ON c.id = p.chairman_id
+    JOIN chairmen c_person ON c_person.id = pe.chairman_id
+    LEFT JOIN pools p ON p.id = cr.pool_id
+    LEFT JOIN chairmen c_pool ON c_pool.id = p.chairman_id
     LEFT JOIN tournaments t ON t.id = p.tournament_id
     WHERE cr.token = ${token}
   `;
@@ -37,7 +41,7 @@ async function loadContext(
     personId: r.person_id as string,
     personName: r.person_name as string,
     commissionerName: r.commissioner_name as string,
-    poolName: r.pool_name as string,
+    poolName: (r.pool_name as string | null) ?? null,
     tournamentName: (r.tournament_name as string | null) ?? null,
     submittedAt: (r.submitted_at as string | null) ?? null,
   };

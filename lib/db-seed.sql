@@ -132,7 +132,7 @@ CREATE TABLE collection_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   token TEXT UNIQUE NOT NULL,
   person_id UUID NOT NULL REFERENCES people(id) ON DELETE CASCADE,
-  pool_id UUID NOT NULL REFERENCES pools(id) ON DELETE CASCADE,
+  pool_id UUID REFERENCES pools(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   submitted_at TIMESTAMPTZ
 );

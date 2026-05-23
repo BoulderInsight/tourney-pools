@@ -194,9 +194,9 @@ export default function GroupEditPage() {
                       ? "text-tp-primary border border-tp-bg-dark active:bg-tp-bg/60"
                       : "text-white bg-tp-accent active:opacity-90"
                   }`}
-                  aria-label={handle ? `Edit ${m.name}'s payment info` : `Collect ${m.name}'s payment info`}
+                  aria-label={handle ? `Edit ${m.name}'s payment info` : `Add ${m.name}'s payment info`}
                 >
-                  {handle ? "Edit" : "Collect"}
+                  {handle ? "Edit" : "Payments"}
                 </button>
                 <button
                   type="button"

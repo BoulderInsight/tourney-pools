@@ -108,13 +108,18 @@ export default function CollectDialog({
   }
 
   async function handleMakeLink() {
-    if (!slug) return;
     setSaving(true);
     setError("");
-    const res = await fetch(`/api/pool/${slug}/collection-requests`, {
+    // Pool-scoped link when invoked from a pool's Players tab; person-only link from
+    // the Groups view (no pool context).
+    const url = slug
+      ? `/api/pool/${slug}/collection-requests`
+      : `/api/people/${person.id}/collection-requests`;
+    const body = slug ? JSON.stringify({ personId: person.id }) : JSON.stringify({});
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ personId: person.id }),
+      body,
     });
     setSaving(false);
     if (!res.ok) { setError("Could not create link. Try again."); return; }
@@ -139,7 +144,7 @@ export default function CollectDialog({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label={`Collect payment info for ${name}`}
+      aria-label={`Payment info for ${name}`}
     >
       <div
         className="w-full max-w-md bg-white rounded-2xl p-5 shadow-card-lg"
@@ -147,7 +152,7 @@ export default function CollectDialog({
       >
         <div className="flex items-start justify-between mb-1">
           <h2 className="font-serif text-xl font-bold text-tp-primary">
-            Collect from {name}
+            Payments for {name}
           </h2>
           <button
             type="button"
@@ -159,7 +164,7 @@ export default function CollectDialog({
           </button>
         </div>
         <p className="text-xs text-gray-400 mb-4">
-          Star their preferred app. You can save what you know{slug ? " and ask them for the rest" : ""}.
+          Star their preferred app. You can save what you know and ask them for the rest.
         </p>
 
         <div className="space-y-2.5 mb-4">
@@ -195,45 +200,41 @@ export default function CollectDialog({
           {saving ? "Saving..." : "Save"}
         </button>
 
-        {slug && (
-          <>
-            <div className="gold-rule my-4" />
+        <div className="gold-rule my-4" />
 
-            <p className="text-xs text-gray-500 mb-2">
-              Or ask {name} to send their info themselves.
-            </p>
-            {!linkUrl ? (
+        <p className="text-xs text-gray-500 mb-2">
+          Or ask {name} to send their info themselves.
+        </p>
+        {!linkUrl ? (
+          <button
+            type="button"
+            onClick={handleMakeLink}
+            disabled={saving}
+            className="w-full py-3 rounded-xl text-sm font-semibold border border-tp-bg-dark text-tp-primary active:bg-tp-bg/60 disabled:opacity-60"
+          >
+            Generate self-serve link
+          </button>
+        ) : (
+          <div className="space-y-2">
+            <div className="bg-tp-bg/80 rounded-xl px-3 py-2 text-xs text-gray-700 break-all font-mono">
+              {linkUrl}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={handleMakeLink}
-                disabled={saving}
-                className="w-full py-3 rounded-xl text-sm font-semibold border border-tp-bg-dark text-tp-primary active:bg-tp-bg/60 disabled:opacity-60"
+                onClick={handleCopy}
+                className="py-3 rounded-xl text-sm font-semibold border border-tp-bg-dark text-tp-primary active:bg-tp-bg/60"
               >
-                Generate self-serve link
+                {copyState === "copied" ? "Copied!" : "Copy link"}
               </button>
-            ) : (
-              <div className="space-y-2">
-                <div className="bg-tp-bg/80 rounded-xl px-3 py-2 text-xs text-gray-700 break-all font-mono">
-                  {linkUrl}
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={handleCopy}
-                    className="py-3 rounded-xl text-sm font-semibold border border-tp-bg-dark text-tp-primary active:bg-tp-bg/60"
-                  >
-                    {copyState === "copied" ? "Copied!" : "Copy link"}
-                  </button>
-                  <a
-                    href={`sms:?body=${smsBody}`}
-                    className="py-3 rounded-xl text-sm font-semibold bg-tp-primary text-white text-center active:bg-tp-primary/90"
-                  >
-                    Text it
-                  </a>
-                </div>
-              </div>
-            )}
-          </>
+              <a
+                href={`sms:?body=${smsBody}`}
+                className="py-3 rounded-xl text-sm font-semibold bg-tp-primary text-white text-center active:bg-tp-primary/90"
+              >
+                Text it
+              </a>
+            </div>
+          </div>
         )}
 
         {error && <p className="text-xs text-red-600 mt-3">{error}</p>}
