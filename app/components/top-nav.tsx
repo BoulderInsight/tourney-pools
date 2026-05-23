@@ -13,10 +13,8 @@ export type TopNavActive =
   | "pools"
   | "groups"
   | "admin"
-  | "pool-leaderboard"
   | "pool-scores"
-  | "pool-players"
-  | "pool-setup";
+  | "pool-players";
 
 interface TopNavProps {
   /** Which link should render in the active state. */
@@ -27,7 +25,7 @@ interface TopNavProps {
 
 /**
  * Logged-in app top bar. Logo on the left, consistent text-xs links on the right:
- * Admin (super only), Pools, Groups, the active pool's per-pool tabs (when applicable),
+ * Admin (super only), Pools, Groups, Scores/Players (when on a pool the chairman owns),
  * Sign out. Replaces the prior per-page header markup and the fixed bottom nav.
  */
 export default function TopNav({ active, pool }: TopNavProps) {
@@ -76,26 +74,14 @@ export default function TopNav({ active, pool }: TopNavProps) {
         )}
         <Link href="/dashboard" className={linkClass("pools")}>Pools</Link>
         <Link href="/groups" className={linkClass("groups")}>Groups</Link>
-        {pool && (
+        {pool?.isOwner && (
           <>
-            <Link href={`/pool/${pool.slug}`} className={linkClass("pool-leaderboard")}>
-              Leaderboard
+            <Link href={`/pool/${pool.slug}/scores`} className={linkClass("pool-scores")}>
+              Scores
             </Link>
-            {pool.isOwner && (
-              <Link href={`/pool/${pool.slug}/scores`} className={linkClass("pool-scores")}>
-                Scores
-              </Link>
-            )}
-            {pool.isOwner && (
-              <Link href={`/pool/${pool.slug}/players`} className={linkClass("pool-players")}>
-                Players
-              </Link>
-            )}
-            {pool.isOwner && (
-              <Link href={`/pool/${pool.slug}/setup`} className={linkClass("pool-setup")}>
-                Setup
-              </Link>
-            )}
+            <Link href={`/pool/${pool.slug}/players`} className={linkClass("pool-players")}>
+              Players
+            </Link>
           </>
         )}
         {isLoggedIn && (
