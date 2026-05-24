@@ -24,7 +24,7 @@ export async function importTournamentField(
   try {
     leaderboard = await fetchLeaderboard(apiTournamentId, year);
   } catch {
-    return null; // field not published yet — try again on the next cron run
+    return null; // field not published yet, try again on the next cron run
   }
   if (leaderboard.golfers.length === 0) return null;
 

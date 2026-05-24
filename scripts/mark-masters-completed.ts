@@ -17,7 +17,7 @@ async function main() {
     WHERE id = ${MASTERS_ID} AND status = 'in_progress'
     RETURNING name, status, end_date
   `;
-  console.log(r[0] ?? "(no change — already not in_progress)");
+  console.log(r[0] ?? "(no change, already not in_progress)");
 }
 
 main().catch((e) => {

@@ -77,7 +77,7 @@ async function main() {
   // C-3: bump last_sync_at on pools so the page stops claiming stale data
   await sql`UPDATE pools SET last_sync_at = now() WHERE tournament_id = ${tournament.id} AND setup_complete = true`;
 
-  // Quick verification — show first 5 PGA golfers with scores
+  // Quick verification, show first 5 PGA golfers with scores
   const sample = await sql`
     SELECT name, odds_api_id, r1, r2, r3, r4, status, made_cut
     FROM tournament_golfers

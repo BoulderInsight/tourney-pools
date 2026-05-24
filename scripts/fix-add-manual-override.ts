@@ -18,7 +18,7 @@ async function main() {
   `;
 
   if (before.length > 0) {
-    console.log("Column manual_override already exists — nothing to do.");
+    console.log("Column manual_override already exists, nothing to do.");
     return;
   }
 

@@ -117,12 +117,12 @@ async function main() {
   }
 
   if (ambiguous.length > 0) {
-    console.log("\nAMBIGUOUS — multiple API candidates share last name (no auto-match):");
+    console.log("\nAMBIGUOUS, multiple API candidates share last name (no auto-match):");
     console.table(ambiguous.map((m) => ({ db_name: m.db_name })));
   }
 
   if (none.length > 0) {
-    console.log("\nUNMATCHED — no API row found (will be left with NULL odds_api_id):");
+    console.log("\nUNMATCHED, no API row found (will be left with NULL odds_api_id):");
     console.table(none.map((m) => ({ db_name: m.db_name })));
   }
 

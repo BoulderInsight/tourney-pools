@@ -28,7 +28,7 @@ async function main() {
   `;
   console.table(gCols);
 
-  // Check Masters sync staleness (it's marked in_progress — has it actually been updating?)
+  // Check Masters sync staleness (it's marked in_progress, has it actually been updating?)
   console.log("\n=== MASTERS tournament_golfers max updated_at (cron health check) ===");
   const masters = await sql`
     SELECT
@@ -62,7 +62,7 @@ async function main() {
         AND (manual_override IS NULL OR manual_override = false)
       LIMIT 1
     `;
-    console.log("Query succeeded — no manual_override bug.");
+    console.log("Query succeeded, no manual_override bug.");
   } catch (e) {
     console.log("Query FAILS:", e instanceof Error ? e.message : e);
   }

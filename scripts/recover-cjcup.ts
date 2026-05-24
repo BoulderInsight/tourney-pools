@@ -52,7 +52,7 @@ async function main() {
   console.log(`Matched ${matches.length}/${dbGolfers.length} golfers to the live field; ${unmatched.length} unmatched.`);
   console.table(matches.map((m) => ({ golfer: m.dbName, playerId: m.playerId })));
   if (unmatched.length) {
-    console.log("Unmatched (not in this tournament's field — will never have a score):");
+    console.log("Unmatched (not in this tournament's field, will never have a score):");
     console.log("  " + unmatched.join(", "));
   }
 

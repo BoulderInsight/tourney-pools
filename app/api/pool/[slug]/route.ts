@@ -78,7 +78,7 @@ export async function GET(
         // Update last_sync_at for this pool
         await sql`UPDATE pools SET last_sync_at = now() WHERE id = ${pool.id}`;
       } catch (err) {
-        // Sync failure shouldn't block page load — but log it so it surfaces in Vercel
+        // Sync failure shouldn't block page load, but log it so it surfaces in Vercel
         console.error(`[pool/${params.slug}] auto-sync failed:`, err);
       }
     }

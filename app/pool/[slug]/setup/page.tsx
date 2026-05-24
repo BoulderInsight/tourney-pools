@@ -283,7 +283,7 @@ export default function PoolSetupPage() {
           setFieldFromTournament(false);
           setFieldAwaiting(true);
         } else {
-          // Not linked to a tournament with live data — use the default field
+          // Not linked to a tournament with live data, use the default field
           setFieldFromTournament(false);
           setFieldAwaiting(false);
         }
@@ -454,7 +454,7 @@ export default function PoolSetupPage() {
         </h2>
         <p className="text-gray-500 text-sm mb-8 max-w-xs">
           {fieldAwaiting
-            ? `Your pool is set up. ${settings.draftType === "snake" ? "You'll be able to run your draft" : "Your draft will run automatically"} once ${selectedTournament?.name ?? "the tournament"}'s field is announced — usually a few days before it starts.`
+            ? `Your pool is set up. ${settings.draftType === "snake" ? "You'll be able to run your draft" : "Your draft will run automatically"} once ${selectedTournament?.name ?? "the tournament"}'s field is announced, usually a few days before it starts.`
             : "Share the leaderboard link with your players. Scores can be entered as rounds are played."}
         </p>
         <a href={"/pool/" + slug} className="btn-green inline-block">View Leaderboard</a>
@@ -921,10 +921,10 @@ export default function PoolSetupPage() {
                   </p>
                   <p className="text-xs text-gray-600 leading-relaxed">
                     {selectedTournament?.name ?? "This tournament"}&apos;s field is usually
-                    published a few days before play begins. Finish setting up your pool now —
+                    published a few days before play begins. Finish setting up your pool now.
                     {settings.draftType === "snake"
-                      ? " you'll be able to run your draft as soon as the field is announced."
-                      : " your draft will run automatically as soon as the field is announced."}
+                      ? " You'll be able to run your draft as soon as the field is announced."
+                      : " Your draft will run automatically as soon as the field is announced."}
                   </p>
                 </div>
 
@@ -943,8 +943,8 @@ export default function PoolSetupPage() {
                   {fieldLoading
                     ? "Loading the official tournament field…"
                     : fieldFromTournament
-                    ? `Official field for ${selectedTournament?.name ?? "this tournament"} — ${golferCount} golfers.`
-                    : `${golferCount} golfers (default list — not linked to a tournament with live scoring).`}
+                    ? `Official field for ${selectedTournament?.name ?? "this tournament"}, ${golferCount} golfers.`
+                    : `${golferCount} golfers (default list, not linked to a tournament with live scoring).`}
                 </p>
 
                 <div className="rounded-xl border-2 border-tp-bg-dark bg-tp-bg/30 p-3 font-mono text-xs leading-relaxed overflow-y-auto" style={{ maxHeight: 320 }}>
@@ -1070,7 +1070,7 @@ export default function PoolSetupPage() {
                 {
                   label: "Draft",
                   value: (settings.draftType === "snake" ? "Live Snake Draft" : settings.draftType === "auto-snake" ? "Auto Snake Draft" : "Pure Random")
-                    + (fieldAwaiting ? " — after the field is announced" : ""),
+                    + (fieldAwaiting ? ", after the field is announced" : ""),
                 },
                 {
                   label: "Missed Cut",

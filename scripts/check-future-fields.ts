@@ -29,11 +29,11 @@ async function main() {
     try {
       const lb = await fetchLeaderboard(t.api_tournament_id, t.year);
       console.log(
-        `  +${String(daysOut).padStart(3)}d  ${t.name} — field: ${lb.golfers.length} golfers (status: ${lb.status})`
+        `  +${String(daysOut).padStart(3)}d  ${t.name}, field: ${lb.golfers.length} golfers (status: ${lb.status})`
       );
     } catch (e) {
       console.log(
-        `  +${String(daysOut).padStart(3)}d  ${t.name} — API error: ${e instanceof Error ? e.message : String(e)}`
+        `  +${String(daysOut).padStart(3)}d  ${t.name}, API error: ${e instanceof Error ? e.message : String(e)}`
       );
     }
     await sleep(400);

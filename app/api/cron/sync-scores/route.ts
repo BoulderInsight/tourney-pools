@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   const errors: string[] = [];
 
   // Promote tournaments whose start date has arrived (scheduled → in_progress).
-  // Nothing else does this — without it a tournament is never synced on day one.
+  // Nothing else does this, without it a tournament is never synced on day one.
   await sql`
     UPDATE tournaments SET status = 'in_progress', updated_at = now()
     WHERE status = 'scheduled'
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 
       // Index this tournament's golfers. Pools created through the setup
       // wizard store golfers by name with no odds_api_id, so we match on
-      // odds_api_id first, then fall back to a unique normalized name —
+      // odds_api_id first, then fall back to a unique normalized name,
       // backfilling the id so future syncs are an exact match.
       const dbGolfers = await sql`
         SELECT id, name, odds_api_id
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
       for (const g of dbGolfers) {
         if (g.odds_api_id) byApiId.set(String(g.odds_api_id), g.id);
         const nm = normalizeName(g.name);
-        // null marks an ambiguous name shared by 2+ golfers — never match it
+        // null marks an ambiguous name shared by 2+ golfers, never match it
         byName.set(nm, byName.has(nm) ? null : g.id);
       }
 
@@ -142,7 +142,7 @@ export async function GET(req: NextRequest) {
         pool.api_tournament_id,
         pool.year
       );
-      if (!field) continue; // field still not published — try again next run
+      if (!field) continue; // field still not published, try again next run
 
       for (const p of awaitingPools.filter((x) => x.tournament_id === pool.tournament_id)) {
         const draftType = p.settings?.draftType || "auto-snake";
