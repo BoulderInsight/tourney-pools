@@ -40,6 +40,8 @@ export default function GroupEditPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [collectingPersonId, setCollectingPersonId] = useState<string | null>(null);
+  const [getVenmoBusyId, setGetVenmoBusyId] = useState<string | null>(null);
+  const [getVenmoFlash, setGetVenmoFlash] = useState<{ id: string; text: string } | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/groups/${groupId}`);
@@ -105,6 +107,34 @@ export default function GroupEditPage() {
     setSaving(false);
     if (!res.ok) { setError("Could not remove member."); return; }
     await load();
+  }
+
+  /**
+   * 'Get Venmo' shortcut: mints a self-serve collect link for this Person and
+   * opens iMessage addressed to their phone with the link prefilled in the
+   * body. The member taps the link, fills in Venmo / Cash App / PayPal on
+   * their own device, and the data lands on the chairman's people row. Avoids
+   * the chairman having to copy a token, switch apps, paste, and address by
+   * hand.
+   */
+  async function handleGetVenmo(m: { id: string; name: string; phone: string | null }) {
+    if (getVenmoBusyId || !m.phone) return;
+    setGetVenmoBusyId(m.id);
+    setGetVenmoFlash(null);
+    const res = await fetch(`/api/people/${m.id}/collection-requests`, { method: "POST" });
+    setGetVenmoBusyId(null);
+    if (!res.ok) {
+      setGetVenmoFlash({ id: m.id, text: "Could not generate link." });
+      setTimeout(() => setGetVenmoFlash(null), 5000);
+      return;
+    }
+    const { url } = await res.json();
+    const firstName = (m.name || "").trim().split(/\s+/)[0] || "there";
+    const body =
+      `Hey ${firstName}! Drop your Venmo (or Cash App / PayPal) here so I can pay you when you win our golf pool: ${url}`;
+    // Single recipient + body: iOS handles either ?body= or &body=. Use & so
+    // the form matches the multi-recipient helper we use elsewhere.
+    window.location.href = `sms:${m.phone}&body=${encodeURIComponent(body)}`;
   }
 
   async function handleDeleteGroup() {
@@ -179,8 +209,9 @@ export default function GroupEditPage() {
           return (
             <div
               key={m.id}
-              className="flex items-center justify-between bg-white border border-tp-bg-dark rounded-xl px-4 py-3"
+              className="bg-white border border-tp-bg-dark rounded-xl px-4 py-3"
             >
+              <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-gray-900 truncate flex items-center gap-1.5">
                   {m.name}
@@ -206,6 +237,20 @@ export default function GroupEditPage() {
                 )}
               </div>
               <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                {/* Get Venmo: one-tap self-serve link via SMS. Only renders
+                    when phone is on file AND no handle yet (otherwise the
+                    chairman either can't text or already has the data). */}
+                {!handle && m.phone && (
+                  <button
+                    type="button"
+                    onClick={() => handleGetVenmo(m)}
+                    disabled={saving || getVenmoBusyId === m.id}
+                    className="text-xs font-semibold text-white bg-tp-primary rounded-full px-3 py-1.5 active:opacity-90 disabled:opacity-50"
+                    aria-label={`Text ${m.name} a link to enter their payment info`}
+                  >
+                    {getVenmoBusyId === m.id ? "Opening..." : "📱 Get Venmo"}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setCollectingPersonId(m.id)}
@@ -213,7 +258,7 @@ export default function GroupEditPage() {
                   className={`text-xs font-semibold rounded-full px-3 py-1.5 disabled:opacity-50 ${
                     handle
                       ? "text-tp-primary border border-tp-bg-dark active:bg-tp-bg/60"
-                      : "text-white bg-tp-accent active:opacity-90"
+                      : "text-tp-accent border border-tp-accent/40 active:bg-tp-accent/10"
                   }`}
                   aria-label={handle ? `Edit ${m.name}'s payment info` : `Add ${m.name}'s payment info`}
                 >
@@ -229,6 +274,12 @@ export default function GroupEditPage() {
                   Remove
                 </button>
               </div>
+              </div>
+              {getVenmoFlash && getVenmoFlash.id === m.id && (
+                <p className="text-[11px] text-amber-600 font-semibold mt-2">
+                  {getVenmoFlash.text}
+                </p>
+              )}
             </div>
           );
         })}
