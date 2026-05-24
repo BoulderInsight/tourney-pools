@@ -19,6 +19,7 @@ interface Pool {
   player_count: number;
   pending_count: number;
   accepted_count: number;
+  pending_with_phone_count: number;
   created_at: string;
   tournament_name: string | null;
   tournament_status: string | null;
@@ -33,6 +34,9 @@ function DashboardContent() {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
+  const [textingId, setTextingId] = useState<string | null>(null);
+  const [textFlash, setTextFlash] = useState<{ id: string; tone: "warn" | "info"; text: string } | null>(null);
+  const [showCompleted, setShowCompleted] = useState(false);
   const [tier, setTier] = useState("free");
   const [proUntil, setProUntil] = useState<string | null>(null);
   const [customAdImage, setCustomAdImage] = useState<string | null>(null);
@@ -102,6 +106,44 @@ function DashboardContent() {
       router.push(`/pool/${slug}/setup`);
     }
     setCreating(false);
+  }
+
+  /**
+   * Dashboard shortcut to re-text every pending invitee with a phone on file.
+   * Same backing endpoint as /pool/[slug]/players' Resend Invites, so 'invited_at'
+   * gets stamped and the recipient list lines up. On success, navigates to the
+   * sms: URL which opens iMessage with everyone addressed and the join link
+   * pre-filled in the body.
+   */
+  async function handleTextPool(pool: Pool) {
+    if (textingId) return;
+    setTextingId(pool.id);
+    setTextFlash(null);
+    const res = await fetch(`/api/pool/${pool.slug}/invite`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "resend" }),
+    });
+    setTextingId(null);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setTextFlash({ id: pool.id, tone: "warn", text: data?.error || "Could not start text." });
+      setTimeout(() => setTextFlash(null), 5000);
+      return;
+    }
+    const { smsUrl } = await res.json();
+    if (smsUrl) {
+      window.location.href = smsUrl;
+    } else {
+      setTextFlash({
+        id: pool.id,
+        tone: "warn",
+        text: "No phone numbers on file for pending invitees.",
+      });
+      setTimeout(() => setTextFlash(null), 5000);
+    }
+    // Refresh so the pending_with_phone_count badge updates if needed.
+    fetchPools();
   }
 
   const [deleteModal, setDeleteModal] = useState<{ id: string; name: string } | null>(null);
@@ -333,9 +375,15 @@ function DashboardContent() {
                 </div>
               );
             }
-            return (
-              <div className="space-y-3">
-                {filtered.map((pool) => {
+            // Split active vs completed so the dashboard stays short. Completed
+            // pools remain fully usable (chairman can still text, view scores,
+            // copy the invite link), they're just tucked behind a toggle so the
+            // primary list focuses on what needs attention.
+            const isOverPool = (p: Pool) =>
+              p.tournament_status === "completed" || p.tournament_status === "cancelled";
+            const activePools = filtered.filter((p) => !isOverPool(p));
+            const completedPools = filtered.filter((p) => isOverPool(p));
+            const renderCard = (pool: Pool) => {
             // Completed/cancelled pools stay fully usable: the invite link still resolves
             // (players use it to access payout buttons post-tournament), and the chairman
             // still needs View / Scores / Copy to administer their pool's afterlife. Only
@@ -404,23 +452,59 @@ function DashboardContent() {
                 </Link>
                 {/* Invite link goes to /join so invitees land on the RSVP page first.
                     Once the draft is complete, the /join page surfaces a link onward
-                    to the leaderboard, so this single URL covers the whole lifecycle. */}
-                {pool.setup_complete && (
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(`https://tourneypools.com/join/${pool.slug}`);
-                      setCopied(pool.id);
-                      setTimeout(() => setCopied(null), 2000);
-                    }}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-tp-accent border-t border-tp-bg-dark active:bg-tp-accent/5 transition-colors"
-                  >
-                    {copied === pool.id ? (
-                      <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Link Copied!</>
-                    ) : (
-                      <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg> Copy Invite Link</>
-                    )}
-                  </button>
-                )}
+                    to the leaderboard, so this single URL covers the whole lifecycle.
+                    Text Pool sits beside it when there are pending invitees with
+                    phones on file, so the chairman can ping them straight from
+                    the dashboard without drilling into /players. */}
+                {pool.setup_complete && (() => {
+                  const canText = !pool.draft_complete && pool.pending_with_phone_count > 0;
+                  return (
+                    <>
+                      <div className="flex border-t border-tp-bg-dark">
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(`https://tourneypools.com/join/${pool.slug}`);
+                            setCopied(pool.id);
+                            setTimeout(() => setCopied(null), 2000);
+                          }}
+                          className="flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-tp-accent active:bg-tp-accent/5 transition-colors"
+                        >
+                          {copied === pool.id ? (
+                            <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Link Copied!</>
+                          ) : (
+                            <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg> Copy Invite Link</>
+                          )}
+                        </button>
+                        {canText && (
+                          <>
+                            <div className="w-px bg-tp-bg-dark" />
+                            <button
+                              type="button"
+                              onClick={() => handleTextPool(pool)}
+                              disabled={textingId === pool.id}
+                              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-tp-primary active:bg-tp-primary/5 transition-colors disabled:opacity-60"
+                            >
+                              {textingId === pool.id ? (
+                                <>Opening...</>
+                              ) : (
+                                <>📱 Text Pool ({pool.pending_with_phone_count})</>
+                              )}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                      {textFlash && textFlash.id === pool.id && (
+                        <p
+                          className={`text-[11px] text-center px-3 py-1.5 border-t border-tp-bg-dark ${
+                            textFlash.tone === "warn" ? "text-amber-600 bg-amber-50" : "text-tp-primary bg-tp-bg/40"
+                          }`}
+                        >
+                          {textFlash.text}
+                        </p>
+                      )}
+                    </>
+                  );
+                })()}
                 {/* Pool actions. Edit goes to the setup wizard (which loads
                     the existing pool's data) and stays active until the draft
                     runs. After draft_complete=true the roster and rules are
@@ -445,9 +529,41 @@ function DashboardContent() {
                 </div>
               </div>
             );
-          })}
-              </div>
-            );
+          };
+          return (
+            <>
+              {activePools.length > 0 ? (
+                <div className="space-y-3">{activePools.map(renderCard)}</div>
+              ) : (
+                completedPools.length > 0 && !showCompleted && (
+                  <p className="text-center text-sm text-gray-400 italic py-2">
+                    No active pools right now.
+                  </p>
+                )
+              )}
+              {/* Completed pools collapse behind a toggle so the primary list
+                  stays focused on what's in-flight. Toggle stays visible while
+                  the section is open so the chairman can re-collapse it. */}
+              {completedPools.length > 0 && (
+                <div className="mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setShowCompleted((v) => !v)}
+                    className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-gray-500 active:text-tp-primary"
+                    aria-expanded={showCompleted}
+                  >
+                    <span>{showCompleted ? "▾" : "▸"}</span>
+                    {showCompleted
+                      ? `Hide completed pools (${completedPools.length})`
+                      : `Show completed pools (${completedPools.length})`}
+                  </button>
+                  {showCompleted && (
+                    <div className="space-y-3 mt-2">{completedPools.map(renderCard)}</div>
+                  )}
+                </div>
+              )}
+            </>
+          );
           })()}
         </>
       )}
