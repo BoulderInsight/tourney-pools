@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { findOrCreatePerson } from "@/lib/people";
+import { findOrCreatePersonForPool } from "@/lib/people";
 
 export const dynamic = "force-dynamic";
 
@@ -52,13 +52,20 @@ export async function PATCH(
     );
   }
 
-  // Re-link to the Person matching the new name. findOrCreatePerson will pick
-  // up any existing handle-bearing Person for this chairman with that name
-  // (Brack with Venmo on file in another pool, etc), so a rename doesn't lose
-  // payment info if the new name already has data on it. The old Person row
-  // stays (it may be linked from other pools).
+  // Re-link to the Person matching the new name. The 'ForPool' variant keeps
+  // cross-pool reuse (renaming 'Brak' -> 'Brack' picks up an existing Brack
+  // Person with Venmo on file) BUT enforces per-pool uniqueness: if the new
+  // name matches another player in THIS pool, a fresh Person row is created
+  // so the two same-name players don't silently share data. excludePlayerId
+  // skips the player being renamed so a no-op rename doesn't trip the check.
   const sql = getDb();
-  const person = await findOrCreatePerson(sql, session.chairmanId, name);
+  const person = await findOrCreatePersonForPool(
+    sql,
+    session.chairmanId,
+    name,
+    pool.id,
+    { excludePlayerId: params.playerId },
+  );
 
   const updated = await sql`
     UPDATE players

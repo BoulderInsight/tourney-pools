@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { findOrCreatePerson, setPersonPhone } from "@/lib/people";
+import { findOrCreatePersonForPool, setPersonPhone } from "@/lib/people";
 import { normalizeUsPhoneE164 } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
@@ -64,7 +64,12 @@ export async function POST(
     }
   }
 
-  const person = await findOrCreatePerson(sql, session.chairmanId, name);
+  // findOrCreatePersonForPool keeps cross-pool reuse (Brack's Venmo carries
+  // forward) but enforces per-pool uniqueness so two players named the same
+  // in this pool always get distinct Person rows. Without this, adding a
+  // second 'Christi' would silently link to the first Christi's row and the
+  // two would share phone + handles.
+  const person = await findOrCreatePersonForPool(sql, session.chairmanId, name, pool.id);
   if (e164) {
     await setPersonPhone(sql, person.id, e164);
   }

@@ -60,6 +60,58 @@ export async function findOrCreatePerson(
   return createPerson(sql, chairmanId, name);
 }
 
+/**
+ * Like findOrCreatePerson, but enforces uniqueness within a pool: never
+ * returns a Person that's already linked to another player in this pool.
+ *
+ * Use this for any flow that adds, renames, or bulk-saves players within a
+ * single pool. The cross-pool reuse benefit (Brack's Venmo carrying from
+ * one season to the next) still works for any Person that isn't already
+ * spoken for in this specific pool. If the only matching Person IS already
+ * linked to another player here, a fresh Person row is inserted so the two
+ * same-name players don't silently share a phone or handles.
+ *
+ * `excludePlayerId` skips the player being currently saved (used by rename
+ * so a no-op rename doesn't see itself as a collision). `alreadyUsedPersonIds`
+ * tracks Persons used earlier in the same batch (used by the bulk setup
+ * endpoint when multiple players with the same name appear in one save).
+ */
+export async function findOrCreatePersonForPool(
+  sql: Sql,
+  chairmanId: string,
+  name: string,
+  poolId: string,
+  options: { excludePlayerId?: string; alreadyUsedPersonIds?: Set<string> } = {},
+): Promise<Person> {
+  const candidate = await findOrCreatePerson(sql, chairmanId, name);
+
+  // Already taken earlier in this batch (e.g. two Christis in the same
+  // wizard save). Always go create a new row.
+  if (options.alreadyUsedPersonIds?.has(candidate.id)) {
+    return createPerson(sql, chairmanId, name);
+  }
+
+  // Already linked to a different player in this pool? Same rule: fresh row.
+  const conflictRows = options.excludePlayerId
+    ? await sql`
+        SELECT id FROM players
+        WHERE pool_id = ${poolId}
+          AND person_id = ${candidate.id}
+          AND id != ${options.excludePlayerId}
+        LIMIT 1
+      `
+    : await sql`
+        SELECT id FROM players
+        WHERE pool_id = ${poolId} AND person_id = ${candidate.id}
+        LIMIT 1
+      `;
+  if (conflictRows.length > 0) {
+    return createPerson(sql, chairmanId, name);
+  }
+
+  return candidate;
+}
+
 /** Get a single Person owned by the given chairman, or null if not found / not owned. */
 export async function getPersonForChairman(
   sql: Sql,
