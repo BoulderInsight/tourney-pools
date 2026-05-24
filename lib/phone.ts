@@ -41,6 +41,12 @@ export function formatUsPhoneDisplay(e164: string | null | undefined): string {
  * a chairman re-texting the same pool actually wants. We previously used the
  * iOS-specific `sms:/open?addresses=` form, but that always opens a fresh
  * composition rather than threading into the existing conversation.
+ *
+ * Caveat: with several recipients followed by `?body=`, some iOS versions only
+ * honor the first phone and swallow the rest into the body text. If reliable
+ * multi-recipient addressing matters more than thread-matching (e.g. the one-off
+ * Invite/Resend flow where the chairman is texting people they may have never
+ * grouped with), use `buildIosMultiRecipientSmsLink` instead.
  */
 export function buildSmsLink(phones: (string | null | undefined)[]): string | null {
   const valid = phones.filter(
@@ -48,4 +54,34 @@ export function buildSmsLink(phones: (string | null | undefined)[]): string | nu
   );
   if (valid.length === 0) return null;
   return `sms:${valid.join(",")}`;
+}
+
+/**
+ * Build a multi-recipient SMS URL using the iOS-friendly `&addresses=` form
+ * with a pre-filled body. Always opens a NEW composition (no thread matching),
+ * but reliably addresses every recipient even when the body param is set.
+ *
+ * Use this for one-off broadcasts like Invite to Pool / Resend Invites where
+ * thread matching isn't useful (these aren't a recurring group thread yet). For
+ * the Text the Pool feature on the leaderboard, keep `buildSmsLink` so we at
+ * least try to match the chairman's existing ad-hoc thread when one exists.
+ *
+ * Returns null when no valid recipients were supplied.
+ */
+export function buildIosMultiRecipientSmsLink(
+  phones: (string | null | undefined)[],
+  body: string,
+): string | null {
+  const valid = phones.filter(
+    (p): p is string => typeof p === "string" && p.startsWith("+") && p.length >= 8,
+  );
+  if (valid.length === 0) return null;
+  // iOS Messages parses both `sms:/open?addresses=` and `sms:&addresses=` but
+  // the latter is more widely supported across versions and works in Mobile
+  // Safari without the `/open` host segment. The body param uses `&body=` for
+  // the same reason. Recipients stay comma-joined; the addresses param is
+  // multi-value and iOS splits on commas internally.
+  const addrs = encodeURIComponent(valid.join(","));
+  const encodedBody = encodeURIComponent(body);
+  return `sms:&addresses=${addrs}&body=${encodedBody}`;
 }
