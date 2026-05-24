@@ -421,15 +421,17 @@ function DashboardContent() {
                     )}
                   </button>
                 )}
-                {/* Pool actions. Edit stays disabled once setup completes (whether or not
-                    the tournament is over) so a finalized pool can't be reconfigured. */}
+                {/* Pool actions. Edit goes to the setup wizard (which loads
+                    the existing pool's data) and stays active until the draft
+                    runs. After draft_complete=true the roster and rules are
+                    locked so Edit greys out. */}
                 <div className="flex border-t border-tp-bg-dark">
                   <Link href={`/pool/${pool.slug}`} className="flex-1 text-center py-2.5 text-xs font-semibold text-tp-primary active:bg-tp-primary/5 transition-colors">View</Link>
                   <div className="w-px bg-tp-bg-dark" />
                   <Link href={`/pool/${pool.slug}/scores`} className="flex-1 text-center py-2.5 text-xs font-semibold text-tp-primary active:bg-tp-primary/5 transition-colors">Scores</Link>
                   <div className="w-px bg-tp-bg-dark" />
-                  {pool.setup_complete ? (
-                    <span className="flex-1 text-center py-2.5 text-xs font-semibold text-gray-300 cursor-not-allowed">Edit</span>
+                  {pool.draft_complete ? (
+                    <span className="flex-1 text-center py-2.5 text-xs font-semibold text-gray-300 cursor-not-allowed" title="Draft is complete. Pool is locked.">Edit</span>
                   ) : (
                     <Link href={`/pool/${pool.slug}/setup`} className="flex-1 text-center py-2.5 text-xs font-semibold text-tp-primary active:bg-tp-primary/5 transition-colors">Edit</Link>
                   )}
