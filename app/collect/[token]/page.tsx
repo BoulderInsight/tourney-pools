@@ -85,12 +85,25 @@ export default async function CollectPage({ params }: { params: { token: string 
           <h1 className="font-serif text-2xl font-bold text-tp-primary leading-tight">
             Hi {ctx.personName}
           </h1>
-          <p className="text-sm text-gray-600 mt-2">
-            {ctx.poolName ? (
+          {/* Three branches: tournament present (3 explicit lines so the
+              tournament gets its own line and reads cleanly), pool only, or
+              the generic future-pool fallback. The breaks are intentional
+              rather than relying on natural wrap so long tournament names
+              ('THE CJ CUP Byron Nelson') don't half-wrap with the chairman
+              name on the line above. */}
+          <p className="text-sm text-gray-600 mt-2 leading-relaxed">
+            {ctx.poolName && ctx.tournamentName ? (
               <>
-                <strong>{ctx.commissionerName}</strong> is running the <strong>{ctx.poolName}</strong> pool
-                {ctx.tournamentName ? <> for <strong>{ctx.tournamentName}</strong></> : null} and needs
-                your payment info so winners can be paid easily.
+                <strong>{ctx.commissionerName}</strong> is running the <strong>{ctx.poolName}</strong> pool for
+                <br />
+                <strong>{ctx.tournamentName}</strong>
+                <br />
+                and needs your payment info so winners can be paid easily.
+              </>
+            ) : ctx.poolName ? (
+              <>
+                <strong>{ctx.commissionerName}</strong> is running the <strong>{ctx.poolName}</strong> pool and
+                needs your payment info so winners can be paid easily.
               </>
             ) : (
               <>
