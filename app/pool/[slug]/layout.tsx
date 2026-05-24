@@ -45,6 +45,22 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       title,
       description,
     },
+    // PWA install metadata. Lets the OS treat this pool as its own home
+    // screen app: dynamic per-pool manifest provides icon + start_url, the
+    // iOS-specific meta tags give Safari what it needs since iOS ignores
+    // most of the manifest in favor of these.
+    manifest: `/pool/${params.slug}/manifest.webmanifest`,
+    appleWebApp: {
+      capable: true,
+      // iOS reads this for the saved icon label, NOT the page <title>. So
+      // setting it to the bare pool name (without ' | TourneyPools') keeps
+      // the home-screen label short and recognizable.
+      title: pool.pool_name as string,
+      statusBarStyle: "black-translucent",
+    },
+    icons: {
+      apple: "/apple-touch-icon.png",
+    },
   };
 }
 
