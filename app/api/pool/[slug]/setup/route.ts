@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { draftGolfers } from "@/lib/pool";
-import { findOrCreatePerson, setPersonPhone } from "@/lib/people";
+import { findOrCreatePersonForPool, setPersonPhone } from "@/lib/people";
 import { normalizeUsPhoneE164 } from "@/lib/phone";
 
 export async function POST(
@@ -80,11 +80,20 @@ export async function POST(
     await sql`DELETE FROM players WHERE pool_id = ${poolId} AND id = ANY(${removed}::uuid[])`;
   }
 
+  // Track Person ids already taken in this batch so two same-name players
+  // entered in one wizard save (two 'Christi') each get their own Person row
+  // instead of silently sharing one.
   const insertedPlayers: { id: string; name: string }[] = [];
+  const personsUsedInBatch = new Set<string>();
   for (let i = 0; i < players.length; i++) {
     const p = players[i];
     const name: string = p.name;
-    const person = await findOrCreatePerson(sql, session.chairmanId, name);
+    const isExisting = typeof p.id === "string" && existingIds.has(p.id);
+    const person = await findOrCreatePersonForPool(sql, session.chairmanId, name, poolId, {
+      excludePlayerId: isExisting ? (p.id as string) : undefined,
+      alreadyUsedPersonIds: personsUsedInBatch,
+    });
+    personsUsedInBatch.add(person.id);
 
     if (typeof p.phone === "string" && p.phone.trim().length > 0) {
       const e164 = normalizeUsPhoneE164(p.phone);
@@ -97,7 +106,6 @@ export async function POST(
       await setPersonPhone(sql, person.id, e164);
     }
 
-    const isExisting = typeof p.id === "string" && existingIds.has(p.id);
     if (isExisting) {
       const updated = await sql`
         UPDATE players
