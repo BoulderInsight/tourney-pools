@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { buildSmsLink } from "@/lib/phone";
+import { buildIosMultiRecipientSmsLink } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
 
@@ -90,11 +90,16 @@ export async function POST(
   const tournamentPart = pool.tournament_name ? ` for the ${pool.tournament_name}` : "";
   const messageBody = `You're invited to join ${pool.pool_name}${tournamentPart}! 🏌️ Tap here to RSVP: ${joinUrl}`;
 
-  const smsBase = buildSmsLink(recipients.map((r) => r.phone));
-  if (!smsBase) {
+  // Use the multi-recipient iOS form so every invitee actually gets addressed,
+  // even with several recipients + a pre-filled body. The plain sms:p1,p2?body=
+  // form is unreliable on iOS with many recipients: some versions only honor
+  // the first phone and swallow the rest. Tradeoff: this always opens a fresh
+  // composition, but for invite/resend that's fine (these aren't a recurring
+  // group thread).
+  const smsUrl = buildIosMultiRecipientSmsLink(recipients.map((r) => r.phone), messageBody);
+  if (!smsUrl) {
     return NextResponse.json({ smsUrl: null, body: null, recipients: [] });
   }
-  const smsUrl = `${smsBase}${smsBase.includes("?") ? "&" : "?"}body=${encodeURIComponent(messageBody)}`;
 
   // Mark these invitees as texted now. Idempotent under repeat clicks: a "new"
   // invocation immediately after the first finds no rows because invited_at is
