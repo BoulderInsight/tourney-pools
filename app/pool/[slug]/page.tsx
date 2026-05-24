@@ -653,9 +653,20 @@ function SettingsPill({ label, info }: { label: string; info: string }) {
   );
 }
 
-function AwaitingFieldState({ info, invitees }: {
+function AwaitingFieldState({
+  info,
+  invitees,
+  isOwner,
+  paymentByPlayer,
+  getVenmoBusyId,
+  onGetVenmo,
+}: {
   info: { name: string; status: string | null; startDate: string | null };
   invitees: { id: string; name: string; rsvpStatus: "accepted" | "pending" }[];
+  isOwner: boolean;
+  paymentByPlayer: Record<string, { personId: string; phone: string | null; hasHandle: boolean }>;
+  getVenmoBusyId: string | null;
+  onGetVenmo: (playerId: string, name: string, personId: string, phone: string) => void | Promise<void>;
 }) {
   // Rendered inside the main pool layout, beneath the shared header + rules
   // pills. The page-level header already carries the TourneyPools mark and
@@ -706,14 +717,41 @@ function AwaitingFieldState({ info, invitees }: {
           <div className="grid grid-cols-2 gap-2 max-w-md mx-auto">
             {invitees.map((p) => {
               const isAccepted = p.rsvpStatus === "accepted";
+              const pay = isOwner ? paymentByPlayer[p.id] : undefined;
               return (
                 <div
                   key={p.id}
-                  className="flex items-center justify-between bg-white border border-tp-bg-dark rounded-xl px-3 py-3 text-left min-w-0"
+                  className="flex flex-col bg-white border border-tp-bg-dark rounded-xl px-3 py-3 min-w-0"
                 >
-                  <span className="font-semibold text-tp-primary truncate">{p.name}</span>
-                  {isAccepted && (
-                    <span className="text-green-600 text-base flex-shrink-0 ml-1" aria-label="Accepted">✅</span>
+                  <div className="flex items-center justify-between gap-2 min-w-0">
+                    <span className="font-semibold text-tp-primary truncate">{p.name}</span>
+                    {isAccepted && (
+                      <span className="text-green-600 text-base flex-shrink-0" aria-label="Accepted">✅</span>
+                    )}
+                  </div>
+                  {/* Chairman-only payment status row. Goal: at a glance, know
+                      who's still missing Venmo so we can chase them now rather
+                      than after someone wins. Three states:
+                        - hasHandle → small green confirmation
+                        - !hasHandle && phone → one-tap Get Venmo button
+                        - !hasHandle && !phone → muted "no phone" hint */}
+                  {pay && (
+                    <div className="mt-2">
+                      {pay.hasHandle ? (
+                        <p className="text-[11px] text-green-700 font-semibold">💵 Venmo on file</p>
+                      ) : pay.phone ? (
+                        <button
+                          type="button"
+                          onClick={() => onGetVenmo(p.id, p.name, pay.personId, pay.phone as string)}
+                          disabled={getVenmoBusyId === p.id}
+                          className="w-full text-[11px] font-bold text-tp-primary border border-tp-primary/30 rounded-lg px-2 py-1.5 active:bg-tp-primary/10 disabled:opacity-50"
+                        >
+                          {getVenmoBusyId === p.id ? "Opening..." : "📱 Get Venmo"}
+                        </button>
+                      ) : (
+                        <p className="text-[11px] text-gray-400 italic">No phone on file</p>
+                      )}
+                    </div>
                   )}
                 </div>
               );
@@ -762,6 +800,13 @@ export default function PoolLeaderboardPage() {
   // Names let us show "On file: Brack, Chig, Jef" so the chairman can spot at a
   // glance whether they've collected enough phones.
   const [phoneRecipients, setPhoneRecipients] = useState<{ name: string; phone: string }[]>([]);
+  // Chairman-only payment state keyed by playerId. Powers the Draft Pending
+  // roster grid: shows whether a player has a payment handle on file and, if
+  // not, lets the chairman one-tap text them a self-serve collect link
+  // (same flow as the Get Venmo button on the groups page).
+  const [paymentByPlayer, setPaymentByPlayer] = useState<Record<string, { personId: string; phone: string | null; hasHandle: boolean }>>({});
+  // Per-row busy lock while we mint a collect-link URL and hand off to SMS.
+  const [getVenmoBusyId, setGetVenmoBusyId] = useState<string | null>(null);
 
   const fetchPool = useCallback(async () => {
     try {
@@ -814,10 +859,36 @@ export default function PoolLeaderboardPage() {
             const peopleRes = await fetch(`/api/pool/${slug}/people`);
             if (peopleRes.ok) {
               const { players: peopleRows } = await peopleRes.json();
-              const recipients = (peopleRows as Array<{ name?: string; person?: { phone?: string | null } }>)
+              type PeopleRow = {
+                id?: string;
+                name?: string;
+                personId?: string;
+                person?: {
+                  phone?: string | null;
+                  venmoHandle?: string | null;
+                  cashappHandle?: string | null;
+                  paypalHandle?: string | null;
+                };
+              };
+              const rows = peopleRows as PeopleRow[];
+              const recipients = rows
                 .map((r) => ({ name: r.name ?? "", phone: r.person?.phone ?? "" }))
                 .filter((r) => r.phone.length > 0 && r.phone.startsWith("+"));
               setPhoneRecipients(recipients);
+
+              // Chairman map for the Draft Pending roster grid: which players
+              // already have a handle, and which have a phone we can text a
+              // collect link to. Keyed by playerId so we can match the public
+              // `invitees` list 1:1.
+              const map: Record<string, { personId: string; phone: string | null; hasHandle: boolean }> = {};
+              for (const r of rows) {
+                if (!r.id || !r.personId) continue;
+                const hasHandle = !!(
+                  r.person?.venmoHandle || r.person?.cashappHandle || r.person?.paypalHandle
+                );
+                map[r.id] = { personId: r.personId, phone: r.person?.phone ?? null, hasHandle };
+              }
+              setPaymentByPlayer(map);
             }
           } catch { /* the button just stays hidden */ }
         }
@@ -1093,7 +1164,32 @@ export default function PoolLeaderboardPage() {
           Awaiting field wins first so pre-draft pools show only the shared
           header + rules + Save-to-Home + the "Draft Pending / Not Ready" body. */}
       {awaitingField ? (
-        <AwaitingFieldState info={awaitingInfo} invitees={invitees} />
+        <AwaitingFieldState
+          info={awaitingInfo}
+          invitees={invitees}
+          isOwner={isOwner}
+          paymentByPlayer={paymentByPlayer}
+          getVenmoBusyId={getVenmoBusyId}
+          onGetVenmo={async (playerId, name, personId, phone) => {
+            // Mirrors the Get Venmo flow on /groups: mint a self-serve collect
+            // URL for this Person, then open SMS prefilled with the same body.
+            // Player taps, fills in handles, data lands on the chairman's
+            // people row, and on next pool fetch the row's hasHandle flips.
+            if (getVenmoBusyId || !phone) return;
+            setGetVenmoBusyId(playerId);
+            try {
+              const res = await fetch(`/api/people/${personId}/collection-requests`, { method: "POST" });
+              if (!res.ok) return;
+              const { url } = await res.json();
+              const firstName = (name || "").trim().split(/\s+/)[0] || "there";
+              const body =
+                `Hey ${firstName}! Drop your Venmo (or Cash App / PayPal) here so the losers can pay you when you win our golf pool: ${url}`;
+              window.location.href = `sms:${phone}&body=${encodeURIComponent(body)}`;
+            } finally {
+              setGetVenmoBusyId(null);
+            }
+          }}
+        />
       ) : !draftComplete ? (
         <LiveDraft
           slug={slug as string}
