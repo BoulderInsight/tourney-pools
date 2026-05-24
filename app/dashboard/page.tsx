@@ -20,6 +20,7 @@ interface Pool {
   pending_count: number;
   accepted_count: number;
   pending_with_phone_count: number;
+  total_with_phone_count: number;
   created_at: string;
   tournament_name: string | null;
   tournament_status: string | null;
@@ -33,6 +34,8 @@ function DashboardContent() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
+  // Track which link was just copied per pool so the toast lights up on the
+  // right button. Encoding: `${kind}:${poolId}`, e.g. 'invite:abc' or 'pool:abc'.
   const [copied, setCopied] = useState<string | null>(null);
   const [textingId, setTextingId] = useState<string | null>(null);
   const [textFlash, setTextFlash] = useState<{ id: string; tone: "warn" | "info"; text: string } | null>(null);
@@ -109,11 +112,10 @@ function DashboardContent() {
   }
 
   /**
-   * Dashboard shortcut to re-text every pending invitee with a phone on file.
-   * Same backing endpoint as /pool/[slug]/players' Resend Invites, so 'invited_at'
-   * gets stamped and the recipient list lines up. On success, navigates to the
-   * sms: URL which opens iMessage with everyone addressed and the join link
-   * pre-filled in the body.
+   * Dashboard shortcut to text the whole pool. Calls the invite endpoint with
+   * mode='all' so the message goes to every player with a phone (pending
+   * AND accepted, declined excluded). On success, opens iMessage with
+   * everyone addressed and the join link pre-filled.
    */
   async function handleTextPool(pool: Pool) {
     if (textingId) return;
@@ -122,7 +124,7 @@ function DashboardContent() {
     const res = await fetch(`/api/pool/${pool.slug}/invite`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode: "resend" }),
+      body: JSON.stringify({ mode: "all" }),
     });
     setTextingId(null);
     if (!res.ok) {
@@ -138,11 +140,11 @@ function DashboardContent() {
       setTextFlash({
         id: pool.id,
         tone: "warn",
-        text: "No phone numbers on file for pending invitees.",
+        text: "No phone numbers on file for any players.",
       });
       setTimeout(() => setTextFlash(null), 5000);
     }
-    // Refresh so the pending_with_phone_count badge updates if needed.
+    // Refresh so the count badge updates if needed.
     fetchPools();
   }
 
@@ -450,49 +452,65 @@ function DashboardContent() {
                 <Link href={pool.setup_complete ? `/pool/${pool.slug}` : `/pool/${pool.slug}/setup`} className="block p-4 active:bg-tp-bg/40 transition-colors">
                   {headerInner}
                 </Link>
-                {/* Invite link goes to /join so invitees land on the RSVP page first.
-                    Once the draft is complete, the /join page surfaces a link onward
-                    to the leaderboard, so this single URL covers the whole lifecycle.
-                    Text Pool sits beside it when there are pending invitees with
-                    phones on file, so the chairman can ping them straight from
-                    the dashboard without drilling into /players. */}
+                {/* Share + text row(s). Two clipboard buttons on top
+                    (Invite Link -> /join, Pool Link -> /pool/[slug]), then a
+                    full-width Text Pool button when there's anyone with a
+                    phone in the roster. Text Pool addresses pending AND
+                    accepted players so the chairman can broadcast to the
+                    whole pool, not just the people who haven't RSVP'd. */}
                 {pool.setup_complete && (() => {
-                  const canText = !pool.draft_complete && pool.pending_with_phone_count > 0;
+                  const canText = !pool.draft_complete && pool.total_with_phone_count > 0;
+                  const inviteCopied = copied === `invite:${pool.id}`;
+                  const poolCopied = copied === `pool:${pool.id}`;
                   return (
                     <>
                       <div className="flex border-t border-tp-bg-dark">
                         <button
                           onClick={() => {
                             navigator.clipboard.writeText(`https://tourneypools.com/join/${pool.slug}`);
-                            setCopied(pool.id);
+                            setCopied(`invite:${pool.id}`);
                             setTimeout(() => setCopied(null), 2000);
                           }}
-                          className="flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-tp-accent active:bg-tp-accent/5 transition-colors"
+                          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-semibold text-tp-accent active:bg-tp-accent/5 transition-colors"
+                          title="Send this to invitees who haven't joined yet. Opens the RSVP page."
                         >
-                          {copied === pool.id ? (
-                            <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Link Copied!</>
+                          {inviteCopied ? (
+                            <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Invite Copied!</>
                           ) : (
-                            <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg> Copy Invite Link</>
+                            <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg> Invite Link</>
                           )}
                         </button>
-                        {canText && (
-                          <>
-                            <div className="w-px bg-tp-bg-dark" />
-                            <button
-                              type="button"
-                              onClick={() => handleTextPool(pool)}
-                              disabled={textingId === pool.id}
-                              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-tp-primary active:bg-tp-primary/5 transition-colors disabled:opacity-60"
-                            >
-                              {textingId === pool.id ? (
-                                <>Opening...</>
-                              ) : (
-                                <>📱 Text Pool ({pool.pending_with_phone_count})</>
-                              )}
-                            </button>
-                          </>
-                        )}
+                        <div className="w-px bg-tp-bg-dark" />
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(`https://tourneypools.com/pool/${pool.slug}`);
+                            setCopied(`pool:${pool.id}`);
+                            setTimeout(() => setCopied(null), 2000);
+                          }}
+                          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-semibold text-tp-primary active:bg-tp-primary/5 transition-colors"
+                          title="Send this to anyone who just wants to watch the leaderboard. Skips the RSVP page."
+                        >
+                          {poolCopied ? (
+                            <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Pool Copied!</>
+                          ) : (
+                            <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg> Pool Link</>
+                          )}
+                        </button>
                       </div>
+                      {canText && (
+                        <button
+                          type="button"
+                          onClick={() => handleTextPool(pool)}
+                          disabled={textingId === pool.id}
+                          className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-tp-primary border-t border-tp-bg-dark active:bg-tp-primary/5 transition-colors disabled:opacity-60"
+                        >
+                          {textingId === pool.id ? (
+                            <>Opening...</>
+                          ) : (
+                            <>📱 Text Pool ({pool.total_with_phone_count})</>
+                          )}
+                        </button>
+                      )}
                       {textFlash && textFlash.id === pool.id && (
                         <p
                           className={`text-[11px] text-center px-3 py-1.5 border-t border-tp-bg-dark ${
