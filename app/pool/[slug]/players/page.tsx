@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import type { PaymentMethod, PlayerWithPerson, RsvpStatus } from "@/lib/types";
 import CollectDialog from "./CollectDialog";
 import ConfirmModal from "@/app/components/confirm-modal";
+import NameMatchChooser, { type NameChoice } from "@/app/components/name-match-chooser";
 
 const METHOD_LABEL: Record<PaymentMethod, string> = {
   venmo: "Venmo",
@@ -206,12 +207,15 @@ function PlayerRow({
 function AddPlayerInline({
   onAdd,
 }: {
-  onAdd: (name: string, phone: string) => Promise<{ ok: boolean; error?: string }>;
+  onAdd: (name: string, phone: string, choice: NameChoice) => Promise<{ ok: boolean; error?: string }>;
 }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // Default to 'new' until the chooser fires (it always fires at least once
+  // when matches resolve, and stays 'new' when there are no matches).
+  const [choice, setChoice] = useState<NameChoice>({ kind: "new" });
 
   async function submit() {
     if (busy) return;
@@ -222,11 +226,12 @@ function AddPlayerInline({
     }
     setBusy(true);
     setError("");
-    const { ok, error: apiError } = await onAdd(cleanName, phone.trim());
+    const { ok, error: apiError } = await onAdd(cleanName, phone.trim(), choice);
     setBusy(false);
     if (ok) {
       setName("");
       setPhone("");
+      setChoice({ kind: "new" });
     } else if (apiError) {
       setError(apiError);
     }
@@ -274,6 +279,10 @@ function AddPlayerInline({
           {busy ? "Adding..." : "Add"}
         </button>
       </div>
+      {/* Renders only when the typed name matches an existing Person with data.
+          Updates the parent's `choice` state so submit sends the right
+          { personId } or { forceNew } flag. */}
+      <NameMatchChooser name={name} onChoice={setChoice} />
       {error && <p className="text-[11px] text-red-500 mt-2">{error}</p>}
     </div>
   );
@@ -356,11 +365,26 @@ export default function PlayersTabPage() {
     if (res.ok) await load();
   }
 
-  async function handleAddPlayer(name: string, phone: string): Promise<{ ok: boolean; error?: string }> {
+  async function handleAddPlayer(
+    name: string,
+    phone: string,
+    choice: NameChoice,
+  ): Promise<{ ok: boolean; error?: string }> {
+    // Translate the chooser choice into the API's add-player body shape:
+    //   { personId }     link to an existing Person (chairman picked from prompt)
+    //   { forceNew }     always create new (chairman picked 'add as new')
+    // The endpoint also accepts neither, but the chooser always emits one or
+    // the other so we always send something explicit.
+    const body: Record<string, unknown> = { name, phone: phone || undefined };
+    if (choice.kind === "existing") {
+      body.personId = choice.personId;
+    } else {
+      body.forceNew = true;
+    }
     const res = await fetch(`/api/pool/${slugStr}/players`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, phone: phone || undefined }),
+      body: JSON.stringify(body),
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));

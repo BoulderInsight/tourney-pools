@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { addMemberToGroup, getGroupForChairman } from "@/lib/groups";
-import { findOrCreatePerson, setPersonPhone } from "@/lib/people";
+import { findOrCreatePerson, createPerson, setPersonPhone } from "@/lib/people";
 import { normalizeUsPhoneE164 } from "@/lib/phone";
 
 export async function POST(
@@ -23,7 +23,8 @@ export async function POST(
   let personId: string;
 
   if (typeof body.personId === "string" && body.personId.length > 0) {
-    // Existing person path: verify ownership.
+    // Explicit Person id: chairman picked from the collision prompt or is
+    // linking to a Person they know about. Verify ownership.
     const rows = await sql`
       SELECT id FROM people WHERE id = ${body.personId} AND chairman_id = ${session.chairmanId}
     `;
@@ -32,8 +33,13 @@ export async function POST(
     }
     personId = body.personId;
   } else if (typeof body.name === "string" && body.name.trim().length > 0) {
-    // Typed-name path: find or create a Person owned by this chairman.
-    const person = await findOrCreatePerson(sql, session.chairmanId, body.name.trim());
+    // Typed-name path. forceNew=true means the chairman saw the collision
+    // prompt and explicitly chose 'add as new person' (or wants to bypass
+    // any silent match). Otherwise fall through to legacy find-or-create.
+    const name = body.name.trim();
+    const person = body.forceNew === true
+      ? await createPerson(sql, session.chairmanId, name)
+      : await findOrCreatePerson(sql, session.chairmanId, name);
     personId = person.id;
   } else {
     return NextResponse.json({ error: "personId or name required" }, { status: 400 });
