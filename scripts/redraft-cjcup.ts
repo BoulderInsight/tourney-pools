@@ -97,7 +97,7 @@ async function main() {
   const tgByApiId = new Map(realTg.map((r) => [String(r.odds_api_id), r]));
   const orderedTg = lb.golfers.map((g) => tgByApiId.get(g.playerId)).filter((t) => t != null);
 
-  // 4. Re-draft each pool — mirror the setup route's auto-snake path
+  // 4. Re-draft each pool, mirror the setup route's auto-snake path
   for (const pool of pools) {
     await sql`DELETE FROM assignments WHERE pool_id = ${pool.id}`;
     await sql`DELETE FROM golfers WHERE pool_id = ${pool.id}`;
@@ -132,8 +132,8 @@ async function main() {
     console.log(`  ${pool.pool_name}: re-drafted ${golfers.length} golfers to ${players.length} players`);
   }
 
-  // 5. Verify — every drafted golfer should now be in the field
-  console.log("\nVerification — golfers per player:");
+  // 5. Verify, every drafted golfer should now be in the field
+  console.log("\nVerification, golfers per player:");
   for (const pool of pools) {
     const rows = await sql`
       SELECT p.name AS player, COUNT(*)::int AS drafted,

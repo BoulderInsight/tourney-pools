@@ -167,7 +167,7 @@ function computeGolferStanding(
       };
     }
 
-    // worst-made: handled at pool level — needs all golfers context
+    // worst-made: handled at pool level, needs all golfers context
     // placeholder; the caller patches this
     return { rawScore: playedTotal, penaltyScore: 0, totalScore: null };
   }
@@ -450,7 +450,7 @@ export function draftGolfers(
       round++;
     }
   } else {
-    // Live snake draft — shuffle pool for pick display order
+    // Live snake draft, shuffle pool for pick display order
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];

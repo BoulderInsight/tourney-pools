@@ -4,7 +4,7 @@ import { getDb } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 /**
- * Public RSVP landing data. No auth — anyone with the pool slug can hit this.
+ * Public RSVP landing data. No auth, anyone with the pool slug can hit this.
  * The pool slug is already publicly shareable (it's the leaderboard URL too) so
  * this doesn't widen the privacy surface.
  *

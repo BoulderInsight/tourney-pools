@@ -680,7 +680,7 @@ function AwaitingFieldState({ info }: {
           <h1 className="font-serif text-2xl font-bold text-tp-primary mb-2">Draft Pending</h1>
           <p className="text-gray-500 text-sm max-w-xs leading-relaxed">
             Waiting for {info.name || "the tournament"}&apos;s field to be announced
-            {startLabel ? ` — the tournament starts ${startLabel}` : ""}. The field is usually
+            {startLabel ? `, the tournament starts ${startLabel}` : ""}. The field is usually
             published a few days before play begins, and the draft runs as soon as it&apos;s out.
           </p>
         </>

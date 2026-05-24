@@ -23,7 +23,7 @@ async function main() {
   console.log("Player status distribution (PGA, with API ID):");
   console.table(byStatus);
 
-  // Players who have R1 but not done — i.e. should still be moving
+  // Players who have R1 but not done, i.e. should still be moving
   const inFlux = await sql`
     SELECT name, r1, r2, r3, r4, status, updated_at
     FROM tournament_golfers

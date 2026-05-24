@@ -20,7 +20,7 @@ export async function GET(
   }
   const t = rows[0];
 
-  // Not an API-backed tournament — the wizard falls back to the default field
+  // Not an API-backed tournament, the wizard falls back to the default field
   if (t.api_source !== "slashgolf" || !t.api_tournament_id) {
     return NextResponse.json({ apiBacked: false, hasField: false, golfers: [] });
   }
@@ -43,8 +43,8 @@ export async function GET(
       golfers,
     });
   } catch (err) {
-    // The field isn't published yet (the API returns 400 pre-tournament) —
-    // report it as API-backed so the wizard enters "awaiting field" mode.
+    // The field isn't published yet (the API returns 400 pre-tournament).
+    // Report it as API-backed so the wizard enters "awaiting field" mode.
     console.error(`[tournaments/${params.tournamentId}/field] field not available:`, err);
     return NextResponse.json({ apiBacked: true, hasField: false, golfers: [] });
   }
