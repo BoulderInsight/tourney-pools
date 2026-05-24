@@ -115,7 +115,9 @@ export default async function CollectPage({ params }: { params: { token: string 
         </div>
         <SelfServeForm token={params.token} initiallySubmitted={ctx.submitted} />
         <p className="text-[11px] text-gray-400 text-center mt-4 leading-relaxed">
-          Only {ctx.commissionerName} can see what you enter here. No accounts, no payments through TourneyPools.
+          Only {ctx.commissionerName} can see what you enter here.
+          <br />
+          No accounts, no payments through TourneyPools.
         </p>
       </div>
     </main>
