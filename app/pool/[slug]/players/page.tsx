@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import type { PaymentMethod, PlayerWithPerson, RsvpStatus } from "@/lib/types";
 import CollectDialog from "./CollectDialog";
+import ConfirmModal from "@/app/components/confirm-modal";
 
 const METHOD_LABEL: Record<PaymentMethod, string> = {
   venmo: "Venmo",
@@ -84,42 +85,196 @@ function RsvpBadge({
 }
 
 function PlayerRow({
-  p, locked, onOpenDialog, onOverride,
+  p, locked, onOpenDialog, onOverride, onRename, onRemove,
 }: {
   p: PlayerWithPerson;
   locked: boolean;
   onOpenDialog: () => void;
   onOverride: (next: RsvpStatus) => void;
+  /** When provided, the row renders rename + remove affordances. Omit when locked. */
+  onRename?: (next: string) => Promise<boolean>;
+  onRemove?: () => void;
 }) {
   const handle = preferredHandle(p);
+  const [editing, setEditing] = useState(false);
+  const [draftName, setDraftName] = useState(p.name);
+  const [savingRename, setSavingRename] = useState(false);
+  const editable = !locked && (onRename || onRemove);
+
+  async function commitRename() {
+    const next = draftName.trim();
+    if (!onRename || next.length === 0 || next === p.name) {
+      setEditing(false);
+      setDraftName(p.name);
+      return;
+    }
+    setSavingRename(true);
+    const ok = await onRename(next);
+    setSavingRename(false);
+    if (ok) setEditing(false);
+  }
+
   return (
-    <div className="flex items-center justify-between bg-white border border-tp-bg-dark rounded-xl px-4 py-3 gap-2">
-      <button
-        type="button"
-        onClick={onOpenDialog}
-        className="min-w-0 flex-1 text-left active:opacity-70"
-      >
-        <p className="font-semibold text-gray-900 truncate flex items-center gap-1.5">
-          {p.name}
-          {p.person.phone && (
-            <span
-              className="text-tp-accent text-sm flex-shrink-0"
-              title="Phone on file"
-              aria-label="Phone on file"
-            >
-              📱
-            </span>
+    <div className="bg-white border border-tp-bg-dark rounded-xl px-4 py-3">
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={onOpenDialog}
+          disabled={editing}
+          className="min-w-0 flex-1 text-left active:opacity-70 disabled:active:opacity-100"
+        >
+          {editing ? (
+            <input
+              autoFocus
+              value={draftName}
+              onChange={(e) => setDraftName(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); commitRename(); }
+                if (e.key === "Escape") { setEditing(false); setDraftName(p.name); }
+              }}
+              onBlur={commitRename}
+              disabled={savingRename}
+              className="font-semibold text-gray-900 bg-tp-bg/40 border border-tp-bg-dark rounded-md px-2 py-1 w-full"
+              aria-label="Rename player"
+            />
+          ) : (
+            <p className="font-semibold text-gray-900 truncate flex items-center gap-1.5">
+              {p.name}
+              {p.person.phone && (
+                <span
+                  className="text-tp-accent text-sm flex-shrink-0"
+                  title="Phone on file"
+                  aria-label="Phone on file"
+                >
+                  📱
+                </span>
+              )}
+            </p>
           )}
-        </p>
-        {handle ? (
-          <p className="text-xs text-gray-500 truncate mt-0.5">
-            {METHOD_LABEL[handle.method]} &middot; @{handle.handle}
-          </p>
-        ) : (
-          <p className="text-xs text-gray-400 mt-0.5">No handle on file</p>
-        )}
-      </button>
-      <RsvpBadge status={p.rsvpStatus} onOverride={onOverride} locked={locked} />
+          {handle ? (
+            <p className="text-xs text-gray-500 truncate mt-0.5">
+              {METHOD_LABEL[handle.method]} &middot; @{handle.handle}
+            </p>
+          ) : (
+            <p className="text-xs text-gray-400 mt-0.5">No handle on file</p>
+          )}
+        </button>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {editable && !editing && (
+            <>
+              {onRename && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setDraftName(p.name); setEditing(true); }}
+                  className="w-8 h-8 flex items-center justify-center rounded-md text-gray-400 active:text-tp-primary active:bg-tp-bg/60"
+                  aria-label={`Rename ${p.name}`}
+                  title="Rename"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+              )}
+              {onRemove && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onRemove(); }}
+                  className="w-8 h-8 flex items-center justify-center rounded-md text-gray-300 active:text-red-500 active:bg-red-50"
+                  aria-label={`Remove ${p.name}`}
+                  title="Remove"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M10 4h4a1 1 0 011 1v2H9V5a1 1 0 011-1z" />
+                  </svg>
+                </button>
+              )}
+            </>
+          )}
+          <RsvpBadge status={p.rsvpStatus} onOverride={onOverride} locked={locked || editing} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Small inline form at the bottom of the Players list to add someone the
+ * chairman forgot. Same fields as the setup wizard's player row: name + an
+ * optional phone. Hidden once draft_complete=true.
+ */
+function AddPlayerInline({
+  onAdd,
+}: {
+  onAdd: (name: string, phone: string) => Promise<{ ok: boolean; error?: string }>;
+}) {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit() {
+    if (busy) return;
+    const cleanName = name.trim();
+    if (cleanName.length === 0) {
+      setError("Name is required");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    const { ok, error: apiError } = await onAdd(cleanName, phone.trim());
+    setBusy(false);
+    if (ok) {
+      setName("");
+      setPhone("");
+    } else if (apiError) {
+      setError(apiError);
+    }
+  }
+
+  return (
+    <div className="bg-tp-bg/40 border-2 border-dashed border-tp-primary/20 rounded-xl p-3 mt-2">
+      <p className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold mb-2">
+        Add a player
+      </p>
+      <div className="flex flex-col sm:flex-row gap-2">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && name.trim()) submit(); }}
+          placeholder="Player name"
+          className="input-field flex-1 text-sm"
+          aria-label="New player name"
+        />
+        <div className="relative w-full sm:w-48">
+          <span
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none opacity-60"
+            aria-hidden="true"
+          >
+            📱
+          </span>
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && name.trim()) submit(); }}
+            placeholder="Phone (optional)"
+            className="input-field w-full text-sm pl-10"
+            autoComplete="tel-national"
+            inputMode="tel"
+            aria-label="New player phone"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={submit}
+          disabled={busy || name.trim().length === 0}
+          className="bg-tp-primary text-white text-sm font-semibold rounded-xl px-4 py-2 active:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {busy ? "Adding..." : "Add"}
+        </button>
+      </div>
+      {error && <p className="text-[11px] text-red-500 mt-2">{error}</p>}
     </div>
   );
 }
@@ -137,6 +292,8 @@ export default function PlayersTabPage() {
   const [groupSaved, setGroupSaved] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
   const [showDeclined, setShowDeclined] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<{ id: string; name: string } | null>(null);
+  const [removing, setRemoving] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/pool/${slugStr}/people`);
@@ -174,6 +331,43 @@ export default function PlayersTabPage() {
       body: JSON.stringify({ status }),
     });
     if (res.ok) await load();
+  }
+
+  /** Rename returns ok so the row's inline editor knows whether to exit edit mode. */
+  async function handleRename(playerId: string, name: string): Promise<boolean> {
+    const res = await fetch(`/api/pool/${slugStr}/players/${playerId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    if (!res.ok) return false;
+    await load();
+    return true;
+  }
+
+  async function confirmRemove() {
+    if (!removeTarget) return;
+    setRemoving(true);
+    const res = await fetch(`/api/pool/${slugStr}/players/${removeTarget.id}`, {
+      method: "DELETE",
+    });
+    setRemoving(false);
+    setRemoveTarget(null);
+    if (res.ok) await load();
+  }
+
+  async function handleAddPlayer(name: string, phone: string): Promise<{ ok: boolean; error?: string }> {
+    const res = await fetch(`/api/pool/${slugStr}/players`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, phone: phone || undefined }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return { ok: false, error: data?.error || "Could not add player." };
+    }
+    await load();
+    return { ok: true };
   }
 
   async function handleInvite(mode: "new" | "resend") {
@@ -294,7 +488,7 @@ export default function PlayersTabPage() {
       <h2 className="font-serif text-sm font-bold text-tp-primary uppercase tracking-wider mb-2">
         Players ({accepted.length + pending.length})
       </h2>
-      <div className="space-y-2 mb-6">
+      <div className="space-y-2 mb-3">
         {[...accepted, ...pending].length === 0 ? (
           <p className="text-xs text-gray-400 italic py-4 text-center">No players yet.</p>
         ) : (
@@ -305,10 +499,20 @@ export default function PlayersTabPage() {
               locked={draftComplete}
               onOpenDialog={() => setOpenPersonId(p.personId)}
               onOverride={(next) => handleOverride(p.id, next)}
+              onRename={draftComplete ? undefined : (next) => handleRename(p.id, next)}
+              onRemove={draftComplete ? undefined : () => setRemoveTarget({ id: p.id, name: p.name })}
             />
           ))
         )}
       </div>
+
+      {/* Add-player row at the bottom of the list. Only available pre-draft
+          so the chairman can catch missed names without re-running setup. */}
+      {!draftComplete && (
+        <div className="mb-6">
+          <AddPlayerInline onAdd={handleAddPlayer} />
+        </div>
+      )}
 
       {/* Declined section, collapsible. Chairman-only visibility; never reaches
           public surfaces because the leaderboard endpoint filters to accepted. */}
@@ -331,6 +535,8 @@ export default function PlayersTabPage() {
                   locked={draftComplete}
                   onOpenDialog={() => setOpenPersonId(p.personId)}
                   onOverride={(next) => handleOverride(p.id, next)}
+                  onRename={draftComplete ? undefined : (next) => handleRename(p.id, next)}
+                  onRemove={draftComplete ? undefined : () => setRemoveTarget({ id: p.id, name: p.name })}
                 />
               ))}
             </div>
@@ -347,6 +553,20 @@ export default function PlayersTabPage() {
           onSaved={async () => { await load(); setOpenPersonId(null); }}
         />
       )}
+
+      <ConfirmModal
+        open={!!removeTarget}
+        title={removeTarget ? `Remove ${removeTarget.name}?` : ""}
+        message={
+          removeTarget
+            ? `Remove ${removeTarget.name} from this pool. Their payment info stays on file for any future pools. This can't be undone for this pool but you can re-add them.`
+            : ""
+        }
+        confirmLabel={removing ? "Removing..." : "Remove"}
+        danger
+        onConfirm={confirmRemove}
+        onCancel={() => (removing ? null : setRemoveTarget(null))}
+      />
 
       {/* Save as group action */}
       <div className="mt-8">
