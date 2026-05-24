@@ -45,16 +45,21 @@ async function loadContext(token: string): Promise<Context | null> {
 export async function generateMetadata({ params }: { params: { token: string } }): Promise<Metadata> {
   const ctx = await loadContext(params.token);
   if (!ctx) return { title: "TourneyPools" };
-  const title = `Enter payment info for ${ctx.commissionerName} | TourneyPools`;
+  // Keep the browser tab informative ("Enter payment info for Chris Cox") so
+  // an open tab is identifiable, but the iMessage / Slack unfurl title (which
+  // sits below the OG image as a small caption) just reads 'TourneyPools' so
+  // it doesn't repeat the chairman name that already appears in the image.
+  const tabTitle = `Enter payment info for ${ctx.commissionerName} | TourneyPools`;
+  const unfurlTitle = "TourneyPools";
   const descriptionParts: string[] = [];
   if (ctx.poolName) descriptionParts.push(ctx.poolName);
   if (ctx.tournamentName) descriptionParts.push(`for ${ctx.tournamentName}`);
   const description = descriptionParts.length > 0 ? descriptionParts.join(" ") : "Add your payment info so the winners can be paid.";
   return {
-    title,
+    title: tabTitle,
     description,
-    openGraph: { title, description },
-    twitter: { card: "summary_large_image", title, description },
+    openGraph: { title: unfurlTitle, description },
+    twitter: { card: "summary_large_image", title: unfurlTitle, description },
   };
 }
 
