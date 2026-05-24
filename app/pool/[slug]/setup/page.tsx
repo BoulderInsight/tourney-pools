@@ -202,44 +202,46 @@ export default function PoolSetupPage() {
     loadTournaments();
   }, []);
 
-  // Load existing pool data to resume where you left off
+  // Load existing pool data to resume where you left off. Two fetches:
+  //
+  //   /api/pool/[slug]         non-roster pool data (name, buy-in, settings,
+  //                            tournament). Public endpoint; doesn't expose
+  //                            phones and filters players to accepted-only.
+  //   /api/pool/[slug]/people  chairman-only full roster, including pending
+  //                            and declined invitees plus phones. THIS is the
+  //                            source of truth for the player list, so the
+  //                            wizard reflects everyone who's been added even
+  //                            if they haven't tapped the invite yet.
   useEffect(() => {
     async function loadPool() {
-      const [poolRes, meRes] = await Promise.all([
+      const [poolRes, peopleRes, meRes] = await Promise.all([
         fetch(`/api/pool/${slug}`),
+        fetch(`/api/pool/${slug}/people`),
         fetch("/api/auth/me"),
       ]);
       if (poolRes.ok) {
         const data = await poolRes.json();
         if (data?.poolName) setPoolName(data.poolName);
         if (data?.buyIn) setBuyIn(data.buyIn);
-        if (data?.players?.length > 0) {
-          setPlayers(data.players.map((p: { id: string; name: string }) => ({ id: p.id, name: p.name, phone: "" })));
-        }
         if (data?.settings) setSettings((prev) => ({ ...prev, ...data.settings }));
         if (data?.tournamentId) setSelectedTournamentId(data.tournamentId);
-
-        // Chairman-only secondary fetch: pull existing phones so the form
-        // pre-fills them instead of looking like blank fields the chairman
-        // would otherwise re-type. Public /api/pool/[slug] never carries
-        // phones; /people is auth-scoped to the chairman.
-        try {
-          const peopleRes = await fetch(`/api/pool/${slug}/people`);
-          if (peopleRes.ok) {
-            const { players: peopleRows } = await peopleRes.json();
-            // Store the pretty US format (e.g. "(919) 555-1234"), not the raw E.164,
-            // so the chairman sees something readable in the input. Server normalizes
-            // back to E.164 on save.
-            const phoneByName = new Map<string, string>();
-            for (const row of peopleRows as Array<{ name: string; person: { phone: string | null } }>) {
-              if (row.person?.phone) phoneByName.set(row.name, formatUsPhoneDisplay(row.person.phone));
-            }
-            setPlayers((prev) => prev.map((pl) => ({
-              ...pl,
-              phone: phoneByName.get(pl.name) ?? pl.phone ?? "",
-            })));
-          }
-        } catch { /* non-fatal; form just shows blank phones */ }
+      }
+      if (peopleRes.ok) {
+        const { players: peopleRows } = await peopleRes.json();
+        // Keep the player's real UUID id so the save endpoint can match it
+        // against the existing row and preserve rsvp_status / invited_at.
+        // Newly-added players (via the Add Player button) get fake `p${ts}`
+        // ids which the save endpoint will recognize as new and INSERT fresh.
+        const loaded = (peopleRows as Array<{
+          id: string;
+          name: string;
+          person: { phone: string | null };
+        }>).map((row) => ({
+          id: row.id,
+          name: row.name,
+          phone: row.person?.phone ? formatUsPhoneDisplay(row.person.phone) : "",
+        }));
+        if (loaded.length > 0) setPlayers(loaded);
       }
       if (meRes.ok) {
         const me = await meRes.json();

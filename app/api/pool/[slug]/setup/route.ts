@@ -32,10 +32,11 @@ export async function POST(
   const entries: { name: string; ranking: number | null }[] = golferEntries
     || (golferNames || []).map((n: string) => ({ name: n, ranking: null }));
 
-  // Clear existing data for re-setup
+  // Clear golfer-side data for re-setup (the draft is re-run after). Player
+  // rows are NOT blindly deleted here because that would reset rsvp_status
+  // and invited_at on every wizard save. Instead we merge below.
   await sql`DELETE FROM assignments WHERE pool_id = ${poolId}`;
   await sql`DELETE FROM golfers WHERE pool_id = ${poolId}`;
-  await sql`DELETE FROM players WHERE pool_id = ${poolId}`;
 
   // Update pool settings (including tournament_id if provided)
   await sql`
@@ -53,33 +54,66 @@ export async function POST(
     WHERE id = ${poolId}
   `;
 
-  // Insert players. For each typed name, find or create a Person owned by this
-  // chairman and link the player to it via person_id. Using findOrCreatePerson
-  // preserves handles across re-runs of the setup wizard, so a typo fix or a
-  // settings change does not silently lose collected payment data.
-  // Optional phone per player: validated to E.164. Bad input aborts the whole
-  // save with 400 so the chairman re-enters; we'd rather fail loud than store
-  // garbage. Empty/missing phone is a no-op (does not clobber existing).
-  const insertedPlayers = [];
+  // Player merge:
+  //   - existing rows whose ids aren't in the incoming list -> DELETE
+  //   - incoming rows with a real (UUID) id matching an existing row -> UPDATE
+  //     name + pick_order; re-link person if the name changed. rsvp_status,
+  //     invited_at, and the row identity are all preserved.
+  //   - incoming rows without a matching id (newly added in the wizard) ->
+  //     INSERT with rsvp_status='pending', no invited_at.
+  //
+  // findOrCreatePerson runs for every incoming player so handles travel with
+  // renames and a previously-handled Person of the same name picks back up.
+  // Phone validation is the same loud-fail behavior as before: a bad value
+  // aborts the whole save with 400.
+  const existingRows = await sql`SELECT id FROM players WHERE pool_id = ${poolId}`;
+  const existingIds = new Set(existingRows.map((r) => r.id as string));
+  const incomingIds = new Set(
+    players
+      .filter((p: { id?: string }) => typeof p.id === "string" && existingIds.has(p.id))
+      .map((p: { id: string }) => p.id),
+  );
+
+  // Remove players the chairman dropped from the form.
+  const removed = Array.from(existingIds).filter((id) => !incomingIds.has(id));
+  if (removed.length > 0) {
+    await sql`DELETE FROM players WHERE pool_id = ${poolId} AND id = ANY(${removed}::uuid[])`;
+  }
+
+  const insertedPlayers: { id: string; name: string }[] = [];
   for (let i = 0; i < players.length; i++) {
     const p = players[i];
-    const person = await findOrCreatePerson(sql, session.chairmanId, p.name);
+    const name: string = p.name;
+    const person = await findOrCreatePerson(sql, session.chairmanId, name);
+
     if (typeof p.phone === "string" && p.phone.trim().length > 0) {
       const e164 = normalizeUsPhoneE164(p.phone);
       if (!e164) {
         return NextResponse.json(
-          { error: `Invalid US phone number for ${p.name}` },
+          { error: `Invalid US phone number for ${name}` },
           { status: 400 },
         );
       }
       await setPersonPhone(sql, person.id, e164);
     }
-    const result = await sql`
-      INSERT INTO players (pool_id, name, pick_order, person_id)
-      VALUES (${poolId}, ${p.name}, ${i}, ${person.id})
-      RETURNING id, name
-    `;
-    insertedPlayers.push({ id: result[0].id, name: result[0].name });
+
+    const isExisting = typeof p.id === "string" && existingIds.has(p.id);
+    if (isExisting) {
+      const updated = await sql`
+        UPDATE players
+        SET name = ${name}, pick_order = ${i}, person_id = ${person.id}
+        WHERE id = ${p.id} AND pool_id = ${poolId}
+        RETURNING id, name
+      `;
+      if (updated.length > 0) insertedPlayers.push({ id: updated[0].id, name: updated[0].name });
+    } else {
+      const inserted = await sql`
+        INSERT INTO players (pool_id, name, pick_order, person_id, rsvp_status)
+        VALUES (${poolId}, ${name}, ${i}, ${person.id}, 'pending')
+        RETURNING id, name
+      `;
+      insertedPlayers.push({ id: inserted[0].id, name: inserted[0].name });
+    }
   }
 
   // Awaiting-field pool: the field isn't published yet, so save the players
