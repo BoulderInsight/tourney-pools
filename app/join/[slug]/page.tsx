@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import SaveToHomeButton from "@/app/components/save-to-home-button";
 
 type RsvpStatus = "pending" | "accepted" | "declined";
 
@@ -461,14 +460,11 @@ export default function JoinPoolPage() {
         </div>
       )}
 
-      {/* Save to Home Screen lives near the bottom so it doesn't compete
-          with the RSVP decision. Self-hides if the page is already running
-          as an installed app, so an invitee who already saved it won't be
-          nagged on return visits. Uses the same per-pool manifest as the
-          leaderboard so the saved icon's label is the pool name. */}
-      <div className="mt-8">
-        <SaveToHomeButton poolName={data.poolName} />
-      </div>
+      {/* Save to Home Screen intentionally lives ONLY on the pool page, not
+          here. We want the icon to launch the live leaderboard, not the
+          invite flow (which is a one-time RSVP screen and a dead end once
+          they've responded). I'm In already redirects to /pool/[slug] where
+          the button is waiting. */}
 
       {/* Always-visible footer link to the live leaderboard. Useful for invitees
           who've already RSVP'd and just want to peek at scores, especially after

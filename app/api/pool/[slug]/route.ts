@@ -102,6 +102,20 @@ export async function GET(
     ORDER BY pl.pick_order
   `;
 
+  // Invite roll-up for the pre-draft header. Counts pending alongside accepted
+  // so we can render "2 of 7 RSVPed" — declined are excluded since they
+  // explicitly said no and shouldn't inflate the denominator. Public; doesn't
+  // leak names, just totals.
+  const rsvpCountsRows = await sql`
+    SELECT
+      COUNT(*) FILTER (WHERE rsvp_status = 'accepted') AS accepted,
+      COUNT(*) FILTER (WHERE rsvp_status IN ('accepted', 'pending')) AS invited
+    FROM players
+    WHERE pool_id = ${pool.id}
+  `;
+  const acceptedCount = Number(rsvpCountsRows[0]?.accepted ?? 0);
+  const invitedCount = Number(rsvpCountsRows[0]?.invited ?? 0);
+
   const golfers = await sql`
     SELECT g.id, g.name,
       COALESCE(tg.r1, g.r1) as r1,
@@ -183,6 +197,8 @@ export async function GET(
     adRemoved: pool.ad_removed,
     draftComplete: pool.draft_complete,
     awaitingField: pool.awaiting_field,
+    acceptedCount,
+    invitedCount,
     lastSyncAt: pool.last_sync_at,
     tournamentId: pool.tournament_id,
     tournamentName: pool.tournament_name,

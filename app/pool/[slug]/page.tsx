@@ -715,6 +715,12 @@ export default function PoolLeaderboardPage() {
   const [tournamentStatus, setTournamentStatus] = useState<string | null>(null);
   const [tournamentEndDate, setTournamentEndDate] = useState<string | null>(null);
   const [chairmanPaymentInfo, setChairmanPaymentInfo] = useState<PaymentHandle | null>(null);
+  // Invite totals from the public API. Pre-draft we render "X of Y RSVPed" in
+  // the header so chairmen and invitees can see momentum (and so the
+  // post-RSVP landing doesn't read "1 player" when 7 were invited). Post-draft
+  // the roster is frozen and we fall back to the plain accepted count.
+  const [acceptedCount, setAcceptedCount] = useState(0);
+  const [invitedCount, setInvitedCount] = useState(0);
   // Chairman-only: name + E.164 phone for players in this pool who have one on
   // file. Empty until the owner fetch resolves; never populated for non-owners.
   // Names let us show "On file: Brack, Chig, Jef" so the chairman can spot at a
@@ -747,6 +753,8 @@ export default function PoolLeaderboardPage() {
         setTournamentStatus(data.tournamentStatus || null);
         setTournamentEndDate(data.tournamentEndDate || null);
         setChairmanPaymentInfo(data.chairmanPaymentInfo ?? null);
+        setAcceptedCount(Number(data.acceptedCount ?? 0));
+        setInvitedCount(Number(data.invitedCount ?? 0));
         // Check if current user is chairman
         let owner = false;
         try {
@@ -861,7 +869,16 @@ export default function PoolLeaderboardPage() {
             <strong className="text-gray-700">${totalPurse}</strong> purse
           </span>
           <span className="text-gray-300">|</span>
-          <span>{config.players.length} players</span>
+          {/* Pre-draft: "2 of 7 RSVPed" so chairmen and invitees see who's
+              still outstanding. Post-draft: the roster is frozen, so we
+              fall back to the simpler "N players" count of who's playing. */}
+          {!draftComplete && invitedCount > acceptedCount ? (
+            <span>
+              <strong className="text-gray-700">{acceptedCount}</strong> of {invitedCount} RSVPed
+            </span>
+          ) : (
+            <span>{config.players.length} players</span>
+          )}
           {chairmanName && (
             <>
               <span className="text-gray-300">|</span>
