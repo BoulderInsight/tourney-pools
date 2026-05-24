@@ -35,6 +35,22 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     description,
     openGraph: { title, description },
     twitter: { card: "summary_large_image", title, description },
+    // Same PWA install metadata as the leaderboard layout so an invitee who
+    // taps Save to Home Screen from /join gets the pool-named icon and the
+    // app-style standalone launch. Reuses the per-pool manifest at
+    // /pool/[slug]/manifest.webmanifest (start_url points at the leaderboard
+    // so post-install taps go straight to live scores, regardless of where
+    // the icon was originally saved from).
+    manifest: `/pool/${params.slug}/manifest.webmanifest`,
+    appleWebApp: {
+      capable: true,
+      title: poolName,
+      statusBarStyle: "black-translucent",
+    },
+    icons: {
+      icon: "/favicon.png",
+      apple: "/apple-touch-icon.png",
+    },
   };
 }
 
