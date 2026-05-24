@@ -223,8 +223,40 @@ export default function PoolSetupPage() {
         const data = await poolRes.json();
         if (data?.poolName) setPoolName(data.poolName);
         if (data?.buyIn) setBuyIn(data.buyIn);
-        if (data?.settings) setSettings((prev) => ({ ...prev, ...data.settings }));
-        if (data?.tournamentId) setSelectedTournamentId(data.tournamentId);
+        if (data?.settings) {
+          setSettings((prev) => ({ ...prev, ...data.settings }));
+          // Hydrate the custom-purse textbox from the saved array so a
+          // 'Custom' pool re-opens with its real percentages instead of
+          // resetting to the '100' placeholder.
+          if (Array.isArray(data.settings.purseDistribution) && data.settings.purseDistribution.length > 0) {
+            setCustomDist(data.settings.purseDistribution.join(","));
+          }
+        }
+        if (data?.tournamentId) {
+          setSelectedTournamentId(data.tournamentId);
+          // The tournament-id useEffect will fetch the live field next and
+          // overwrite fieldText. Marking fromTournament here keeps the UI
+          // labels correct during the brief gap before that resolves.
+          setFieldFromTournament(true);
+        }
+        // awaiting_field is a real column on pools; carry it through so the
+        // wizard re-opens in the same 'no field yet, set up rules and we'll
+        // draft when it publishes' branch the chairman left it in.
+        if (data?.awaitingField) setFieldAwaiting(true);
+        // Re-hydrate the field textbox from the pool's own golfers so a
+        // manually-entered field doesn't get clobbered by DEFAULT_FIELD on
+        // re-save. For tournament-linked pools the tournament effect will
+        // overwrite this with the live field shortly; if that fetch ever
+        // fails this fallback keeps the real golfers intact.
+        if (Array.isArray(data.golfers) && data.golfers.length > 0) {
+          setFieldText(
+            data.golfers
+              .map((g: { name: string; worldRanking?: number | null }) =>
+                g.worldRanking ? `${g.name} (#${g.worldRanking})` : g.name,
+              )
+              .join("\n"),
+          );
+        }
       }
       if (peopleRes.ok) {
         const { players: peopleRows } = await peopleRes.json();
