@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import SaveToHomeButton from "@/app/components/save-to-home-button";
 
 type RsvpStatus = "pending" | "accepted" | "declined";
@@ -198,6 +198,7 @@ function DetailRow({
 
 export default function JoinPoolPage() {
   const { slug } = useParams();
+  const router = useRouter();
   const [data, setData] = useState<JoinData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -227,12 +228,23 @@ export default function JoinPoolPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ playerId: selectedPlayerId, status }),
     });
-    setSubmitting(false);
     if (!res.ok) {
+      setSubmitting(false);
       const d = await res.json().catch(() => ({}));
       setError(d?.error || "Could not save your response.");
       return;
     }
+    // Accepted RSVPs go straight to the pool page so the invitee lands on the
+    // header + rules + Save to Home Screen treatment that frames the rest of
+    // the season. Pre-draft pools show the Draft Pending body beneath the
+    // same header, post-draft pools show the live leaderboard. Declines stay
+    // on /join with the confirmation so people can flip back to "I'm In"
+    // without losing context.
+    if (status === "accepted") {
+      router.push(`/pool/${slug}`);
+      return;
+    }
+    setSubmitting(false);
     setRecentChoice(status);
     await fetchData();
   }

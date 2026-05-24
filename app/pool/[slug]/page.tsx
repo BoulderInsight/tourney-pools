@@ -656,6 +656,10 @@ function SettingsPill({ label, info }: { label: string; info: string }) {
 function AwaitingFieldState({ info }: {
   info: { name: string; status: string | null; startDate: string | null };
 }) {
+  // Rendered inside the main pool layout, beneath the shared header + rules
+  // pills. The page-level header already carries the TourneyPools mark and
+  // pool/tournament context, so this block stays focused on the "what's
+  // happening / when" message and skips its own logo.
   const started =
     info.status === "in_progress" ||
     info.status === "completed" ||
@@ -664,11 +668,10 @@ function AwaitingFieldState({ info }: {
     ? new Date(info.startDate).toLocaleDateString("en-US", { month: "long", day: "numeric" })
     : null;
   return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <img src="/logo.png" alt="TourneyPools" className="h-10 mx-auto mb-3" />
+    <div className="flex flex-col items-center justify-center py-12 text-center">
       {started ? (
         <>
-          <h1 className="font-serif text-2xl font-bold text-tp-primary mb-2">Draft Not Ready</h1>
+          <h2 className="font-serif text-xl font-bold text-tp-primary mb-2">Draft Not Ready</h2>
           <p className="text-gray-500 text-sm mb-2 max-w-xs leading-relaxed">
             We haven&apos;t been able to load {info.name || "the tournament"}&apos;s field yet.
           </p>
@@ -678,7 +681,7 @@ function AwaitingFieldState({ info }: {
         </>
       ) : (
         <>
-          <h1 className="font-serif text-2xl font-bold text-tp-primary mb-2">Draft Pending</h1>
+          <h2 className="font-serif text-xl font-bold text-tp-primary mb-2">Draft Pending</h2>
           <p className="text-gray-500 text-sm max-w-xs leading-relaxed">
             Waiting for {info.name || "the tournament"}&apos;s field to be announced
             {startLabel ? `, the tournament starts ${startLabel}` : ""}. The field is usually
@@ -834,10 +837,6 @@ export default function PoolLeaderboardPage() {
     );
   }
 
-  if (awaitingField) {
-    return <AwaitingFieldState info={awaitingInfo} />;
-  }
-
   const totalPurse = config.players.length * config.buyIn;
   const roundsWithData = [1, 2, 3, 4].filter(r =>
     config.golfers.some(g => g[`r${r}` as keyof typeof g] !== null)
@@ -938,8 +937,9 @@ export default function PoolLeaderboardPage() {
           chairman AND at least one player has a phone on file. Listing the names
           inline so the chairman can see at a glance who's getting the text and
           who's still missing a phone. The sms: URL opens the device's native
-          messaging app with everyone pre-addressed. */}
-      {isOwner && (() => {
+          messaging app with everyone pre-addressed. Skipped during awaitingField
+          since there's no draft / scores to message about yet. */}
+      {!awaitingField && isOwner && (() => {
         const smsUrl = buildSmsLink(phoneRecipients.map((r) => r.phone));
         if (!smsUrl) return null;
         const count = phoneRecipients.length;
@@ -984,8 +984,10 @@ export default function PoolLeaderboardPage() {
             - tournament_status completed AND chairman has a payment handle → Tip the Commish
             - >30 days past tournament_end_date → render nothing (pool is a static archive)
             - everything else → existing sponsor ad
-          The 30-day cutoff is independent of status so a stale completed pool still archives. */}
-      {(() => {
+          The 30-day cutoff is independent of status so a stale completed pool still archives.
+          Skipped during awaitingField so pre-draft pages stay focused on the
+          "field coming soon" message rather than ads. */}
+      {!awaitingField && (() => {
         const ARCHIVE_AFTER_DAYS = 30;
         if (tournamentEndDate) {
           const daysSinceEnd = (Date.now() - new Date(tournamentEndDate).getTime()) / (1000 * 60 * 60 * 24);
@@ -1016,22 +1018,29 @@ export default function PoolLeaderboardPage() {
         <SaveToHomeButton poolName={config.poolName || "Golf Pool"} />
       </div>
 
-      {/* Refresh button */}
-      <div className="flex justify-between items-center mb-4">
-        <div className="gold-rule flex-1" />
-        <button
-          onClick={fetchPool}
-          className="ml-3 flex items-center gap-1.5 text-xs text-gray-400 active:text-tp-primary transition-colors"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          {lastUpdated && lastUpdated.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-        </button>
-      </div>
+      {/* Refresh button. Hidden during awaitingField because there are no
+          scores to refresh yet, just a "waiting for field" message. */}
+      {!awaitingField && (
+        <div className="flex justify-between items-center mb-4">
+          <div className="gold-rule flex-1" />
+          <button
+            onClick={fetchPool}
+            className="ml-3 flex items-center gap-1.5 text-xs text-gray-400 active:text-tp-primary transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {lastUpdated && lastUpdated.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+          </button>
+        </div>
+      )}
 
-      {/* Live Draft or Standings */}
-      {!draftComplete ? (
+      {/* Awaiting-field message, draft, or standings.
+          Awaiting field wins first so pre-draft pools show only the shared
+          header + rules + Save-to-Home + the "Draft Pending / Not Ready" body. */}
+      {awaitingField ? (
+        <AwaitingFieldState info={awaitingInfo} />
+      ) : !draftComplete ? (
         <LiveDraft
           slug={slug as string}
           config={config as PoolConfig & { assignments: { playerId: string; golferId: string; pickNumber: number }[] }}
