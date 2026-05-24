@@ -112,19 +112,19 @@ function DashboardContent() {
   }
 
   /**
-   * Dashboard shortcut to text the whole pool. Calls the invite endpoint with
-   * mode='all' so the message goes to every player with a phone (pending
-   * AND accepted, declined excluded). On success, opens iMessage with
-   * everyone addressed and the join link pre-filled.
+   * Dashboard text-broadcast shortcut. mode='all' covers pending + accepted,
+   * mode='resend' covers pending only ('text no RSVP' wording on the button).
+   * Both reuse the existing /invite endpoint and open iMessage with everyone
+   * addressed and the join link pre-filled.
    */
-  async function handleTextPool(pool: Pool) {
+  async function handleTextPool(pool: Pool, mode: "all" | "resend") {
     if (textingId) return;
     setTextingId(pool.id);
     setTextFlash(null);
     const res = await fetch(`/api/pool/${pool.slug}/invite`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode: "all" }),
+      body: JSON.stringify({ mode }),
     });
     setTextingId(null);
     if (!res.ok) {
@@ -140,7 +140,10 @@ function DashboardContent() {
       setTextFlash({
         id: pool.id,
         tone: "warn",
-        text: "No phone numbers on file for any players.",
+        text:
+          mode === "resend"
+            ? "No phones on file for any pending invitees."
+            : "No phone numbers on file for any players.",
       });
       setTimeout(() => setTextFlash(null), 5000);
     }
@@ -459,7 +462,9 @@ function DashboardContent() {
                     accepted players so the chairman can broadcast to the
                     whole pool, not just the people who haven't RSVP'd. */}
                 {pool.setup_complete && (() => {
-                  const canText = !pool.draft_complete && pool.total_with_phone_count > 0;
+                  const canTextAll = !pool.draft_complete && pool.total_with_phone_count > 0;
+                  const canTextNoRsvp = !pool.draft_complete && pool.pending_with_phone_count > 0;
+                  const showTextRow = canTextAll || canTextNoRsvp;
                   const inviteCopied = copied === `invite:${pool.id}`;
                   const poolCopied = copied === `pool:${pool.id}`;
                   return (
@@ -497,19 +502,42 @@ function DashboardContent() {
                           )}
                         </button>
                       </div>
-                      {canText && (
-                        <button
-                          type="button"
-                          onClick={() => handleTextPool(pool)}
-                          disabled={textingId === pool.id}
-                          className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-tp-primary border-t border-tp-bg-dark active:bg-tp-primary/5 transition-colors disabled:opacity-60"
-                        >
-                          {textingId === pool.id ? (
-                            <>Opening...</>
-                          ) : (
-                            <>📱 Text Pool ({pool.total_with_phone_count})</>
+                      {showTextRow && (
+                        <div className="flex border-t border-tp-bg-dark">
+                          {canTextNoRsvp && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleTextPool(pool, "resend")}
+                                disabled={textingId === pool.id}
+                                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-tp-primary active:bg-tp-primary/5 transition-colors disabled:opacity-60"
+                                title="Text only the people who haven't RSVP'd yet"
+                              >
+                                {textingId === pool.id ? (
+                                  <>Opening...</>
+                                ) : (
+                                  <>📱 Text No RSVP ({pool.pending_with_phone_count})</>
+                                )}
+                              </button>
+                              {canTextAll && <div className="w-px bg-tp-bg-dark" />}
+                            </>
                           )}
-                        </button>
+                          {canTextAll && (
+                            <button
+                              type="button"
+                              onClick={() => handleTextPool(pool, "all")}
+                              disabled={textingId === pool.id}
+                              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-tp-primary active:bg-tp-primary/5 transition-colors disabled:opacity-60"
+                              title="Text everyone in the pool with a phone on file"
+                            >
+                              {textingId === pool.id ? (
+                                <>Opening...</>
+                              ) : (
+                                <>📱 Text Pool ({pool.total_with_phone_count})</>
+                              )}
+                            </button>
+                          )}
+                        </div>
                       )}
                       {textFlash && textFlash.id === pool.id && (
                         <p
