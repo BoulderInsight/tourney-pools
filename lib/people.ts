@@ -112,6 +112,29 @@ export async function findOrCreatePersonForPool(
   return candidate;
 }
 
+/**
+ * Return every Person owned by this chairman matching the given name. Used by
+ * the add-form collision check: when a chairman types a name that already
+ * has Persons on file (with phone or handles), the UI shows the matches and
+ * lets them pick 'use existing' vs 'add as new'.
+ *
+ * Includes Persons even if they have no data; the calling endpoint filters
+ * those out so the chooser only shows meaningful options.
+ */
+export async function findPeopleByName(
+  sql: Sql,
+  chairmanId: string,
+  name: string,
+): Promise<Person[]> {
+  const rows = await sql`
+    SELECT id, chairman_id, name, venmo_handle, cashapp_handle, paypal_handle, preferred_method, phone
+    FROM people
+    WHERE chairman_id = ${chairmanId} AND name = ${name}
+    ORDER BY created_at ASC
+  `;
+  return rows.map(rowToPerson);
+}
+
 /** Get a single Person owned by the given chairman, or null if not found / not owned. */
 export async function getPersonForChairman(
   sql: Sql,

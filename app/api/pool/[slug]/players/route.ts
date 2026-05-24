@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { findOrCreatePersonForPool, setPersonPhone } from "@/lib/people";
+import { findOrCreatePersonForPool, createPerson, setPersonPhone } from "@/lib/people";
 import { normalizeUsPhoneE164 } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
@@ -64,12 +64,40 @@ export async function POST(
     }
   }
 
-  // findOrCreatePersonForPool keeps cross-pool reuse (Brack's Venmo carries
-  // forward) but enforces per-pool uniqueness so two players named the same
-  // in this pool always get distinct Person rows. Without this, adding a
-  // second 'Christi' would silently link to the first Christi's row and the
-  // two would share phone + handles.
-  const person = await findOrCreatePersonForPool(sql, session.chairmanId, name, pool.id);
+  // Three Person-resolution paths the chairman can drive from the add form:
+  //   personId   chairman explicitly picked an existing Person from the
+  //              collision prompt ('use existing'). Verify ownership then link.
+  //   forceNew   chairman explicitly chose 'add as new person' on a collision
+  //              prompt. Always create a fresh Person row.
+  //   neither    legacy / no-prompt path: findOrCreatePersonForPool, which
+  //              keeps cross-pool reuse but enforces per-pool uniqueness.
+  let person;
+  const explicitPersonId = typeof body.personId === "string" ? body.personId.trim() : "";
+  const forceNew = body.forceNew === true;
+  if (explicitPersonId.length > 0) {
+    const rows = await sql`
+      SELECT id, chairman_id, name, venmo_handle, cashapp_handle, paypal_handle, preferred_method, phone
+      FROM people WHERE id = ${explicitPersonId} AND chairman_id = ${session.chairmanId}
+    `;
+    if (rows.length === 0) {
+      return NextResponse.json({ error: "Person not found" }, { status: 404 });
+    }
+    const r = rows[0];
+    person = {
+      id: r.id as string,
+      chairmanId: r.chairman_id as string,
+      name: r.name as string,
+      venmoHandle: (r.venmo_handle as string | null) ?? null,
+      cashappHandle: (r.cashapp_handle as string | null) ?? null,
+      paypalHandle: (r.paypal_handle as string | null) ?? null,
+      preferredMethod: (r.preferred_method as "venmo" | "cashapp" | "paypal" | null) ?? null,
+      phone: (r.phone as string | null) ?? null,
+    };
+  } else if (forceNew) {
+    person = await createPerson(sql, session.chairmanId, name);
+  } else {
+    person = await findOrCreatePersonForPool(sql, session.chairmanId, name, pool.id);
+  }
   if (e164) {
     await setPersonPhone(sql, person.id, e164);
   }

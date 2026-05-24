@@ -7,6 +7,7 @@ import type { GroupWithMembers, PaymentMethod, Person } from "@/lib/types";
 import CollectDialog from "@/app/pool/[slug]/players/CollectDialog";
 import TopNav from "@/app/components/top-nav";
 import { formatUsPhoneDisplay } from "@/lib/phone";
+import NameMatchChooser, { type NameChoice } from "@/app/components/name-match-chooser";
 
 const METHOD_LABEL: Record<PaymentMethod, string> = {
   venmo: "Venmo",
@@ -42,6 +43,7 @@ export default function GroupEditPage() {
   const [collectingPersonId, setCollectingPersonId] = useState<string | null>(null);
   const [getVenmoBusyId, setGetVenmoBusyId] = useState<string | null>(null);
   const [getVenmoFlash, setGetVenmoFlash] = useState<{ id: string; text: string } | null>(null);
+  const [memberChoice, setMemberChoice] = useState<NameChoice>({ kind: "new" });
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/groups/${groupId}`);
@@ -82,10 +84,23 @@ export default function GroupEditPage() {
     if (!name) return;
     setSaving(true);
     setError("");
+    // Translate the chooser choice into the group-member endpoint's body:
+    //   { personId }   chairman picked an existing Person from the prompt
+    //   { forceNew }   chairman picked 'add as new person'
+    // The endpoint also supports { name } alone for legacy callers.
+    const body: Record<string, unknown> = {
+      name,
+      phone: newMemberPhone.trim() || undefined,
+    };
+    if (memberChoice.kind === "existing") {
+      body.personId = memberChoice.personId;
+    } else {
+      body.forceNew = true;
+    }
     const res = await fetch(`/api/groups/${groupId}/members`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, phone: newMemberPhone.trim() || undefined }),
+      body: JSON.stringify(body),
     });
     setSaving(false);
     if (!res.ok) {
@@ -95,6 +110,7 @@ export default function GroupEditPage() {
     }
     setNewMemberName("");
     setNewMemberPhone("");
+    setMemberChoice({ kind: "new" });
     await load();
   }
 
@@ -332,6 +348,10 @@ export default function GroupEditPage() {
               Add
             </button>
           </div>
+          {/* Same collision prompt as the /players add row. Defaults to
+              'Add as new' so a chairman who doesn't read it won't silently
+              link the new member to an existing same-name Person's row. */}
+          <NameMatchChooser name={newMemberName} onChoice={setMemberChoice} />
         </div>
         {error && <p className="text-[11px] text-red-500 mt-2">{error}</p>}
         <p className="text-[11px] text-gray-400 mt-2">
