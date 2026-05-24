@@ -59,6 +59,11 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       statusBarStyle: "black-translucent",
     },
     icons: {
+      // Re-declare the favicon explicitly: Next.js metadata merging replaces
+      // the parent layout's `icons` object wholesale rather than merging
+      // fields, so omitting `icon` here would strip the favicon from pool
+      // pages.
+      icon: "/favicon.png",
       apple: "/apple-touch-icon.png",
     },
   };
