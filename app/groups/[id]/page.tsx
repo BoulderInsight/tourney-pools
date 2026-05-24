@@ -147,7 +147,7 @@ export default function GroupEditPage() {
     const { url } = await res.json();
     const firstName = (m.name || "").trim().split(/\s+/)[0] || "there";
     const body =
-      `Hey ${firstName}! Drop your Venmo (or Cash App / PayPal) here so I can pay you when you win our golf pool: ${url}`;
+      `Hey ${firstName}! Drop your Venmo (or Cash App / PayPal) here so the losers can pay you when you win our golf pool: ${url}`;
     // Single recipient + body: iOS handles either ?body= or &body=. Use & so
     // the form matches the multi-recipient helper we use elsewhere.
     window.location.href = `sms:${m.phone}&body=${encodeURIComponent(body)}`;
