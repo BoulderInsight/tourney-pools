@@ -15,7 +15,15 @@ export async function GET() {
            t.name AS tournament_name, t.status AS tournament_status,
            (SELECT COUNT(*) FROM players WHERE pool_id = p.id) as player_count,
            (SELECT COUNT(*) FROM players WHERE pool_id = p.id AND rsvp_status = 'pending') as pending_count,
-           (SELECT COUNT(*) FROM players WHERE pool_id = p.id AND rsvp_status = 'accepted') as accepted_count
+           (SELECT COUNT(*) FROM players WHERE pool_id = p.id AND rsvp_status = 'accepted') as accepted_count,
+           -- pending invitees who actually have a phone, so the dashboard's
+           -- 'Text Pool' shortcut can decide whether the button has anyone to
+           -- send to before lighting up.
+           (
+             SELECT COUNT(*) FROM players pl
+             JOIN people pe ON pe.id = pl.person_id
+             WHERE pl.pool_id = p.id AND pl.rsvp_status = 'pending' AND pe.phone IS NOT NULL
+           ) as pending_with_phone_count
     FROM pools p
     LEFT JOIN tournaments t ON t.id = p.tournament_id
     WHERE p.chairman_id = ${session.chairmanId}
