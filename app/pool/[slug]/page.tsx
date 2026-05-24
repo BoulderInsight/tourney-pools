@@ -9,6 +9,7 @@ import { buildSmsLink } from "@/lib/phone";
 import Link from "next/link";
 import { SponsorBanner } from "@/app/components/sponsor-banner";
 import { TipTheCommish } from "@/app/components/tip-the-commish";
+import SaveToHomeButton from "@/app/components/save-to-home-button";
 
 function LoadingState() {
   return (
@@ -1004,6 +1005,16 @@ export default function PoolLeaderboardPage() {
           />
         );
       })()}
+
+      {/* Quick-save action. Renders for everyone (chairman + players), then
+          self-hides if the page is already running as an installed app
+          (display-mode: standalone or iOS navigator.standalone). On Android
+          it triggers the real install prompt; on iOS it explains the Share
+          menu steps. The dynamic per-pool manifest + apple-mobile-web-app-title
+          ensure the saved icon uses the pool name and TourneyPools mark. */}
+      <div className="mb-4">
+        <SaveToHomeButton poolName={config.poolName || "Golf Pool"} />
+      </div>
 
       {/* Refresh button */}
       <div className="flex justify-between items-center mb-4">
