@@ -101,10 +101,10 @@ export default function SaveToHomeButton({ poolName }: { poolName: string }) {
       <button
         type="button"
         onClick={handleClick}
-        className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-tp-primary border border-tp-bg-dark rounded-xl active:bg-tp-bg/60 transition-colors"
+        className="w-full flex items-center justify-center gap-2.5 py-3.5 text-sm font-bold text-white bg-tp-accent rounded-xl active:bg-tp-accent-dark transition-colors shadow-card tracking-wide"
         aria-label={`Save ${poolName} to your home screen`}
       >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
