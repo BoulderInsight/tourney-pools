@@ -271,7 +271,10 @@ function StandingCard({ standing, expanded, onToggle, index, buyIn, tournamentOv
         {/* Score */}
         <div className="flex flex-col items-end flex-shrink-0">
           <ScoreBadge score={standing.totalScore} size="xl" />
-          {standing.prize > 0 && (
+          {/* Prize pill is the final payout, not a projection. Only show it
+              once the tournament is actually complete; mid-round it implies
+              someone has 'won' when play is still live. */}
+          {tournamentOver && standing.prize > 0 && (
             <span className="text-xs font-semibold text-tp-accent mt-0.5">
               ${standing.prize}
             </span>
@@ -1038,7 +1041,7 @@ export default function PoolLeaderboardPage() {
                 }
                 index={i}
                 buyIn={config.buyIn}
-                tournamentOver={currentRound >= 4}
+                tournamentOver={tournamentStatus === "completed"}
                 payoutMethod={config.settings.payoutMethod || "honor-system"}
                 chairmanNameForPayout={chairmanName}
                 poolName={config.poolName || "Golf Pool"}
