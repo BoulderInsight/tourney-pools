@@ -653,8 +653,9 @@ function SettingsPill({ label, info }: { label: string; info: string }) {
   );
 }
 
-function AwaitingFieldState({ info }: {
+function AwaitingFieldState({ info, invitees }: {
   info: { name: string; status: string | null; startDate: string | null };
+  invitees: { id: string; name: string; rsvpStatus: "accepted" | "pending" }[];
 }) {
   // Rendered inside the main pool layout, beneath the shared header + rules
   // pills. The page-level header already carries the TourneyPools mark and
@@ -667,27 +668,58 @@ function AwaitingFieldState({ info }: {
   const startLabel = info.startDate
     ? new Date(info.startDate).toLocaleDateString("en-US", { month: "long", day: "numeric" })
     : null;
+  const acceptedCount = invitees.filter((p) => p.rsvpStatus === "accepted").length;
   return (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
-      {started ? (
-        <>
-          <h2 className="font-serif text-xl font-bold text-tp-primary mb-2">Draft Not Ready</h2>
-          <p className="text-gray-500 text-sm mb-2 max-w-xs leading-relaxed">
-            We haven&apos;t been able to load {info.name || "the tournament"}&apos;s field yet.
+    <div>
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        {started ? (
+          <>
+            <h2 className="font-serif text-xl font-bold text-tp-primary mb-2">Draft Not Ready</h2>
+            <p className="text-gray-500 text-sm mb-2 max-w-xs leading-relaxed">
+              We haven&apos;t been able to load {info.name || "the tournament"}&apos;s field yet.
+            </p>
+            <p className="text-gray-400 text-xs max-w-xs leading-relaxed">
+              This usually resolves on its own within a few minutes. If it doesn&apos;t, contact support.
+            </p>
+          </>
+        ) : (
+          <>
+            <h2 className="font-serif text-xl font-bold text-tp-primary mb-2">Draft Pending</h2>
+            <p className="text-gray-500 text-sm max-w-xs leading-relaxed">
+              Waiting for {info.name || "the tournament"}&apos;s field to be announced
+              {startLabel ? `, the tournament starts ${startLabel}` : ""}. The field is usually
+              published a few days before play begins, and the draft runs as soon as it&apos;s out.
+            </p>
+          </>
+        )}
+      </div>
+
+      {/* Invitee roster: same 2-column grid as /join's picker, but read-only
+          here. Green check = accepted, no marker = still pending. Lets
+          invitees see at a glance whether everyone is on board before the
+          draft kicks off. Declined are dropped server-side. */}
+      {invitees.length > 0 && (
+        <div className="mt-2 mb-8">
+          <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold text-center mb-3">
+            {acceptedCount} of {invitees.length} RSVPed
           </p>
-          <p className="text-gray-400 text-xs max-w-xs leading-relaxed">
-            This usually resolves on its own within a few minutes. If it doesn&apos;t, contact support.
-          </p>
-        </>
-      ) : (
-        <>
-          <h2 className="font-serif text-xl font-bold text-tp-primary mb-2">Draft Pending</h2>
-          <p className="text-gray-500 text-sm max-w-xs leading-relaxed">
-            Waiting for {info.name || "the tournament"}&apos;s field to be announced
-            {startLabel ? `, the tournament starts ${startLabel}` : ""}. The field is usually
-            published a few days before play begins, and the draft runs as soon as it&apos;s out.
-          </p>
-        </>
+          <div className="grid grid-cols-2 gap-2 max-w-md mx-auto">
+            {invitees.map((p) => {
+              const isAccepted = p.rsvpStatus === "accepted";
+              return (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between bg-white border border-tp-bg-dark rounded-xl px-3 py-3 text-left min-w-0"
+                >
+                  <span className="font-semibold text-tp-primary truncate">{p.name}</span>
+                  {isAccepted && (
+                    <span className="text-green-600 text-base flex-shrink-0 ml-1" aria-label="Accepted">✅</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -721,6 +753,10 @@ export default function PoolLeaderboardPage() {
   // the roster is frozen and we fall back to the plain accepted count.
   const [acceptedCount, setAcceptedCount] = useState(0);
   const [invitedCount, setInvitedCount] = useState(0);
+  // Pre-draft roster (accepted + pending). Rendered below Draft Pending so
+  // invitees can see who's joined and who's still outstanding. Declined are
+  // excluded server-side; this list never contains them.
+  const [invitees, setInvitees] = useState<{ id: string; name: string; rsvpStatus: "accepted" | "pending" }[]>([]);
   // Chairman-only: name + E.164 phone for players in this pool who have one on
   // file. Empty until the owner fetch resolves; never populated for non-owners.
   // Names let us show "On file: Brack, Chig, Jef" so the chairman can spot at a
@@ -755,6 +791,7 @@ export default function PoolLeaderboardPage() {
         setChairmanPaymentInfo(data.chairmanPaymentInfo ?? null);
         setAcceptedCount(Number(data.acceptedCount ?? 0));
         setInvitedCount(Number(data.invitedCount ?? 0));
+        setInvitees(Array.isArray(data.invitees) ? data.invitees : []);
         // Check if current user is chairman
         let owner = false;
         try {
@@ -1056,7 +1093,7 @@ export default function PoolLeaderboardPage() {
           Awaiting field wins first so pre-draft pools show only the shared
           header + rules + Save-to-Home + the "Draft Pending / Not Ready" body. */}
       {awaitingField ? (
-        <AwaitingFieldState info={awaitingInfo} />
+        <AwaitingFieldState info={awaitingInfo} invitees={invitees} />
       ) : !draftComplete ? (
         <LiveDraft
           slug={slug as string}

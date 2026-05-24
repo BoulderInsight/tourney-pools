@@ -116,6 +116,23 @@ export async function GET(
   const acceptedCount = Number(rsvpCountsRows[0]?.accepted ?? 0);
   const invitedCount = Number(rsvpCountsRows[0]?.invited ?? 0);
 
+  // Full invite roster for the pre-draft RSVP grid on /pool/[slug]. Mirrors
+  // the picker on /join: accepted gets a green check, pending shows the bare
+  // name. Declined are dropped here since they're not playing and outing them
+  // publicly on the pool page would feel rude. pick_order can be NULL pre-draft
+  // so we sort by name as a stable fallback.
+  const inviteeRows = await sql`
+    SELECT id, name, rsvp_status
+    FROM players
+    WHERE pool_id = ${pool.id} AND rsvp_status IN ('accepted', 'pending')
+    ORDER BY COALESCE(pick_order, 9999), name
+  `;
+  const invitees = inviteeRows.map((p) => ({
+    id: p.id as string,
+    name: p.name as string,
+    rsvpStatus: p.rsvp_status as "accepted" | "pending",
+  }));
+
   const golfers = await sql`
     SELECT g.id, g.name,
       COALESCE(tg.r1, g.r1) as r1,
@@ -199,6 +216,7 @@ export async function GET(
     awaitingField: pool.awaiting_field,
     acceptedCount,
     invitedCount,
+    invitees,
     lastSyncAt: pool.last_sync_at,
     tournamentId: pool.tournament_id,
     tournamentName: pool.tournament_name,
