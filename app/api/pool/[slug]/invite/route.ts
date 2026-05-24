@@ -14,6 +14,10 @@ export const dynamic = "force-dynamic";
  *   "new"    - pending invitees with NULL invited_at. Used by "Invite to Pool".
  *   "resend" - all pending invitees regardless of prior invite. Used by "Resend
  *              Invites" to re-prod everyone who hasn't responded.
+ *   "all"    - every player with a phone (pending OR accepted, declined
+ *              excluded). Used by the dashboard "Text Pool" button to
+ *              broadcast to the full pool. Accepted players tapping the link
+ *              will see "you're already in" on /join.
  *
  * The pre-filled message: "You're invited to join {Pool Name} for the
  * {Tournament Name}! 🏌️ Tap here to RSVP: {join URL}". Body is URL-encoded
@@ -32,7 +36,8 @@ export async function POST(
   }
 
   const body = await req.json().catch(() => ({}));
-  const mode = body.mode === "resend" ? "resend" : "new";
+  const mode: "new" | "resend" | "all" =
+    body.mode === "resend" ? "resend" : body.mode === "all" ? "all" : "new";
 
   const sql = getDb();
   const poolRows = await sql`
@@ -53,6 +58,10 @@ export async function POST(
     );
   }
 
+  // Three recipient queries keyed by mode. All-mode pulls accepted players
+  // alongside pending so the dashboard broadcast covers the whole pool.
+  // Declined are never texted; if someone explicitly said no, they don't get
+  // a re-ping.
   const rows = mode === "new"
     ? await sql`
         SELECT pl.id, pl.name, pe.phone
@@ -61,6 +70,15 @@ export async function POST(
         WHERE pl.pool_id = ${pool.id}
           AND pl.rsvp_status = 'pending'
           AND pl.invited_at IS NULL
+          AND pe.phone IS NOT NULL
+      `
+    : mode === "all"
+    ? await sql`
+        SELECT pl.id, pl.name, pe.phone
+        FROM players pl
+        JOIN people pe ON pe.id = pl.person_id
+        WHERE pl.pool_id = ${pool.id}
+          AND pl.rsvp_status IN ('pending', 'accepted')
           AND pe.phone IS NOT NULL
       `
     : await sql`
