@@ -653,6 +653,125 @@ function SettingsPill({ label, info }: { label: string; info: string }) {
   );
 }
 
+/**
+ * Read-only roster grid that mirrors /join's picker. Green check = accepted,
+ * no marker = still pending. Declined are dropped server-side so the public
+ * pool page never outs anyone who said no.
+ *
+ * For the chairman a second row appears under each name with payment status:
+ * "Venmo on file" when any handle exists, a one-tap Get Venmo button when
+ * we have a phone but no handle yet, or a muted "No phone on file" hint
+ * otherwise. Same flow as the Get Venmo button on /groups; reuses
+ * POST /api/people/[id]/collection-requests via the parent's handler.
+ */
+function InviteeRosterGrid({
+  invitees,
+  isOwner,
+  paymentByPlayer,
+  getVenmoBusyId,
+  onGetVenmo,
+  slug,
+  onAfterBulkAccept,
+}: {
+  invitees: { id: string; name: string; rsvpStatus: "accepted" | "pending" }[];
+  isOwner: boolean;
+  paymentByPlayer: Record<string, { personId: string; phone: string | null; hasHandle: boolean }>;
+  getVenmoBusyId: string | null;
+  onGetVenmo: (playerId: string, name: string, personId: string, phone: string) => void | Promise<void>;
+  slug: string;
+  onAfterBulkAccept: () => void | Promise<void>;
+}) {
+  const [bulkBusy, setBulkBusy] = useState(false);
+  if (invitees.length === 0) return null;
+  const acceptedCount = invitees.filter((p) => p.rsvpStatus === "accepted").length;
+  const pendingPlayers = invitees.filter((p) => p.rsvpStatus === "pending");
+  // Chairman-only bulk override: flip every pending invitee to accepted in
+  // one tap. Useful when the field has already arrived and the chairman
+  // knows everyone's in; saves chasing RSVP taps. Fires PATCH calls in
+  // parallel; partial failures are swallowed (refetch will show the real
+  // state). Server-side, the endpoint relaxes the draft_complete lock when
+  // no assignments exist, so this also unsticks pools where the flag was
+  // set prematurely.
+  async function handleMarkAllAccepted() {
+    if (bulkBusy) return;
+    setBulkBusy(true);
+    try {
+      await Promise.all(
+        pendingPlayers.map((p) =>
+          fetch(`/api/pool/${slug}/players/${p.id}/rsvp`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "accepted" }),
+          }).catch(() => null),
+        ),
+      );
+      await onAfterBulkAccept();
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+  return (
+    <div className="mt-2 mb-8">
+      <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold text-center mb-3">
+        {acceptedCount} of {invitees.length} RSVPed
+      </p>
+      {/* Chairman shortcut: skip the RSVP chase when the field has already
+          arrived and everyone is known to be in. */}
+      {isOwner && pendingPlayers.length > 0 && (
+        <div className="max-w-md mx-auto mb-3">
+          <button
+            type="button"
+            onClick={handleMarkAllAccepted}
+            disabled={bulkBusy}
+            className="w-full text-xs font-bold text-tp-primary bg-tp-accent/15 border border-tp-accent/40 rounded-xl px-3 py-2 active:bg-tp-accent/25 disabled:opacity-50"
+          >
+            {bulkBusy
+              ? "Marking..."
+              : `Mark ${pendingPlayers.length === invitees.length ? "all" : `the ${pendingPlayers.length} pending`} as RSVPed`}
+          </button>
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-2 max-w-md mx-auto">
+        {invitees.map((p) => {
+          const isAccepted = p.rsvpStatus === "accepted";
+          const pay = isOwner ? paymentByPlayer[p.id] : undefined;
+          return (
+            <div
+              key={p.id}
+              className="flex flex-col bg-white border border-tp-bg-dark rounded-xl px-3 py-3 min-w-0"
+            >
+              <div className="flex items-center justify-between gap-2 min-w-0">
+                <span className="font-semibold text-tp-primary truncate">{p.name}</span>
+                {isAccepted && (
+                  <span className="text-green-600 text-base flex-shrink-0" aria-label="Accepted">✅</span>
+                )}
+              </div>
+              {pay && (
+                <div className="mt-2">
+                  {pay.hasHandle ? (
+                    <p className="text-[11px] text-green-700 font-semibold">💵 Venmo on file</p>
+                  ) : pay.phone ? (
+                    <button
+                      type="button"
+                      onClick={() => onGetVenmo(p.id, p.name, pay.personId, pay.phone as string)}
+                      disabled={getVenmoBusyId === p.id}
+                      className="w-full text-[11px] font-bold text-tp-primary border border-tp-primary/30 rounded-lg px-2 py-1.5 active:bg-tp-primary/10 disabled:opacity-50"
+                    >
+                      {getVenmoBusyId === p.id ? "Opening..." : "📱 Get Venmo"}
+                    </button>
+                  ) : (
+                    <p className="text-[11px] text-gray-400 italic">No phone on file</p>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function AwaitingFieldState({
   info,
   invitees,
@@ -660,6 +779,8 @@ function AwaitingFieldState({
   paymentByPlayer,
   getVenmoBusyId,
   onGetVenmo,
+  slug,
+  onAfterBulkAccept,
 }: {
   info: { name: string; status: string | null; startDate: string | null };
   invitees: { id: string; name: string; rsvpStatus: "accepted" | "pending" }[];
@@ -667,6 +788,8 @@ function AwaitingFieldState({
   paymentByPlayer: Record<string, { personId: string; phone: string | null; hasHandle: boolean }>;
   getVenmoBusyId: string | null;
   onGetVenmo: (playerId: string, name: string, personId: string, phone: string) => void | Promise<void>;
+  slug: string;
+  onAfterBulkAccept: () => void | Promise<void>;
 }) {
   // Rendered inside the main pool layout, beneath the shared header + rules
   // pills. The page-level header already carries the TourneyPools mark and
@@ -679,7 +802,6 @@ function AwaitingFieldState({
   const startLabel = info.startDate
     ? new Date(info.startDate).toLocaleDateString("en-US", { month: "long", day: "numeric" })
     : null;
-  const acceptedCount = invitees.filter((p) => p.rsvpStatus === "accepted").length;
   return (
     <div>
       <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -705,60 +827,15 @@ function AwaitingFieldState({
         )}
       </div>
 
-      {/* Invitee roster: same 2-column grid as /join's picker, but read-only
-          here. Green check = accepted, no marker = still pending. Lets
-          invitees see at a glance whether everyone is on board before the
-          draft kicks off. Declined are dropped server-side. */}
-      {invitees.length > 0 && (
-        <div className="mt-2 mb-8">
-          <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold text-center mb-3">
-            {acceptedCount} of {invitees.length} RSVPed
-          </p>
-          <div className="grid grid-cols-2 gap-2 max-w-md mx-auto">
-            {invitees.map((p) => {
-              const isAccepted = p.rsvpStatus === "accepted";
-              const pay = isOwner ? paymentByPlayer[p.id] : undefined;
-              return (
-                <div
-                  key={p.id}
-                  className="flex flex-col bg-white border border-tp-bg-dark rounded-xl px-3 py-3 min-w-0"
-                >
-                  <div className="flex items-center justify-between gap-2 min-w-0">
-                    <span className="font-semibold text-tp-primary truncate">{p.name}</span>
-                    {isAccepted && (
-                      <span className="text-green-600 text-base flex-shrink-0" aria-label="Accepted">✅</span>
-                    )}
-                  </div>
-                  {/* Chairman-only payment status row. Goal: at a glance, know
-                      who's still missing Venmo so we can chase them now rather
-                      than after someone wins. Three states:
-                        - hasHandle → small green confirmation
-                        - !hasHandle && phone → one-tap Get Venmo button
-                        - !hasHandle && !phone → muted "no phone" hint */}
-                  {pay && (
-                    <div className="mt-2">
-                      {pay.hasHandle ? (
-                        <p className="text-[11px] text-green-700 font-semibold">💵 Venmo on file</p>
-                      ) : pay.phone ? (
-                        <button
-                          type="button"
-                          onClick={() => onGetVenmo(p.id, p.name, pay.personId, pay.phone as string)}
-                          disabled={getVenmoBusyId === p.id}
-                          className="w-full text-[11px] font-bold text-tp-primary border border-tp-primary/30 rounded-lg px-2 py-1.5 active:bg-tp-primary/10 disabled:opacity-50"
-                        >
-                          {getVenmoBusyId === p.id ? "Opening..." : "📱 Get Venmo"}
-                        </button>
-                      ) : (
-                        <p className="text-[11px] text-gray-400 italic">No phone on file</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <InviteeRosterGrid
+        invitees={invitees}
+        isOwner={isOwner}
+        paymentByPlayer={paymentByPlayer}
+        getVenmoBusyId={getVenmoBusyId}
+        onGetVenmo={onGetVenmo}
+        slug={slug}
+        onAfterBulkAccept={onAfterBulkAccept}
+      />
     </div>
   );
 }
@@ -1189,6 +1266,8 @@ export default function PoolLeaderboardPage() {
               setGetVenmoBusyId(null);
             }
           }}
+          slug={slug as string}
+          onAfterBulkAccept={fetchPool}
         />
       ) : !draftComplete ? (
         <LiveDraft
@@ -1220,8 +1299,47 @@ export default function PoolLeaderboardPage() {
             ))}
           </div>
 
-          {/* Empty state */}
-          {currentRound === 0 && (
+          {/* When standings are empty but invitees exist, surface the roster
+              grid instead of the bare "Scores will appear" text. This catches
+              two cases:
+                1. No draft assignments yet (field hasn't been drafted)
+                2. Assignments exist but everyone is still pending — the
+                   public API filters players to accepted-only, so standings
+                   render empty even though the draft technically ran.
+              Either way the chairman gets a clear chase list with the
+              Mark-all-RSVPed shortcut so the pool can actually get going. */}
+          {standings.length === 0 && invitees.length > 0 && (
+            <div className="mt-2">
+              <div className="gold-rule mb-4" />
+              <InviteeRosterGrid
+                invitees={invitees}
+                isOwner={isOwner}
+                paymentByPlayer={paymentByPlayer}
+                getVenmoBusyId={getVenmoBusyId}
+                onGetVenmo={async (playerId, name, personId, phone) => {
+                  if (getVenmoBusyId || !phone) return;
+                  setGetVenmoBusyId(playerId);
+                  try {
+                    const res = await fetch(`/api/people/${personId}/collection-requests`, { method: "POST" });
+                    if (!res.ok) return;
+                    const { url } = await res.json();
+                    const firstName = (name || "").trim().split(/\s+/)[0] || "there";
+                    const body =
+                      `Hey ${firstName}! Drop your Venmo (or Cash App / PayPal) here so the losers can pay you when you win our golf pool: ${url}`;
+                    window.location.href = `sms:${phone}&body=${encodeURIComponent(body)}`;
+                  } finally {
+                    setGetVenmoBusyId(null);
+                  }
+                }}
+                slug={slug as string}
+                onAfterBulkAccept={fetchPool}
+              />
+            </div>
+          )}
+
+          {/* Empty state: only when there is no roster to show either. The
+              roster grid above handles the "no accepted players yet" case. */}
+          {currentRound === 0 && !(standings.length === 0 && invitees.length > 0) && (
             <div className="text-center mt-8 mb-4">
               <div className="gold-rule mb-4" />
               <p className="font-serif italic text-gray-400 text-sm">

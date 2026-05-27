@@ -35,11 +35,21 @@ export async function PATCH(
     return NextResponse.json({ error: "Pool not found" }, { status: 404 });
   }
   const pool = poolRows[0];
+  // Lock only if a draft has *actually* happened (golfer assignments exist).
+  // The draft_complete flag alone is too brittle: some pools end up with it
+  // set without ever having anyone RSVP, leaving the chairman unable to flip
+  // anyone to accepted. Checking the assignments table makes the lock match
+  // the real intent — "the roster is frozen because picks have been made."
   if (pool.draft_complete) {
-    return NextResponse.json(
-      { error: "Draft is complete. Pool roster is locked." },
-      { status: 409 },
-    );
+    const assigned = await sql`
+      SELECT 1 FROM assignments WHERE pool_id = ${pool.id} LIMIT 1
+    `;
+    if (assigned.length > 0) {
+      return NextResponse.json(
+        { error: "Draft is complete. Pool roster is locked." },
+        { status: 409 },
+      );
+    }
   }
 
   const updated = await sql`
