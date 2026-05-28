@@ -38,6 +38,10 @@ CREATE TABLE tournaments (
   logo_url TEXT,
   api_source TEXT,
   api_tournament_id TEXT,
+  -- Last time we refreshed DataGolf pre-tournament predictions for this
+  -- event. Used to de-duplicate calls when multiple pools draft the same
+  -- tournament within the same window.
+  dg_synced_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -78,6 +82,14 @@ CREATE TABLE tournament_golfers (
   made_cut BOOLEAN,
   world_ranking INTEGER,
   odds_api_id TEXT,
+  -- DataGolf pre-tournament model predictions. Populated at draft time by
+  -- the setup endpoint (lib/datagolf.ts -> syncTournamentPredictions). Used
+  -- by draftGolfers auto-snake to seed the pick order. NULL when DataGolf
+  -- has no quote for this golfer (off-tour event, name match miss, etc.) —
+  -- those golfers fall to the back of the snake.
+  dg_win_prob NUMERIC(8,6),
+  dg_skill_rating NUMERIC(8,4),
+  dg_updated_at TIMESTAMPTZ,
   status TEXT DEFAULT 'active',
   manual_override BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT now(),

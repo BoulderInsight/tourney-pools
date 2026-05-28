@@ -1,13 +1,18 @@
 import { getDb } from "./db";
 import { fetchLeaderboard, extractRoundScores } from "./golf-api";
 import { draftGolfers } from "./pool";
+import { syncTournamentPredictions } from "./datagolf-sync";
 import type { DraftType, Golfer, PoolPlayer } from "./types";
 
-// A tournament_golfers row, as needed to build a pool's field.
+// A tournament_golfers row, as needed to build a pool's field. dg_* fields
+// power the auto-snake seed order via draftGolfers; null when DataGolf has
+// no quote for this golfer (off-tour event, name miss, sync skipped).
 export interface FieldGolfer {
   id: string;
   name: string;
   world_ranking: number | null;
+  dg_win_prob: number | null;
+  dg_skill_rating: number | null;
 }
 
 // Fetch a tournament's live field from the golf API and upsert it into
@@ -55,16 +60,33 @@ export async function importTournamentField(
     }
   }
 
+  // Now that tournament_golfers rows exist for every entrant, refresh
+  // DataGolf pre-tournament predictions so the auto-snake draft below has a
+  // real seed signal. syncTournamentPredictions silently no-ops on errors;
+  // worst case the seed falls back to alphabetical (status quo before this).
+  try {
+    await syncTournamentPredictions(tournamentId);
+  } catch (err) {
+    console.error("[draft-pool] DataGolf sync threw (continuing):", err);
+  }
+
   // Return the field in leaderboard order (the auto-snake seed order)
   const rows = await sql`
-    SELECT id, name, odds_api_id, world_ranking FROM tournament_golfers
+    SELECT id, name, odds_api_id, world_ranking, dg_win_prob, dg_skill_rating
+    FROM tournament_golfers
     WHERE tournament_id = ${tournamentId} AND odds_api_id IS NOT NULL
   `;
   const byApiId = new Map(rows.map((r) => [String(r.odds_api_id), r]));
   return leaderboard.golfers
     .map((g) => byApiId.get(g.playerId))
     .filter((r) => r != null)
-    .map((r) => ({ id: r!.id, name: r!.name, world_ranking: r!.world_ranking }));
+    .map((r) => ({
+      id: r!.id as string,
+      name: r!.name as string,
+      world_ranking: r!.world_ranking as number | null,
+      dg_win_prob: r!.dg_win_prob != null ? Number(r!.dg_win_prob) : null,
+      dg_skill_rating: r!.dg_skill_rating != null ? Number(r!.dg_skill_rating) : null,
+    }));
 }
 
 // (Re)create a pool's golfers from a tournament field and, for auto draft
@@ -92,6 +114,12 @@ export async function draftPoolFromField(
       id: row[0].id, name: row[0].name,
       r1: null, r2: null, r3: null, r4: null, madeCut: null,
       worldRanking: tg.world_ranking,
+      // dg_* fields stay on the shared tournament_golfers row but we also
+      // surface them here so draftGolfers can sort by them. The per-pool
+      // golfers table doesn't need its own DG columns — the next read via
+      // the public API joins tournament_golfers and picks them up.
+      dgWinProb: tg.dg_win_prob,
+      dgSkillRating: tg.dg_skill_rating,
     });
   }
 

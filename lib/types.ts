@@ -54,6 +54,16 @@ export interface Golfer {
   oddsApiId?: string | null;
   manualOverride?: boolean;
   worldRanking?: number | null;
+  /**
+   * DataGolf pre-tournament model probabilities. Populated at draft time via
+   * lib/datagolf-sync. `dgWinProb` is 0..1; bigger = bigger favorite and
+   * higher draft seed. `dgSkillRating` here is DataGolf's top-10 probability,
+   * used as a stable secondary sort signal. Both null when DataGolf has no
+   * quote for the player (off-tour event, name match miss). See the matching
+   * sort logic in `draftGolfers`.
+   */
+  dgWinProb?: number | null;
+  dgSkillRating?: number | null;
 }
 
 export interface DraftAssignment {

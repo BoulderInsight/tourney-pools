@@ -422,11 +422,29 @@ export function draftGolfers(
       });
     }
   } else if (draftType === "auto-snake") {
-    // Sort golfers by world ranking (best first, unranked last)
+    // Seed order, best first:
+    //   1. DataGolf win probability (larger = bigger favorite)
+    //   2. DataGolf top-10 probability as a stable tiebreaker
+    //   3. World ranking (legacy fallback for tournaments we never synced)
+    //   4. Alphabetical so the trailing unseeded chunk is deterministic
+    //
+    // Why this order: slashgolf doesn't expose world ranking for tournament
+    // fields, so for any tournament-linked pool the only meaningful signal
+    // is DataGolf. The world_ranking fallback only kicks in for the legacy
+    // hardcoded default field. Without DG probabilities at all, this whole
+    // chain falls through to name, which is the same behavior as before the
+    // DG integration landed.
     pool.sort((a, b) => {
+      const aWin = a.dgWinProb ?? -1;
+      const bWin = b.dgWinProb ?? -1;
+      if (aWin !== bWin) return bWin - aWin;
+      const aTop = a.dgSkillRating ?? -1;
+      const bTop = b.dgSkillRating ?? -1;
+      if (aTop !== bTop) return bTop - aTop;
       const aR = a.worldRanking ?? 9999;
       const bR = b.worldRanking ?? 9999;
-      return aR - bR;
+      if (aR !== bR) return aR - bR;
+      return a.name.localeCompare(b.name);
     });
 
     // Snake through ranked golfers

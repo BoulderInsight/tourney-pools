@@ -142,7 +142,9 @@ export async function GET(
       COALESCE(tg.made_cut, g.made_cut) as made_cut,
       COALESCE(tg.odds_api_id, g.odds_api_id) as odds_api_id,
       g.manual_override,
-      COALESCE(tg.world_ranking, g.world_ranking) as world_ranking
+      COALESCE(tg.world_ranking, g.world_ranking) as world_ranking,
+      tg.dg_win_prob,
+      tg.dg_skill_rating
     FROM golfers g
     LEFT JOIN tournament_golfers tg ON g.tournament_golfer_id = tg.id
     WHERE g.pool_id = ${pool.id}
@@ -177,6 +179,8 @@ export async function GET(
       oddsApiId: g.odds_api_id,
       manualOverride: g.manual_override,
       worldRanking: g.world_ranking,
+      dgWinProb: g.dg_win_prob != null ? Number(g.dg_win_prob) : null,
+      dgSkillRating: g.dg_skill_rating != null ? Number(g.dg_skill_rating) : null,
     })),
     buyIn: pool.buy_in,
     settings: { ...DEFAULT_SETTINGS, ...(pool.settings as Partial<CommissionerSettings>) },

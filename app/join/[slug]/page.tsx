@@ -49,7 +49,7 @@ function draftTypeLabel(t?: string): string {
 function draftTypeBlurb(t?: string): string {
   switch (t) {
     case "auto-snake":
-      return "Players are seeded randomly, then take turns picking golfers in reverse order each round to keep it fair.";
+      return "Players are seeded randomly, then golfers are assigned in snake order using DataGolf's pre-tournament favorites. No manual picking required.";
     case "random":
       return "Golfers are randomly assigned to players. No picking required.";
     case "snake":

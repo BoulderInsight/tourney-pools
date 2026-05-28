@@ -11,6 +11,20 @@ import { SponsorBanner } from "@/app/components/sponsor-banner";
 import { TipTheCommish } from "@/app/components/tip-the-commish";
 import SaveToHomeButton from "@/app/components/save-to-home-button";
 
+/**
+ * Convert a DataGolf win probability into an American-odds string for
+ * display ("+1200", "-150"). Mirrors the server-side helper in
+ * lib/datagolf.ts; duplicated here so the page bundle doesn't pull in the
+ * full datagolf client (which references process.env). Returns null for
+ * out-of-range inputs so callers can simply omit the badge.
+ */
+function americanOddsFromWinProb(p: number | null | undefined): string | null {
+  if (p == null || !isFinite(p) || p <= 0 || p >= 1) return null;
+  const decimal = 1 / p;
+  if (decimal >= 2) return `+${Math.round((decimal - 1) * 100)}`;
+  return `${Math.round(-100 / (decimal - 1))}`;
+}
+
 function LoadingState() {
   return (
     <div className="flex flex-col items-center justify-center py-24 gap-6">
@@ -50,11 +64,13 @@ function RoundDots({ golfer }: { golfer: PoolConfig["golfers"][0] }) {
   );
 }
 
-function GolferDetail({ golfer, counted, totalScore, penaltyScore }: {
+function GolferDetail({ golfer, counted, totalScore, penaltyScore, showOdds }: {
   golfer: PoolConfig["golfers"][0];
   counted: boolean;
   totalScore: number | null;
   penaltyScore: number;
+  /** Hide the DataGolf odds badge once play is underway. */
+  showOdds: boolean;
 }) {
   return (
     <div
@@ -76,9 +92,26 @@ function GolferDetail({ golfer, counted, totalScore, penaltyScore }: {
           <span className="w-4 flex-shrink-0" aria-hidden="true" />
         )}
         <RoundDots golfer={golfer} />
-        {golfer.worldRanking && (
-          <span className="text-[10px] text-gray-400 font-mono flex-shrink-0">#{golfer.worldRanking}</span>
-        )}
+        {/* Pre-tournament: show DataGolf-derived American odds. Once play
+            starts, the badge is noise (scores tell the story) so we hide it.
+            World ranking is the legacy fallback for the hardcoded default
+            field; tournament-linked pools always have null worldRanking. */}
+        {showOdds && (() => {
+          const odds = americanOddsFromWinProb(golfer.dgWinProb);
+          if (odds) {
+            return (
+              <span className="text-[10px] text-tp-primary/70 font-mono font-semibold flex-shrink-0">
+                {odds}
+              </span>
+            );
+          }
+          if (golfer.worldRanking) {
+            return (
+              <span className="text-[10px] text-gray-400 font-mono flex-shrink-0">#{golfer.worldRanking}</span>
+            );
+          }
+          return null;
+        })()}
         <span className="truncate font-medium text-gray-800">{golfer.name}</span>
         {golfer.madeCut === false && (
           <span className="text-[10px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0">
@@ -209,13 +242,17 @@ function WinnerBadge({ standing, buyIn, payoutMethod }: {
   );
 }
 
-function StandingCard({ standing, expanded, onToggle, index, buyIn, tournamentOver, payoutMethod, chairmanNameForPayout, poolName, paymentPlan }: {
+function StandingCard({ standing, expanded, onToggle, index, buyIn, tournamentOver, showOdds, payoutMethod, chairmanNameForPayout, poolName, paymentPlan }: {
   standing: PlayerStanding;
   expanded: boolean;
   onToggle: () => void;
   index: number;
   buyIn: number;
   tournamentOver: boolean;
+  /** True when play hasn't started yet. Gates the DataGolf odds badge per
+   *  the chairman's "pre-draft only" preference; once balls are in the air,
+   *  scores tell the story and badges are noise. */
+  showOdds: boolean;
   payoutMethod: string;
   chairmanNameForPayout: string;
   poolName: string;
@@ -325,6 +362,7 @@ function StandingCard({ standing, expanded, onToggle, index, buyIn, tournamentOv
                 counted={gs.counted}
                 totalScore={gs.totalScore}
                 penaltyScore={gs.penaltyScore}
+                showOdds={showOdds}
               />
             ))}
           </div>
@@ -545,17 +583,39 @@ function LiveDraft({ slug, config, isOwner, onComplete }: {
         <div className="divide-y divide-tp-bg-dark max-h-[400px] overflow-y-auto">
           {config.golfers
             .filter(g => g.name.toLowerCase().includes(search.toLowerCase()))
-            .sort((a, b) => (a.worldRanking || 999) - (b.worldRanking || 999))
+            // Seed favorites to the top. DataGolf win prob comes first so the
+            // picker mirrors the same order auto-snake would have chosen.
+            // Falls back to world ranking for the legacy default field, then
+            // name. Matches the sort logic in lib/pool.ts draftGolfers.
+            .sort((a, b) => {
+              const aWin = a.dgWinProb ?? -1;
+              const bWin = b.dgWinProb ?? -1;
+              if (aWin !== bWin) return bWin - aWin;
+              const aR = a.worldRanking ?? 9999;
+              const bR = b.worldRanking ?? 9999;
+              if (aR !== bR) return aR - bR;
+              return a.name.localeCompare(b.name);
+            })
             .map(g => {
               const isDrafted = draftedIds.has(g.id);
               const owner = isDrafted ? players.find(p => draftAssignments.find(a => a.golfer_id === g.id && a.player_id === p.id)) : null;
               const isSelected = selectedGolfer === g.id;
+              // Show DataGolf-derived American odds when available; fall back
+              // to world ranking; otherwise no seed badge. We surface this on
+              // the live snake picker too so the chairman can make informed
+              // picks (the same signal auto-snake uses behind the scenes).
+              const oddsLabel = americanOddsFromWinProb(g.dgWinProb);
+              const SeedBadge = oddsLabel ? (
+                <span className="text-[10px] text-tp-primary/70 font-mono font-semibold w-10 flex-shrink-0">{oddsLabel}</span>
+              ) : g.worldRanking ? (
+                <span className="text-[10px] text-gray-400 font-mono w-6 flex-shrink-0">#{g.worldRanking}</span>
+              ) : null;
 
               if (isDrafted) {
                 return (
                   <div key={g.id} className="flex items-center gap-3 px-4 py-3 opacity-50">
                     <div className="w-5 h-5 flex-shrink-0" />
-                    {g.worldRanking && <span className="text-[10px] text-gray-400 font-mono w-6 flex-shrink-0">#{g.worldRanking}</span>}
+                    {SeedBadge}
                     <span className="text-sm text-gray-500 line-through flex-1">{g.name}</span>
                     {(() => {
                       const ownerIdx = players.findIndex(p => p.id === owner?.id);
@@ -570,7 +630,7 @@ function LiveDraft({ slug, config, isOwner, onComplete }: {
                 return (
                   <div key={g.id} className="flex items-center gap-3 px-4 py-3">
                     <div className="w-5 h-5 flex-shrink-0" />
-                    {g.worldRanking && <span className="text-[10px] text-gray-400 font-mono w-6 flex-shrink-0">#{g.worldRanking}</span>}
+                    {SeedBadge}
                     <span className="text-sm font-medium text-gray-900">{g.name}</span>
                   </div>
                 );
@@ -582,7 +642,7 @@ function LiveDraft({ slug, config, isOwner, onComplete }: {
                   <div className={`w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors ${isSelected ? "border-tp-primary bg-tp-primary" : "border-gray-300"}`}>
                     {isSelected && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                   </div>
-                  {g.worldRanking && <span className="text-[10px] text-gray-400 font-mono w-6 flex-shrink-0">#{g.worldRanking}</span>}
+                  {SeedBadge}
                   <span className="text-sm font-medium text-gray-900">{g.name}</span>
                 </button>
               );
@@ -1096,7 +1156,7 @@ export default function PoolLeaderboardPage() {
           info={config.settings.draftType === "snake"
             ? "Pick order reverses each round (1-2-3-4, then 4-3-2-1) so everyone gets a fair mix of early and late picks."
             : config.settings.draftType === "auto-snake"
-            ? "Player order was randomized, then golfers were assigned by world ranking in snake format. Fair and balanced."
+            ? "Player order was randomized, then golfers were seeded by DataGolf's pre-tournament win probability (current Vegas + course fit + recent form) and dealt out in snake format. Fair and balanced."
             : "Golfers are shuffled randomly and dealt out in order. Simpler but less balanced than snake."
           }
         />
@@ -1291,6 +1351,7 @@ export default function PoolLeaderboardPage() {
                 index={i}
                 buyIn={config.buyIn}
                 tournamentOver={tournamentStatus === "completed"}
+                showOdds={tournamentStatus !== "in_progress" && tournamentStatus !== "completed"}
                 payoutMethod={config.settings.payoutMethod || "honor-system"}
                 chairmanNameForPayout={chairmanName}
                 poolName={config.poolName || "Golf Pool"}

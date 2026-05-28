@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { draftGolfers } from "@/lib/pool";
 import { findOrCreatePersonForPool, setPersonPhone } from "@/lib/people";
 import { normalizeUsPhoneE164 } from "@/lib/phone";
+import { syncTournamentPredictions } from "@/lib/datagolf-sync";
 
 export async function POST(
   req: NextRequest,
@@ -131,8 +132,13 @@ export async function POST(
     return NextResponse.json({ ok: true, awaitingField: true });
   }
 
-  // Insert golfers with rankings, linked to shared tournament_golfers
-  const insertedGolfers = [];
+  // Insert golfers with rankings, linked to shared tournament_golfers. Keep
+  // tgId alongside each insertedGolfer so the auto-snake branch below can
+  // read DataGolf predictions back without a re-lookup.
+  const insertedGolfers: Array<{
+    id: string; name: string; tgId: string;
+    r1: null; r2: null; r3: null; r4: null; madeCut: null;
+  }> = [];
   for (let i = 0; i < entries.length; i++) {
     // Find or create tournament golfer, scoped to tournament if provided
     let tgRows;
@@ -155,7 +161,7 @@ export async function POST(
         `;
       }
     }
-    const tgId = tgRows[0].id;
+    const tgId = tgRows[0].id as string;
 
     const result = await sql`
       INSERT INTO golfers (pool_id, name, world_ranking, tournament_golfer_id)
@@ -163,19 +169,77 @@ export async function POST(
       RETURNING id, name
     `;
     insertedGolfers.push({
-      id: result[0].id,
-      name: result[0].name,
+      id: result[0].id as string,
+      name: result[0].name as string,
+      tgId,
       r1: null, r2: null, r3: null, r4: null,
       madeCut: null,
     });
   }
 
+  // Refresh DataGolf pre-tournament predictions for this event so auto-snake
+  // can seed by win probability. Idempotent and self-throttling (6h window
+  // by default); silently no-ops on auth or network errors so the draft
+  // still runs. Skipped entirely for pools without a tournament_id since
+  // DataGolf is keyed to a specific PGA Tour event.
+  if (tournamentId && settings.draftType === "auto-snake") {
+    try {
+      const result = await syncTournamentPredictions(tournamentId);
+      if (result.skipped) {
+        console.log(`[setup] DataGolf sync: ${result.skipped}`);
+      } else {
+        console.log(`[setup] DataGolf: matched ${result.matched}/${result.total} golfers, updated ${result.updated}`);
+      }
+    } catch (err) {
+      console.error("[setup] DataGolf sync threw (continuing without):", err);
+    }
+  }
+
   // Auto-draft for random and auto-snake. Live snake draft is handled interactively on the draft page.
   if (settings.draftType === "random" || settings.draftType === "auto-snake") {
-    // For auto-snake, attach rankings so draftGolfers can sort by seed
-    const golferPool = settings.draftType === "auto-snake"
-      ? insertedGolfers.map((g, i) => ({ ...g, worldRanking: entries[i].ranking }))
-      : insertedGolfers;
+    let golferPool: Array<{
+      id: string; name: string;
+      r1: null; r2: null; r3: null; r4: null; madeCut: null;
+      worldRanking?: number | null;
+      dgWinProb?: number | null;
+      dgSkillRating?: number | null;
+    }> = insertedGolfers.map((g) => ({
+      id: g.id,
+      name: g.name,
+      r1: g.r1, r2: g.r2, r3: g.r3, r4: g.r4, madeCut: g.madeCut,
+    }));
+
+    if (settings.draftType === "auto-snake") {
+      // Pull the rankings + DataGolf signal off tournament_golfers in one
+      // query keyed by the tgIds we tracked above. Faster than per-row
+      // lookups and keeps the draft a pure in-memory sort.
+      const tgIds = insertedGolfers.map((g) => g.tgId);
+      const tgRows = await sql`
+        SELECT id, world_ranking, dg_win_prob, dg_skill_rating
+        FROM tournament_golfers
+        WHERE id = ANY(${tgIds}::uuid[])
+      `;
+      const tgById = new Map<string, { wr: number | null; dgWin: number | null; dgSkill: number | null }>();
+      for (const r of tgRows) {
+        tgById.set(r.id as string, {
+          wr: r.world_ranking != null ? Number(r.world_ranking) : null,
+          dgWin: r.dg_win_prob != null ? Number(r.dg_win_prob) : null,
+          dgSkill: r.dg_skill_rating != null ? Number(r.dg_skill_rating) : null,
+        });
+      }
+      golferPool = insertedGolfers.map((g) => {
+        const tg = tgById.get(g.tgId);
+        return {
+          id: g.id,
+          name: g.name,
+          r1: g.r1, r2: g.r2, r3: g.r3, r4: g.r4, madeCut: g.madeCut,
+          worldRanking: tg?.wr ?? entries[insertedGolfers.indexOf(g)].ranking ?? null,
+          dgWinProb: tg?.dgWin ?? null,
+          dgSkillRating: tg?.dgSkill ?? null,
+        };
+      });
+    }
+
     const draftResult = draftGolfers(insertedPlayers, golferPool, settings.draftType);
 
     for (const a of draftResult) {
