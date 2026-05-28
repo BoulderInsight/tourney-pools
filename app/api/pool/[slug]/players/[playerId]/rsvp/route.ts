@@ -28,29 +28,21 @@ export async function PATCH(
 
   const sql = getDb();
   const poolRows = await sql`
-    SELECT id, draft_complete FROM pools
+    SELECT id FROM pools
     WHERE slug = ${params.slug} AND chairman_id = ${session.chairmanId}
   `;
   if (poolRows.length === 0) {
     return NextResponse.json({ error: "Pool not found" }, { status: 404 });
   }
   const pool = poolRows[0];
-  // Lock only if a draft has *actually* happened (golfer assignments exist).
-  // The draft_complete flag alone is too brittle: some pools end up with it
-  // set without ever having anyone RSVP, leaving the chairman unable to flip
-  // anyone to accepted. Checking the assignments table makes the lock match
-  // the real intent — "the roster is frozen because picks have been made."
-  if (pool.draft_complete) {
-    const assigned = await sql`
-      SELECT 1 FROM assignments WHERE pool_id = ${pool.id} LIMIT 1
-    `;
-    if (assigned.length > 0) {
-      return NextResponse.json(
-        { error: "Draft is complete. Pool roster is locked." },
-        { status: 409 },
-      );
-    }
-  }
+  // No draft_complete lock. Flipping a player's rsvp_status does not move
+  // golfer assignments around — those rows live in the assignments table
+  // independent of RSVP — it only changes whether the public leaderboard
+  // includes them. The chairman owns this pool; they should be able to
+  // mark someone accepted or declined at any time, including after a
+  // draft has run (e.g. for pools where the field arrived and the draft
+  // ran before anyone RSVPed, which is exactly when this endpoint is
+  // most useful).
 
   const updated = await sql`
     UPDATE players
