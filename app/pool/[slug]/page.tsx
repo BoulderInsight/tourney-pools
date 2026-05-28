@@ -1351,7 +1351,7 @@ export default function PoolLeaderboardPage() {
                 index={i}
                 buyIn={config.buyIn}
                 tournamentOver={tournamentStatus === "completed"}
-                showOdds={tournamentStatus !== "in_progress" && tournamentStatus !== "completed"}
+                showOdds={tournamentStatus !== "completed"}
                 payoutMethod={config.settings.payoutMethod || "honor-system"}
                 chairmanNameForPayout={chairmanName}
                 poolName={config.poolName || "Golf Pool"}

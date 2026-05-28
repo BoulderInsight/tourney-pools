@@ -760,9 +760,9 @@ export default function PoolSetupPage() {
                   selected={settings.draftType === "auto-snake"}
                   onClick={() => set("draftType", "auto-snake")}
                   title="Auto Snake Draft"
-                  description="Randomized player order, golfers assigned by world ranking in snake format."
+                  description="Randomized player order, golfers seeded by DataGolf pre-tournament favorites in snake format."
                   badge="Recommended"
-                  info="Player order is randomized, then golfers are assigned automatically by world ranking in snake format: Player 1 gets the #1 seed, Player 2 gets #2, Player 3 gets #3, then it snakes back: Player 3 gets #4, Player 2 gets #5, Player 1 gets #6, and so on. Fair, balanced and no live draft coordination needed."
+                  info="Player order is randomized, then golfers are seeded by DataGolf's pre-tournament win probability (Vegas + course fit + recent form) and dealt out in snake format: Player 1 gets the top favorite, Player 2 gets #2, Player 3 gets #3, then it snakes back so Player 3 also gets #4, Player 2 gets #5, Player 1 gets #6, and so on. Fair, balanced, and no live draft coordination needed."
                 />
                 <OptionCard
                   selected={settings.draftType === "random"}
