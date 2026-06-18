@@ -1351,7 +1351,13 @@ export default function PoolLeaderboardPage() {
                 index={i}
                 buyIn={config.buyIn}
                 tournamentOver={tournamentStatus === "completed"}
-                showOdds={tournamentStatus !== "completed"}
+                // Odds badges hidden for now: +XXX strings for deep underdogs
+                // (e.g. +5882253) eat the row width and truncate golfer names.
+                // The DataGolf data is still flowing onto tournament_golfers
+                // and powering the auto-snake seed; only the display is off.
+                // Revisit with a tighter layout (smaller badge, name wrap) if
+                // we want to surface them again.
+                showOdds={false}
                 payoutMethod={config.settings.payoutMethod || "honor-system"}
                 chairmanNameForPayout={chairmanName}
                 poolName={config.poolName || "Golf Pool"}
