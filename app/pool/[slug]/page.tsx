@@ -49,21 +49,6 @@ function ScoreBadge({ score, size = "sm" }: { score: number | null; size?: "sm" 
   );
 }
 
-function RoundDots({ golfer }: { golfer: PoolConfig["golfers"][0] }) {
-  const rounds = [golfer.r1, golfer.r2, golfer.r3, golfer.r4];
-  return (
-    <div className="flex gap-1.5">
-      {rounds.map((r, i) => (
-        <span
-          key={i}
-          className={`w-2 h-2 rounded-full ${r !== null ? "bg-tp-primary" : "bg-gray-200"}`}
-          title={`R${i + 1}: ${formatScore(r)}`}
-        />
-      ))}
-    </div>
-  );
-}
-
 function GolferDetail({ golfer, counted, totalScore, penaltyScore, showOdds }: {
   golfer: PoolConfig["golfers"][0];
   counted: boolean;
@@ -91,7 +76,6 @@ function GolferDetail({ golfer, counted, totalScore, penaltyScore, showOdds }: {
         ) : (
           <span className="w-4 flex-shrink-0" aria-hidden="true" />
         )}
-        <RoundDots golfer={golfer} />
         {/* Pre-tournament: show DataGolf-derived American odds. Once play
             starts, the badge is noise (scores tell the story) so we hide it.
             World ranking is the legacy fallback for the hardcoded default
