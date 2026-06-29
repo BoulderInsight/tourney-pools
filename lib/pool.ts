@@ -313,9 +313,28 @@ export function computeLeaderboard(config: PoolConfig): PlayerStanding[] {
       currentRank = i + 2;
     }
 
-    // Assign prizes
-    for (let i = 0; i < prizes.length && i < standings.length; i++) {
-      standings[i].prize = prizes[i];
+    // Assign prizes, splitting evenly among players tied at the same rank.
+    // Each finishing slot i carries prizes[i] (0 once we run past the prize
+    // list). Players sharing a rank pool the slots they occupy and divide the
+    // total evenly — the standard golf-pool tie rule (e.g. a 2-way tie for 1st
+    // in winner-take-all splits the single prize 50/50). Players with no score
+    // sort last with rank 0 and never share in a slot.
+    const slotPrize = (i: number) => (i < prizes.length ? prizes[i] : 0);
+    let i = 0;
+    while (i < standings.length && standings[i].totalScore !== null) {
+      let j = i;
+      while (
+        j + 1 < standings.length &&
+        standings[j + 1].totalScore !== null &&
+        standings[j + 1].totalScore === standings[i].totalScore
+      ) {
+        j++;
+      }
+      let pooled = 0;
+      for (let k = i; k <= j; k++) pooled += slotPrize(k);
+      const share = pooled / (j - i + 1);
+      for (let k = i; k <= j; k++) standings[k].prize = share;
+      i = j + 1;
     }
   }
 
