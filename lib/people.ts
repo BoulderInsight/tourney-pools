@@ -149,6 +149,31 @@ export async function getPersonForChairman(
 }
 
 /**
+ * Rename a Person and cascade to linked players. `players.name` is a copy taken
+ * when the player is added, and it's what pool rosters and leaderboards render,
+ * so a typo fix has to touch both. Only player rows still carrying the OLD name
+ * are updated: a player deliberately relabeled within one pool keeps that label.
+ * Chairman-only, same as phone; callers must have verified ownership.
+ */
+export async function renamePerson(
+  sql: Sql,
+  personId: string,
+  name: string,
+): Promise<void> {
+  const rows = await sql`SELECT name FROM people WHERE id = ${personId}`;
+  if (rows.length === 0) {
+    throw new Error(`renamePerson: person ${personId} not found`);
+  }
+  const oldName = rows[0].name as string;
+  if (oldName === name) return;
+  await sql`UPDATE people SET name = ${name} WHERE id = ${personId}`;
+  await sql`
+    UPDATE players SET name = ${name}
+    WHERE person_id = ${personId} AND name = ${oldName}
+  `;
+}
+
+/**
  * Overwrite (not coalesce) a Person's handles. Both the commissioner dialog and the
  * self-serve form send the full intended state, including null where a previously
  * stored handle should be cleared.

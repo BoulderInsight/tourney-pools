@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { getPersonForChairman, setPersonHandles, setPersonPhone } from "@/lib/people";
+import { getPersonForChairman, renamePerson, setPersonHandles, setPersonPhone } from "@/lib/people";
 import { normalizeUsPhoneE164 } from "@/lib/phone";
 import type { PaymentMethod } from "@/lib/types";
 
@@ -35,6 +35,18 @@ export async function PATCH(
   }
 
   const body = await req.json();
+
+  // Name is optional in the payload (the self-serve collect form never sends
+  // it). Rejecting empty rather than silently skipping so the dialog can tell
+  // the chairman why nothing saved. Rename cascades to linked pool rosters.
+  if (typeof body.name === "string") {
+    const name = body.name.trim();
+    if (name.length === 0) {
+      return NextResponse.json({ error: "Name can't be empty" }, { status: 400 });
+    }
+    await renamePerson(sql, params.id, name);
+  }
+
   const updated = await setPersonHandles(sql, params.id, {
     venmoHandle: cleanHandle(body.venmoHandle),
     cashappHandle: cleanHandle(body.cashappHandle),

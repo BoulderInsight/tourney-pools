@@ -5,6 +5,7 @@ import type { PaymentMethod, Person } from "@/lib/types";
 import { formatUsPhoneDisplay } from "@/lib/phone";
 
 interface DialogState {
+  name: string;
   venmoHandle: string;
   cashappHandle: string;
   paypalHandle: string;
@@ -14,6 +15,7 @@ interface DialogState {
 
 function initialState(person: Person): DialogState {
   return {
+    name: person.name,
     venmoHandle: person.venmoHandle ?? "",
     cashappHandle: person.cashappHandle ?? "",
     paypalHandle: person.paypalHandle ?? "",
@@ -93,12 +95,17 @@ export default function CollectDialog({
   }
 
   async function handleSave() {
+    if (!state.name.trim()) {
+      setError("Name can't be empty.");
+      return;
+    }
     setSaving(true);
     setError("");
     const res = await fetch(`/api/people/${person.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        name: state.name,
         venmoHandle: state.venmoHandle,
         cashappHandle: state.cashappHandle,
         paypalHandle: state.paypalHandle,
@@ -174,6 +181,27 @@ export default function CollectDialog({
         <p className="text-xs text-gray-400 mb-4">
           Star their preferred app. You can save what you know and ask them for the rest.
         </p>
+
+        {/* Name (chairman-only edit). Renaming here fixes the spelling everywhere:
+            the person row, their group memberships, and any pool rosters still
+            carrying the old spelling. */}
+        <div className="mb-4">
+          <label className="text-[11px] font-bold uppercase tracking-[0.15em] text-gray-400 mb-1.5 block">
+            Name
+          </label>
+          <input
+            type="text"
+            value={state.name}
+            onChange={(e) => set("name", e.target.value)}
+            placeholder="Player name"
+            className="input-field"
+            autoComplete="off"
+            aria-label={`${name}'s name`}
+          />
+          <p className="text-[10px] text-gray-400 mt-1.5">
+            Fixing a typo here updates their groups and pool rosters too.
+          </p>
+        </div>
 
         <div className="space-y-2.5 mb-4">
           <HandleRow
