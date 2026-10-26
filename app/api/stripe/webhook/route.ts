@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
   const sql = getDb();
 
   // Check for duplicate event delivery (idempotency)
+  let idempotencyAvailable = true;
   try {
     const existingEvent = await sql`
       SELECT id FROM stripe_webhook_events 
@@ -42,19 +43,15 @@ export async function POST(req: NextRequest) {
       console.log("Duplicate event received, skipping:", event.id);
       return NextResponse.json({ received: true, duplicate: true });
     }
-
-    // Record event before processing
-    await sql`
-      INSERT INTO stripe_webhook_events (event_id, event_type, received_at)
-      VALUES (${event.id}, ${event.type}, now())
-    `;
   } catch (err) {
     console.error("❌ WEBHOOK IDEMPOTENCY FAILURE - stripe_webhook_events table missing or inaccessible!");
     console.error("❌ Migration 002 must be run on production database immediately!");
     console.error("❌ Duplicate events may be processed until migration is complete!");
     console.error("Error details:", err);
+    idempotencyAvailable = false;
   }
 
+  // Process event BEFORE recording (so failures can be retried)
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const chairmanId = session.metadata?.chairmanId;
@@ -113,6 +110,19 @@ export async function POST(req: NextRequest) {
     if (customerId) {
       await sql`UPDATE chairmen SET tier = 'free' WHERE stripe_customer_id = ${customerId}`;
       console.log("Downgraded to free via subscription.deleted, event:", event.id);
+    }
+  }
+
+  // Record event AFTER successful processing (so failures can be retried by Stripe)
+  if (idempotencyAvailable) {
+    try {
+      await sql`
+        INSERT INTO stripe_webhook_events (event_id, event_type, received_at)
+        VALUES (${event.id}, ${event.type}, now())
+      `;
+    } catch (err) {
+      // If insert fails (duplicate key from race condition), that's fine - event was processed
+      console.log("Event recording failed (possibly duplicate key):", err);
     }
   }
 

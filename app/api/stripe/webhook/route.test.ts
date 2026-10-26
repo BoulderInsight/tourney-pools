@@ -4,35 +4,67 @@ import { NextRequest } from "next/server";
 
 let mockDbResults: { [key: string]: any[] } = {};
 let mockUpdateCalls: Array<{ query: string; tier: string }> = [];
+const mockExistingEvents = new Set<string>();
+let mockUpdateResult: Promise<any> = Promise.resolve([{ id: "chairman-123" }]);
 
 vi.mock("@/lib/db", () => ({
   getDb: () => {
-    const mockSql = vi.fn((strings: TemplateStringsArray, ...values: unknown[]) => {
+    const mockSql = ((strings: TemplateStringsArray, ...values: unknown[]) => {
       const query = strings.join("");
-      
-      // Track tier updates
-      if (query.includes("UPDATE chairmen SET tier")) {
-        const tierMatch = values.find((v) => v === "pro" || v === "free");
-        if (tierMatch) {
-          mockUpdateCalls.push({ query, tier: tierMatch as string });
-        }
-      }
       
       // Idempotency check
       if (query.includes("SELECT id FROM stripe_webhook_events")) {
-        return Promise.resolve(mockDbResults.existingEvents || []);
+        const eventId = values[0] as string;
+        return Promise.resolve(
+          mockExistingEvents.has(eventId) ? [{ id: "1" }] : []
+        );
       }
       
-      // Insert event record
+      // Insert event record (after processing)
       if (query.includes("INSERT INTO stripe_webhook_events")) {
+        const eventId = values[0] as string;
+        mockExistingEvents.add(eventId);
         return Promise.resolve([]);
       }
       
+      // Track tier updates
+      if (query.includes("UPDATE chairmen") && query.includes("tier")) {
+        // Find tier value in the query or values
+        let tier: string | undefined;
+        if (query.includes("tier = 'pro'")) tier = "pro";
+        else if (query.includes("tier = 'free'")) tier = "free";
+        else {
+          // Look in values array
+          tier = values.find((v) => v === "pro" || v === "free") as string;
+        }
+        
+        if (tier) {
+          mockUpdateCalls.push({ query, tier });
+        }
+        return mockUpdateResult;
+      }
+      
       return Promise.resolve([{ id: "chairman-123" }]);
-    });
+    }) as any;
     return mockSql;
   },
 }));
+
+const mockExistingEventsLegacy = new Set<string>();
+
+vi.mock("stripe", () => {
+  const Stripe = vi.fn();
+  Stripe.prototype.webhooks = {
+    constructEvent: vi.fn((body: string, sig: string) => {
+      const event = JSON.parse(body);
+      if (event.id === "evt_invalid_signature" || sig === "invalid") {
+        throw new Error("Invalid signature");
+      }
+      return event;
+    }),
+  };
+  return { default: Stripe };
+});
 
 describe("Stripe Webhook Route - Real Tests", () => {
   const originalEnv = {
@@ -43,6 +75,8 @@ describe("Stripe Webhook Route - Real Tests", () => {
   beforeEach(() => {
     mockDbResults = {};
     mockUpdateCalls = [];
+    mockExistingEvents.clear();
+    mockUpdateResult = Promise.resolve([{ id: "chairman-123" }]);
     process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
     process.env.STRIPE_SECRET_KEY = "sk_test_123";
   });
@@ -52,180 +86,333 @@ describe("Stripe Webhook Route - Real Tests", () => {
     process.env.STRIPE_SECRET_KEY = originalEnv.STRIPE_SECRET_KEY;
   });
 
-  describe("Configuration checks", () => {
-    it("returns 503 when STRIPE_WEBHOOK_SECRET is not set", async () => {
-      delete process.env.STRIPE_WEBHOOK_SECRET;
+  it("returns 503 when STRIPE_WEBHOOK_SECRET is not set", async () => {
+    delete process.env.STRIPE_WEBHOOK_SECRET;
 
-      const req = new NextRequest("http://localhost:3000/api/stripe/webhook", {
+    const response = await POST(
+      new NextRequest("http://localhost/api/stripe/webhook", {
         method: "POST",
-        body: JSON.stringify({ type: "checkout.session.completed" }),
-      });
+        body: "{}",
+      })
+    );
 
-      const response = await POST(req);
-      expect(response.status).toBe(503);
-      const data = await response.json();
-      expect(data.error).toBe("Webhook not configured");
-    });
+    expect(response.status).toBe(503);
+  });
 
-    it("returns 400 when stripe-signature header is missing", async () => {
-      const req = new NextRequest("http://localhost:3000/api/stripe/webhook", {
+  it("returns 400 when stripe-signature header is missing", async () => {
+    const response = await POST(
+      new NextRequest("http://localhost/api/stripe/webhook", {
         method: "POST",
-        body: JSON.stringify({ type: "checkout.session.completed" }),
-      });
+        body: "{}",
+      })
+    );
 
-      const response = await POST(req);
-      expect(response.status).toBe(400);
-      const data = await response.json();
-      expect(data.error).toBe("Missing signature");
-    });
+    expect(response.status).toBe(400);
+  });
 
-    it("returns 400 when signature is invalid", async () => {
-      const req = new NextRequest("http://localhost:3000/api/stripe/webhook", {
+  it("returns 400 when signature is invalid", async () => {
+    const mockEvent = {
+      id: "evt_invalid_signature",
+      type: "checkout.session.completed",
+    };
+
+    const response = await POST(
+      new NextRequest("http://localhost/api/stripe/webhook", {
         method: "POST",
-        headers: {
-          "stripe-signature": "t=123,v1=invalid",
+        headers: { "stripe-signature": "invalid" },
+        body: JSON.stringify(mockEvent),
+      })
+    );
+
+    expect(response.status).toBe(400);
+  });
+
+  it("does NOT grant Pro when payment_status is unpaid", async () => {
+    const mockEvent = {
+      id: "evt_unpaid",
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          metadata: { chairmanId: "chairman-123" },
+          customer: null,
+          payment_status: "unpaid",
         },
-        body: JSON.stringify({ type: "checkout.session.completed" }),
-      });
+      },
+    };
 
-      const response = await POST(req);
-      expect(response.status).toBe(400);
-      const data = await response.json();
-      expect(data.error).toBe("Invalid signature");
-    });
+    mockUpdateCalls = [];
+    const response = await POST(
+      new NextRequest("http://localhost/api/stripe/webhook", {
+        method: "POST",
+        headers: { "stripe-signature": "valid" },
+        body: JSON.stringify(mockEvent),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockUpdateCalls.length).toBe(0);
   });
 
-  describe("checkout.session.completed handling", () => {
-    it("does NOT grant Pro when payment_status is unpaid", async () => {
-      // This test documents that unpaid sessions do not grant Pro
-      const session = {
-        payment_status: "unpaid",
-        metadata: { chairmanId: "chairman-123" },
-      };
-      
-      // With payment_status !== 'paid', no tier update should occur
-      expect(session.payment_status).not.toBe("paid");
-      
-      // The actual verification would require mocking Stripe's constructEvent
-      // which is complex, but this documents the expected behavior
-    });
+  it("grants Pro when checkout.session.completed has payment_status paid", async () => {
+    const mockEvent = {
+      id: "evt_paid",
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          metadata: { chairmanId: "chairman-456" },
+          customer: null,
+          payment_status: "paid",
+        },
+      },
+    };
 
-    it("grants Pro when payment_status is paid", async () => {
-      // This test documents that paid sessions grant Pro
-      const session = {
-        payment_status: "paid",
-        metadata: { chairmanId: "chairman-123" },
-      };
-      
-      expect(session.payment_status).toBe("paid");
-      
-      // The webhook handler checks: if (paymentStatus === "paid")
-      // and only then updates tier to 'pro'
-    });
+    mockUpdateCalls = [];
+    const response = await POST(
+      new NextRequest("http://localhost/api/stripe/webhook", {
+        method: "POST",
+        headers: { "stripe-signature": "valid" },
+        body: JSON.stringify(mockEvent),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockUpdateCalls.length).toBeGreaterThan(0);
+    expect(mockUpdateCalls[0].tier).toBe("pro");
   });
 
-  describe("invoice.paid handling", () => {
-    it("grants Pro by looking up stripe_customer_id", async () => {
-      // invoice.paid handler uses:
-      // UPDATE chairmen SET tier = 'pro' WHERE stripe_customer_id = ${customerId}
-      
-      const invoice = {
-        customer: "cus_123",
-      };
-      
-      // This documents that the lookup is by stripe_customer_id column
-      // which must already exist in the database from checkout
-      expect(invoice.customer).toBe("cus_123");
-      
-      // The handler does NOT use metadata or email from the event
-      // It only uses the customer ID that was stored during checkout
-    });
+  it("grants Pro on invoice.paid by stripe_customer_id lookup", async () => {
+    const mockEvent = {
+      id: "evt_invoice_paid",
+      type: "invoice.paid",
+      data: {
+        object: {
+          customer: "cus_abc123",
+        },
+      },
+    };
+
+    mockUpdateCalls = [];
+    const response = await POST(
+      new NextRequest("http://localhost/api/stripe/webhook", {
+        method: "POST",
+        headers: { "stripe-signature": "valid" },
+        body: JSON.stringify(mockEvent),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockUpdateCalls.length).toBeGreaterThan(0);
+    expect(mockUpdateCalls[0].tier).toBe("pro");
   });
 
-  describe("subscription.updated handling", () => {
-    it("downgrades to free on incomplete status", async () => {
-      const subscription = {
-        customer: "cus_123",
-        status: "incomplete",
-      };
-      
-      const shouldDowngrade = 
-        subscription.status === "incomplete" ||
-        subscription.status === "unpaid" ||
-        subscription.status === "canceled" ||
-        subscription.status === "incomplete_expired";
-      
-      expect(shouldDowngrade).toBe(true);
-    });
+  it("keeps Pro for subscription status: active", async () => {
+    const mockEvent = {
+      id: "evt_sub_active",
+      type: "customer.subscription.updated",
+      data: {
+        object: {
+          customer: "cus_active",
+          status: "active",
+        },
+      },
+    };
 
-    it("downgrades to free on unpaid status", async () => {
-      const subscription = {
-        customer: "cus_123",
-        status: "unpaid",
-      };
-      
-      const shouldDowngrade = ["incomplete", "unpaid", "canceled", "incomplete_expired"].includes(
-        subscription.status
+    mockUpdateCalls = [];
+    const response = await POST(
+      new NextRequest("http://localhost/api/stripe/webhook", {
+        method: "POST",
+        headers: { "stripe-signature": "valid" },
+        body: JSON.stringify(mockEvent),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockUpdateCalls.length).toBeGreaterThan(0);
+    expect(mockUpdateCalls[0].tier).toBe("pro");
+  });
+
+  it("downgrades to Free for subscription status: canceled", async () => {
+    const mockEvent = {
+      id: "evt_sub_canceled",
+      type: "customer.subscription.updated",
+      data: {
+        object: {
+          customer: "cus_canceled",
+          status: "canceled",
+        },
+      },
+    };
+
+    mockUpdateCalls = [];
+    const response = await POST(
+      new NextRequest("http://localhost/api/stripe/webhook", {
+        method: "POST",
+        headers: { "stripe-signature": "valid" },
+        body: JSON.stringify(mockEvent),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockUpdateCalls.length).toBeGreaterThan(0);
+    expect(mockUpdateCalls[0].tier).toBe("free");
+  });
+
+  it("downgrades to Free for subscription status: unpaid", async () => {
+    const mockEvent = {
+      id: "evt_sub_unpaid",
+      type: "customer.subscription.updated",
+      data: {
+        object: {
+          customer: "cus_unpaid",
+          status: "unpaid",
+        },
+      },
+    };
+
+    mockUpdateCalls = [];
+    const response = await POST(
+      new NextRequest("http://localhost/api/stripe/webhook", {
+        method: "POST",
+        headers: { "stripe-signature": "valid" },
+        body: JSON.stringify(mockEvent),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockUpdateCalls.length).toBeGreaterThan(0);
+    expect(mockUpdateCalls[0].tier).toBe("free");
+  });
+
+  it("downgrades to Free on subscription.deleted", async () => {
+    const mockEvent = {
+      id: "evt_sub_deleted",
+      type: "customer.subscription.deleted",
+      data: {
+        object: {
+          customer: "cus_deleted",
+        },
+      },
+    };
+
+    mockUpdateCalls = [];
+    const response = await POST(
+      new NextRequest("http://localhost/api/stripe/webhook", {
+        method: "POST",
+        headers: { "stripe-signature": "valid" },
+        body: JSON.stringify(mockEvent),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockUpdateCalls.length).toBeGreaterThan(0);
+    expect(mockUpdateCalls[0].tier).toBe("free");
+  });
+
+  it("skips duplicate events", async () => {
+    mockExistingEvents.add("evt_duplicate");
+
+    const mockEvent = {
+      id: "evt_duplicate",
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          metadata: { chairmanId: "chairman-789" },
+          customer: null,
+          payment_status: "paid",
+        },
+      },
+    };
+
+    const response = await POST(
+      new NextRequest("http://localhost/api/stripe/webhook", {
+        method: "POST",
+        headers: { "stripe-signature": "valid-signature" },
+        body: JSON.stringify(mockEvent),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.duplicate).toBe(true);
+  });
+
+  it("records new events and processes them", async () => {
+    const mockEvent = {
+      id: "evt_new_event",
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          metadata: { chairmanId: "chairman-789" },
+          customer: null,
+          payment_status: "paid",
+        },
+      },
+    };
+
+    const response = await POST(
+      new NextRequest("http://localhost/api/stripe/webhook", {
+        method: "POST",
+        headers: { "stripe-signature": "valid-signature" },
+        body: JSON.stringify(mockEvent),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.received).toBe(true);
+    expect(data.duplicate).toBeUndefined();
+  });
+
+  it("allows retry when processing fails mid-way", async () => {
+    // First attempt: processing fails after idempotency check but before recording
+    mockUpdateResult = Promise.reject(new Error("Database connection lost"));
+    
+    const mockEvent = {
+      id: "evt_retry_test",
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          metadata: { chairmanId: "chairman-retry" },
+          customer: null,
+          payment_status: "paid",
+        },
+      },
+    };
+
+    try {
+      await POST(
+        new NextRequest("http://localhost/api/stripe/webhook", {
+          method: "POST",
+          headers: { "stripe-signature": "valid-signature" },
+          body: JSON.stringify(mockEvent),
+        })
       );
-      
-      expect(shouldDowngrade).toBe(true);
-    });
+      // Should throw
+      expect(true).toBe(false);
+    } catch (err) {
+      expect(err).toBeDefined();
+    }
 
-    it("downgrades to free on canceled status", async () => {
-      const subscription = {
-        customer: "cus_123",
-        status: "canceled",
-      };
-      
-      const shouldDowngrade = ["incomplete", "unpaid", "canceled", "incomplete_expired"].includes(
-        subscription.status
-      );
-      
-      expect(shouldDowngrade).toBe(true);
-    });
+    // Event should NOT be in idempotency table yet (never recorded because processing failed)
+    expect(mockExistingEvents.has("evt_retry_test")).toBe(false);
 
-    it("downgrades to free on incomplete_expired status", async () => {
-      const subscription = {
-        customer: "cus_123",
-        status: "incomplete_expired",
-      };
-      
-      const shouldDowngrade = ["incomplete", "unpaid", "canceled", "incomplete_expired"].includes(
-        subscription.status
-      );
-      
-      expect(shouldDowngrade).toBe(true);
-    });
+    // Second attempt: Stripe retries, processing succeeds
+    mockUpdateResult = Promise.resolve([{ id: "chairman-retry" }]);
+    
+    const retryResponse = await POST(
+      new NextRequest("http://localhost/api/stripe/webhook", {
+        method: "POST",
+        headers: { "stripe-signature": "valid-signature" },
+        body: JSON.stringify(mockEvent),
+      })
+    );
 
-    it("keeps Pro on active status", async () => {
-      const subscription = {
-        customer: "cus_123",
-        status: "active",
-      };
-      
-      const shouldKeepPro = ["active", "trialing", "past_due"].includes(subscription.status);
-      
-      expect(shouldKeepPro).toBe(true);
-    });
-  });
-
-  describe("Idempotency", () => {
-    it("skips processing duplicate events", async () => {
-      mockDbResults.existingEvents = [{ id: "existing-record-id" }];
-      
-      // The webhook checks stripe_webhook_events table for event.id
-      // If found, it returns { received: true, duplicate: true }
-      expect(mockDbResults.existingEvents.length).toBeGreaterThan(0);
-    });
-
-    it("processes new events and records them", async () => {
-      mockDbResults.existingEvents = [];
-      
-      // For new events, the webhook:
-      // 1. Checks stripe_webhook_events (returns empty)
-      // 2. Inserts the event_id into stripe_webhook_events
-      // 3. Processes the event
-      expect(mockDbResults.existingEvents.length).toBe(0);
-    });
+    expect(retryResponse.status).toBe(200);
+    const data = await retryResponse.json();
+    expect(data.received).toBe(true);
+    expect(data.duplicate).toBeUndefined(); // NOT a duplicate, retry was processed
+    
+    // Now event IS in idempotency table (recorded after successful processing)
+    expect(mockExistingEvents.has("evt_retry_test")).toBe(true);
   });
 });
