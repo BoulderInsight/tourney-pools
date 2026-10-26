@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
+import { getJwtSecret } from "./lib/jwt-secret";
 
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "dev-secret-change-me");
 const COOKIE_NAME = "tp_session";
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  const secret = getJwtSecret();
+  if (!secret) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
 
   const token = req.cookies.get(COOKIE_NAME)?.value;
   if (!token) {
@@ -16,7 +24,7 @@ export async function middleware(req: NextRequest) {
   }
 
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, secret);
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set("x-chairman-id", payload.chairmanId as string);
     return NextResponse.next({ request: { headers: requestHeaders } });

@@ -8,3 +8,12 @@ data/
 .vercel
 *.DS_Store
 .superpowers/
+
+# Data exports and backups (must not be committed)
+scripts/*backup*.json
+scripts/*export*.json
+scripts/*dump*.sql
+*.sql.gz
+*.csv.gz
+/page*.pdf
+MyMastersPoolStacked.jpeg

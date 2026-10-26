@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { findOrCreatePersonForPool, createPerson, setPersonPhone } from "@/lib/people";
 import { normalizeUsPhoneE164 } from "@/lib/phone";
+import { isProEffective } from "@/lib/tier";
 
 export const dynamic = "force-dynamic";
 
@@ -40,8 +41,10 @@ export async function POST(
 
   const sql = getDb();
   const poolRows = await sql`
-    SELECT id, draft_complete FROM pools
-    WHERE slug = ${params.slug} AND chairman_id = ${session.chairmanId}
+    SELECT p.id, p.draft_complete, c.tier, c.pro_until
+    FROM pools p
+    JOIN chairmen c ON c.id = p.chairman_id
+    WHERE p.slug = ${params.slug} AND p.chairman_id = ${session.chairmanId}
   `;
   if (poolRows.length === 0) {
     return NextResponse.json({ error: "Pool not found" }, { status: 404 });
@@ -52,6 +55,22 @@ export async function POST(
       { error: "Draft is complete. Pool roster is locked." },
       { status: 409 },
     );
+  }
+
+  const isPro = isProEffective(pool.tier, pool.pro_until);
+  if (!isPro) {
+    const playerCount = await sql`
+      SELECT COUNT(*) as count FROM players 
+      WHERE pool_id = ${pool.id} AND rsvp_status != 'declined'
+    `;
+    const count = Number(playerCount[0]?.count || 0);
+    
+    if (count >= 8) {
+      return NextResponse.json(
+        { error: "Free pools can have up to 8 players. Upgrade to Pro to add more." },
+        { status: 403 }
+      );
+    }
   }
 
   // Validate phone up front so we don't leave a Person half-updated. Empty

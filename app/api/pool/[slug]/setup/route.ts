@@ -5,6 +5,7 @@ import { draftGolfers } from "@/lib/pool";
 import { findOrCreatePersonForPool, setPersonPhone } from "@/lib/people";
 import { normalizeUsPhoneE164 } from "@/lib/phone";
 import { syncTournamentPredictions } from "@/lib/datagolf-sync";
+import { isProEffective } from "@/lib/tier";
 
 export async function POST(
   req: NextRequest,
@@ -18,8 +19,10 @@ export async function POST(
   const sql = getDb();
 
   const poolRows = await sql`
-    SELECT id FROM pools
-    WHERE slug = ${params.slug} AND chairman_id = ${session.chairmanId}
+    SELECT p.id, c.tier, c.pro_until 
+    FROM pools p
+    JOIN chairmen c ON c.id = p.chairman_id
+    WHERE p.slug = ${params.slug} AND p.chairman_id = ${session.chairmanId}
   `;
   if (poolRows.length === 0) {
     return NextResponse.json({ error: "Pool not found" }, { status: 404 });
@@ -27,6 +30,20 @@ export async function POST(
   const poolId = poolRows[0].id;
 
   const body = await req.json();
+  
+  const isPro = isProEffective(poolRows[0].tier, poolRows[0].pro_until);
+  if (!isPro) {
+    const { players } = body;
+    const nonDeclinedPlayers = players.filter((p: { rsvpStatus?: string }) => 
+      p.rsvpStatus !== 'declined'
+    );
+    if (nonDeclinedPlayers.length > 8) {
+      return NextResponse.json(
+        { error: "Free pools can have up to 8 players. Upgrade to Pro to add more." },
+        { status: 403 }
+      );
+    }
+  }
   const { poolName, players, golferEntries, golferNames, buyIn, settings, tournamentId, awaitingField } = body;
 
   // Support both new format (golferEntries with rankings) and legacy (golferNames)
