@@ -139,3 +139,145 @@ describe("POST /api/pool/[slug]/setup - Body Validation", () => {
     expect(mockExistingPlayers[0].rsvp_status).toBe("declined");
   });
 });
+
+describe("POST /api/pool/[slug]/setup - Legacy Over-8 Pools", () => {
+  beforeEach(() => {
+    mockPool = {
+      id: "pool-123",
+      tier: "free",
+      pro_until: null,
+    };
+  });
+
+  it("allows over-8 legacy pool to run setup with same 10 players", async () => {
+    // Existing pool has 10 accepted players
+    mockExistingPlayers = [
+      { id: "p1", rsvp_status: "accepted" },
+      { id: "p2", rsvp_status: "accepted" },
+      { id: "p3", rsvp_status: "accepted" },
+      { id: "p4", rsvp_status: "accepted" },
+      { id: "p5", rsvp_status: "accepted" },
+      { id: "p6", rsvp_status: "accepted" },
+      { id: "p7", rsvp_status: "accepted" },
+      { id: "p8", rsvp_status: "accepted" },
+      { id: "p9", rsvp_status: "accepted" },
+      { id: "p10", rsvp_status: "accepted" },
+    ];
+
+    const req = new NextRequest("http://localhost:3000/api/pool/test-slug/setup", {
+      method: "POST",
+      body: JSON.stringify({
+        poolName: "Legacy Pool",
+        players: mockExistingPlayers.map((p) => ({ id: p.id, name: `Player ${p.id}` })),
+        golferNames: ["Tiger Woods"],
+        buyIn: 20,
+        settings: {},
+      }),
+    });
+
+    // Should succeed - keeping same 10 players, cap is max(8, 10) = 10
+    const response = await POST(req, { params: { slug: "test-slug" } });
+    expect(response.status).toBe(200);
+  });
+
+  it("blocks over-8 legacy pool from adding 11th player", async () => {
+    // Existing pool has 10 accepted players
+    mockExistingPlayers = [
+      { id: "p1", rsvp_status: "accepted" },
+      { id: "p2", rsvp_status: "accepted" },
+      { id: "p3", rsvp_status: "accepted" },
+      { id: "p4", rsvp_status: "accepted" },
+      { id: "p5", rsvp_status: "accepted" },
+      { id: "p6", rsvp_status: "accepted" },
+      { id: "p7", rsvp_status: "accepted" },
+      { id: "p8", rsvp_status: "accepted" },
+      { id: "p9", rsvp_status: "accepted" },
+      { id: "p10", rsvp_status: "accepted" },
+    ];
+
+    const req = new NextRequest("http://localhost:3000/api/pool/test-slug/setup", {
+      method: "POST",
+      body: JSON.stringify({
+        poolName: "Legacy Pool",
+        players: [
+          ...mockExistingPlayers.map((p) => ({ id: p.id, name: `Player ${p.id}` })),
+          { name: "New Player 11" }, // Adding 11th player
+        ],
+        golferNames: ["Tiger Woods"],
+        buyIn: 20,
+        settings: {},
+      }),
+    });
+
+    // Should be blocked - trying to go from 10 to 11, cap is max(8, 10) = 10
+    const response = await POST(req, { params: { slug: "test-slug" } });
+    expect(response.status).toBe(403);
+    const data = await response.json();
+    expect(data.error).toContain("Free pools hold up to 8 players");
+  });
+
+  it("blocks over-8 legacy pool from replacing declined with new player", async () => {
+    // Pool has 9 accepted + 1 declined = 10 total, 9 active
+    mockExistingPlayers = [
+      { id: "p1", rsvp_status: "accepted" },
+      { id: "p2", rsvp_status: "accepted" },
+      { id: "p3", rsvp_status: "accepted" },
+      { id: "p4", rsvp_status: "accepted" },
+      { id: "p5", rsvp_status: "accepted" },
+      { id: "p6", rsvp_status: "accepted" },
+      { id: "p7", rsvp_status: "accepted" },
+      { id: "p8", rsvp_status: "accepted" },
+      { id: "p9", rsvp_status: "accepted" },
+      { id: "p10", rsvp_status: "declined" },
+    ];
+
+    const req = new NextRequest("http://localhost:3000/api/pool/test-slug/setup", {
+      method: "POST",
+      body: JSON.stringify({
+        poolName: "Legacy Pool",
+        players: [
+          ...mockExistingPlayers.slice(0, 9).map((p) => ({ id: p.id, name: `Player ${p.id}` })),
+          { name: "New Player" }, // Would be 10th non-declined
+        ],
+        golferNames: ["Tiger Woods"],
+        buyIn: 20,
+        settings: {},
+      }),
+    });
+
+    // Should be blocked - 9 existing accepted + 1 new = 10, cap is max(8, 9) = 9
+    const response = await POST(req, { params: { slug: "test-slug" } });
+    expect(response.status).toBe(403);
+  });
+
+  it("allows over-8 legacy pool to keep same 9 players", async () => {
+    // Pool has 9 accepted + 1 declined = 10 total, 9 active
+    mockExistingPlayers = [
+      { id: "p1", rsvp_status: "accepted" },
+      { id: "p2", rsvp_status: "accepted" },
+      { id: "p3", rsvp_status: "accepted" },
+      { id: "p4", rsvp_status: "accepted" },
+      { id: "p5", rsvp_status: "accepted" },
+      { id: "p6", rsvp_status: "accepted" },
+      { id: "p7", rsvp_status: "accepted" },
+      { id: "p8", rsvp_status: "accepted" },
+      { id: "p9", rsvp_status: "accepted" },
+      { id: "p10", rsvp_status: "declined" },
+    ];
+
+    const req = new NextRequest("http://localhost:3000/api/pool/test-slug/setup", {
+      method: "POST",
+      body: JSON.stringify({
+        poolName: "Legacy Pool",
+        players: mockExistingPlayers.slice(0, 9).map((p) => ({ id: p.id, name: `Player ${p.id}` })),
+        golferNames: ["Tiger Woods"],
+        buyIn: 20,
+        settings: {},
+      }),
+    });
+
+    // Should succeed - keeping same 9 players, cap is max(8, 9) = 9
+    const response = await POST(req, { params: { slug: "test-slug" } });
+    expect(response.status).toBe(200);
+  });
+});

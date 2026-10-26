@@ -100,7 +100,7 @@ describe("POST /api/pool/[slug]/players - Free Tier Limits", () => {
     const response = await POST(req, { params: { slug: "test-slug" } });
     expect(response.status).toBe(403);
     const data = await response.json();
-    expect(data.error).toContain("Free pools can have up to 8 players");
+    expect(data.error).toContain("Free pools hold up to 8 players");
     expect(data.upgradeUrl).toBeUndefined();
   });
 

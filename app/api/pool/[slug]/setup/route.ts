@@ -43,15 +43,19 @@ export async function POST(
 
   const isPro = isProEffective(poolRows[0].tier, poolRows[0].pro_until);
   if (!isPro) {
-    // Count non-declined players using database statuses for existing, 'pending' for new
-    const nonDeclinedCount = players.filter((p: { id?: string }) => {
+    // Current count of non-declined players (from database)
+    const currentCount = existingPlayers.filter((p) => p.rsvp_status !== 'declined').length;
+    const cap = Math.max(8, currentCount);
+    
+    // Count what the new total would be using database statuses for existing, 'pending' for new
+    const newCount = players.filter((p: { id?: string }) => {
       const dbStatus = p.id && statusMap.has(p.id) ? statusMap.get(p.id) : 'pending';
       return dbStatus !== 'declined';
     }).length;
     
-    if (nonDeclinedCount > 8) {
+    if (newCount > cap) {
       return NextResponse.json(
-        { error: "Free pools can have up to 8 players. Upgrade to Pro to add more." },
+        { error: "Free pools hold up to 8 players. Upgrade to Pro to add more." },
         { status: 403 }
       );
     }

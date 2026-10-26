@@ -46,17 +46,28 @@ export async function POST(
   if (status === "accepted") {
     const isPro = isProEffective(pool.tier, pool.pro_until);
     if (!isPro) {
+      // Get current player's status and total non-declined count
+      const [currentPlayer] = await sql`
+        SELECT rsvp_status FROM players WHERE id = ${playerId} AND pool_id = ${pool.id}
+      `;
+      if (!currentPlayer) {
+        return NextResponse.json({ error: "Player not found in this pool" }, { status: 404 });
+      }
+      
       const playerCount = await sql`
         SELECT COUNT(*) as count FROM players 
-        WHERE pool_id = ${pool.id} 
-          AND rsvp_status != 'declined'
-          AND id != ${playerId}
+        WHERE pool_id = ${pool.id} AND rsvp_status != 'declined'
       `;
-      const count = Number(playerCount[0]?.count || 0);
+      const currentCount = Number(playerCount[0]?.count || 0);
+      const cap = Math.max(8, currentCount);
       
-      if (count >= 8) {
+      // Check if accepting would increase the count above the cap
+      const currentStatus = currentPlayer.rsvp_status as string;
+      const currentlyCountedAsActive = (currentStatus !== "declined");
+      
+      if (!currentlyCountedAsActive && currentCount >= cap) {
         return NextResponse.json(
-          { error: "Free pools can have up to 8 players. Upgrade to Pro to add more." },
+          { error: "Free pools hold up to 8 players. Upgrade to Pro to add more." },
           { status: 403 }
         );
       }

@@ -1,10 +1,10 @@
 # TourneyPools WTF
 
 ## Last
-2026-10-26 09:22 ET - Added loud error logging for missing idempotency table
+2026-10-26 09:26 ET - Implemented grandfather clause for over-8 legacy pools
 
 ## Now
-All blockers from Data/Front-end review resolved, tests passing
+Cap logic uses max(8, current_count), tests passing (49 total)
 
 ## Next
 - Owner review and approval of PR #60

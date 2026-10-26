@@ -63,11 +63,12 @@ export async function POST(
       SELECT COUNT(*) as count FROM players 
       WHERE pool_id = ${pool.id} AND rsvp_status != 'declined'
     `;
-    const count = Number(playerCount[0]?.count || 0);
+    const currentCount = Number(playerCount[0]?.count || 0);
+    const cap = Math.max(8, currentCount);
     
-    if (count >= 8) {
+    if (currentCount >= cap) {
       return NextResponse.json(
-        { error: "Free pools can have up to 8 players. Upgrade to Pro to add more." },
+        { error: "Free pools hold up to 8 players. Upgrade to Pro to add more." },
         { status: 403 }
       );
     }

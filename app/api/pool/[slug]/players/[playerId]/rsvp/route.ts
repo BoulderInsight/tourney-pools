@@ -39,22 +39,34 @@ export async function PATCH(
   }
   const pool = poolRows[0];
 
-  // Enforce 8-player cap for free pools on any transition to pending or accepted
+  // Enforce player cap for free pools: max(8, current_count)
+  // This grandfathers existing over-8 pools but blocks them from going higher
   if (status === "pending" || status === "accepted") {
     const isPro = isProEffective(pool.tier, pool.pro_until);
     if (!isPro) {
-      // Check count first
+      // Get current player's status and total non-declined count
+      const [currentPlayer] = await sql`
+        SELECT rsvp_status FROM players WHERE id = ${params.playerId} AND pool_id = ${pool.id}
+      `;
+      if (!currentPlayer) {
+        return NextResponse.json({ error: "Player not found" }, { status: 404 });
+      }
+      
       const playerCount = await sql`
         SELECT COUNT(*) as count FROM players 
-        WHERE pool_id = ${pool.id} 
-          AND rsvp_status != 'declined'
-          AND id != ${params.playerId}
+        WHERE pool_id = ${pool.id} AND rsvp_status != 'declined'
       `;
-      const count = Number(playerCount[0]?.count || 0);
+      const currentCount = Number(playerCount[0]?.count || 0);
+      const cap = Math.max(8, currentCount);
       
-      if (count >= 8) {
+      // Check if this change would increase the count above the cap
+      const currentStatus = currentPlayer.rsvp_status as string;
+      const currentlyCountedAsActive = (currentStatus !== "declined");
+      const willBeCountedAsActive = true; // status is pending or accepted
+      
+      if (!currentlyCountedAsActive && willBeCountedAsActive && currentCount >= cap) {
         return NextResponse.json(
-          { error: "Free pools can have up to 8 players. Upgrade to Pro to add more." },
+          { error: "Free pools hold up to 8 players. Upgrade to Pro to add more." },
           { status: 403 }
         );
       }
