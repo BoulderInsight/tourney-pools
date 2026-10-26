@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import type { PaymentMethod, PlayerWithPerson, RsvpStatus } from "@/lib/types";
 import CollectDialog from "./CollectDialog";
 import ConfirmModal from "@/app/components/confirm-modal";
@@ -608,7 +609,7 @@ export default function PlayersTabPage() {
         </button>
         {groupSaved && (
           <p className="text-xs text-tp-accent mt-2 text-center">
-            Saved {groupSaved} to <a href="/groups" className="font-semibold underline">My Groups</a>.
+            Saved {groupSaved} to <Link href="/groups" className="font-semibold underline">My Groups</Link>.
           </p>
         )}
       </div>

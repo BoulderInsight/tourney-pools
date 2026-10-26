@@ -35,6 +35,6 @@ export async function POST(req: NextRequest) {
     isSuperAdmin: chairman.is_super_admin || false,
   });
 
-  setSessionCookie(token);
+  await setSessionCookie(token);
   return NextResponse.json({ ok: true });
 }

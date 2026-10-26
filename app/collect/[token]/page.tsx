@@ -42,7 +42,8 @@ async function loadContext(token: string): Promise<Context | null> {
   };
 }
 
-export async function generateMetadata({ params }: { params: { token: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ token: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const ctx = await loadContext(params.token);
   if (!ctx) return { title: "TourneyPools" };
   // Keep the browser tab informative ("Enter payment info for Chris Cox") so
@@ -63,7 +64,8 @@ export async function generateMetadata({ params }: { params: { token: string } }
   };
 }
 
-export default async function CollectPage({ params }: { params: { token: string } }) {
+export default async function CollectPage(props: { params: Promise<{ token: string }> }) {
+  const params = await props.params;
   const ctx = await loadContext(params.token);
   if (!ctx) {
     return (

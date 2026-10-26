@@ -5,8 +5,9 @@ import { fetchLeaderboard } from "@/lib/golf-api";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { tournamentId: string } }
+  props: { params: Promise<{ tournamentId: string }> }
 ) {
+  const params = await props.params;
   const session = await getSession();
   if (!session?.isSuperAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

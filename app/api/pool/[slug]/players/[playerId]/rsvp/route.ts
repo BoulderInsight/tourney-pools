@@ -13,8 +13,9 @@ export const dynamic = "force-dynamic";
  */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { slug: string; playerId: string } },
+  props: { params: Promise<{ slug: string; playerId: string }> },
 ) {
+  const params = await props.params;
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

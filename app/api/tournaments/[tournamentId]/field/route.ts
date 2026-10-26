@@ -8,8 +8,9 @@ export const dynamic = "force-dynamic";
 // setup wizard can draft from the actual field instead of the default list.
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { tournamentId: string } }
+  props: { params: Promise<{ tournamentId: string }> }
 ) {
+  const params = await props.params;
   const sql = getDb();
   const rows = await sql`
     SELECT name, api_source, api_tournament_id, year

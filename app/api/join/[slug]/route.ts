@@ -14,8 +14,9 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { slug: string } },
+  props: { params: Promise<{ slug: string }> },
 ) {
+  const params = await props.params;
   const sql = getDb();
   const poolRows = await sql`
     SELECT p.id, p.slug, p.pool_name, p.buy_in, p.settings, p.draft_complete,

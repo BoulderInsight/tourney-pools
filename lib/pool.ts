@@ -418,7 +418,7 @@ export function draftGolfers(
   const pool = [...golfers];
   const numPlayers = players.length;
   const totalPicks = pool.length;
-  let pickNumber = 0;
+  const pickNumber = 0;
 
   // Shuffle player order for all draft types
   const playerOrder = [...players];

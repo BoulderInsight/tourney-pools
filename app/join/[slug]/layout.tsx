@@ -6,7 +6,8 @@ import { getDb } from "@/lib/db";
  * and pool/tournament context, not just the generic site title. Pairs with
  * opengraph-image.tsx which renders the matching visual.
  */
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const sql = getDb();
   const rows = await sql`
     SELECT p.pool_name, c.name AS chairman_name, t.name AS tournament_name
