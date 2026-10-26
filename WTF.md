@@ -7,17 +7,19 @@
 - TypeScript type-checks clean
 
 ## Now
-- PR `sec/tp-next-15` ready for review and merge
+- PR `sec/tp-next-15` ready for review
 - Addresses CVE-2025-29927 (middleware bypass) and other security advisories in Next 14.x
 - React upgraded to 19.3.1 alongside Next 15
+- **Merge order changed**: This PR now merges AFTER PR #60 (`cursor/tp-security-fixes-6d7e`)
 
 ## Next
 - Await QA smoke testing on Vercel preview deploy
-- Await owner approval before merging (this is a production deploy)
-- Separate branch `sec/tp-security-fixes` (JWT, Stripe webhook, cron secret, plan limits) will merge after this
+- PR #60 (security fixes: JWT, webhook verification, cron auth, free tier) merges first
+- After #60 merges, merge main into this branch and update test call patterns
+- Then await owner approval before merging to main (production deploy)
 
 ## Blockers
-- None. PR is ready.
+- Waiting on PR #60 to merge first
 
 ## Decisions
 - Used Next.js 15.5.28 (latest stable on 15.x line)
