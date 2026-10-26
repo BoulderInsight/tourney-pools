@@ -14,8 +14,9 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: { slug: string } },
+  props: { params: Promise<{ slug: string }> },
 ) {
+  const params = await props.params;
   const sql = getDb();
   const body = await req.json().catch(() => ({}));
   const { playerId, status } = body as { playerId?: string; status?: string };

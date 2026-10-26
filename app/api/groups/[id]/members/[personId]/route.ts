@@ -5,8 +5,9 @@ import { groupExistsForChairman, removeMemberFromGroup } from "@/lib/groups";
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string; personId: string } },
+  props: { params: Promise<{ id: string; personId: string }> },
 ) {
+  const params = await props.params;
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -16,8 +16,9 @@ import { syncTournamentPredictions } from "@/lib/datagolf-sync";
  */
 export async function POST(
   _req: NextRequest,
-  { params }: { params: { tournamentId: string } },
+  props: { params: Promise<{ tournamentId: string }> },
 ) {
+  const params = await props.params;
   const session = await getSession();
   if (!session?.isSuperAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

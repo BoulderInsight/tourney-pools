@@ -61,8 +61,9 @@ function cleanPreferred(value: unknown): PaymentMethod | null {
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { token: string } },
+  props: { params: Promise<{ token: string }> },
 ) {
+  const params = await props.params;
   const sql = getDb();
   const ctx = await loadContext(sql, params.token);
   if (!ctx) {
@@ -80,8 +81,9 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { token: string } },
+  props: { params: Promise<{ token: string }> },
 ) {
+  const params = await props.params;
   const sql = getDb();
   const ctx = await loadContext(sql, params.token);
   if (!ctx) {

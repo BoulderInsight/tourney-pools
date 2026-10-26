@@ -12,8 +12,9 @@ const SYNC_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { slug: string } }
+  props: { params: Promise<{ slug: string }> }
 ) {
+  const params = await props.params;
   const sql = getDb();
 
   const poolRows = await sql`

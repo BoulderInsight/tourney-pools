@@ -4,8 +4,9 @@ import { getSession } from "@/lib/auth";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { slug: string } }
+  props: { params: Promise<{ slug: string }> }
 ) {
+  const params = await props.params;
   const session = await getSession();
   if (!session?.isSuperAdmin) {
     return NextResponse.json({ error: "Super admin required" }, { status: 403 });

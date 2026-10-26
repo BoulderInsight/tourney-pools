@@ -22,8 +22,9 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(
   _req: Request,
-  { params }: { params: { slug: string } },
+  props: { params: Promise<{ slug: string }> },
 ) {
+  const params = await props.params;
   const sql = getDb();
   const rows = await sql`SELECT pool_name FROM pools WHERE slug = ${params.slug}`;
   const poolName = (rows[0]?.pool_name as string | undefined) ?? "TourneyPools";

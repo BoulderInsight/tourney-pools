@@ -36,8 +36,9 @@ export async function verifyToken(token: string): Promise<SessionPayload | null>
   }
 }
 
-export function setSessionCookie(token: string) {
-  cookies().set(COOKIE_NAME, token, {
+export async function setSessionCookie(token: string) {
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -46,8 +47,9 @@ export function setSessionCookie(token: string) {
   });
 }
 
-export function clearSessionCookie() {
-  cookies().set(COOKIE_NAME, "", {
+export async function clearSessionCookie() {
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE_NAME, "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -57,7 +59,8 @@ export function clearSessionCookie() {
 }
 
 export async function getSession(): Promise<SessionPayload | null> {
-  const cookie = cookies().get(COOKIE_NAME);
+  const cookieStore = await cookies();
+  const cookie = cookieStore.get(COOKIE_NAME);
   if (!cookie?.value) return null;
   return verifyToken(cookie.value);
 }

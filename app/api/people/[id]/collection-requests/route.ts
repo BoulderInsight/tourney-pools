@@ -11,8 +11,9 @@ import { getPersonForChairman } from "@/lib/people";
  */
 export async function POST(
   _req: NextRequest,
-  { params }: { params: { id: string } },
+  props: { params: Promise<{ id: string }> },
 ) {
+  const params = await props.params;
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

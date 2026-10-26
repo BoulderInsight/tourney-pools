@@ -7,8 +7,9 @@ export const dynamic = "force-dynamic";
 // GET: Return current draft state (players with order, assignments so far, available golfers)
 export async function GET(
   req: NextRequest,
-  { params }: { params: { slug: string } }
+  props: { params: Promise<{ slug: string }> }
 ) {
+  const params = await props.params;
   // GET is public so spectators can watch the draft
   const sql = getDb();
   const poolRows = await sql`
@@ -38,8 +39,9 @@ export async function GET(
 // POST: Make a pick or draw order or lock pool
 export async function POST(
   req: NextRequest,
-  { params }: { params: { slug: string } }
+  props: { params: Promise<{ slug: string }> }
 ) {
+  const params = await props.params;
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
