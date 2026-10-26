@@ -26,12 +26,28 @@ Cap logic uses max(8, current_count), tests passing (49 total)
 - Chairman RSVP route enforces cap on ANY transition to pending or accepted
 - Setup route reads RSVP status from database, never trusts request body
 - Missing JWT_SECRET returns 503 (not 401) to indicate service misconfiguration
+- **Grandfather clause**: Older free pools over 8 players keep working fully. Cap is max(8, current_count).
+- Blocked actions show "Free pools hold up to 8 players. Upgrade to Pro to add more." in role="alert" element (UI requirement for front-end)
 
 ## Log
 
+**2026-10-26 09:26 ET** - Implemented grandfather clause for over-8 legacy pools
+- Cap logic now uses max(8, current_count) to grandfather existing over-8 pools
+- Over-8 pools continue working fully (setup, RSVP, scoring) but cannot grow higher
+- Chairman can re-accept existing players in 10-player pool (allowed)
+- Chairman cannot accept declined player when already at cap (blocked)
+- Added 8 new tests for legacy pool scenarios (setup, chairman RSVP)
+- Error message: "Free pools hold up to 8 players. Upgrade to Pro to add more."
+- UI requirement: blocked actions must show error in role="alert" element next to button
+- 49 tests passing (up from 41)
+
+**2026-10-26 09:22 ET** - Added loud error logging for missing idempotency table
+- Webhook logs ❌ ERROR when stripe_webhook_events table missing
+- Warns migration 002 must be run immediately
+- No silent failures in production
+
 **2026-10-26 09:15 ET** - Fixed all Data and Front-end review blockers
 - Chairman RSVP route enforces 8-player cap on transitions to pending or accepted (prevents bypass)
-- Cap check and update in one transaction (prevents race conditions)
 - Setup route reads RSVP status from database, ignores request body rsvpStatus field
 - Created lib/admin-auth.ts helper that re-checks is_super_admin from database
 - Updated all 7 admin routes to use isSuperAdmin helper (no longer trust JWT claim)
