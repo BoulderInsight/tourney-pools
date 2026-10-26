@@ -6,6 +6,7 @@ import {
   normalizeName,
 } from "@/lib/golf-api";
 import { importTournamentField, draftPoolFromField } from "@/lib/draft-pool";
+import crypto from "crypto";
 
 export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
@@ -21,17 +22,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const authBuffer = Buffer.from(authHeader, "utf8");
-  const expectedBuffer = Buffer.from(expectedHeader, "utf8");
-  
-  let isValid = true;
-  for (let i = 0; i < expectedBuffer.length; i++) {
-    if (authBuffer[i] !== expectedBuffer[i]) {
-      isValid = false;
+  try {
+    const authBuffer = Buffer.from(authHeader, "utf8");
+    const expectedBuffer = Buffer.from(expectedHeader, "utf8");
+    
+    if (!crypto.timingSafeEqual(authBuffer, expectedBuffer)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-  }
-
-  if (!isValid) {
+  } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -37,17 +37,24 @@ export async function POST(req: NextRequest) {
     const chairmanId = session.metadata?.chairmanId;
     const customerId = session.customer as string | null;
     const paymentStatus = session.payment_status;
-    const mode = session.mode;
 
-    const isPaid = paymentStatus === "paid";
-    const isSubscription = mode === "subscription";
+    if (paymentStatus === "paid") {
+      if (chairmanId) {
+        await sql`UPDATE chairmen SET tier = 'pro' WHERE id = ${chairmanId}`;
+        console.log("Updated tier to pro via checkout.session.completed (paid), event:", event.id);
+      } else if (customerId) {
+        const result = await sql`UPDATE chairmen SET tier = 'pro' WHERE stripe_customer_id = ${customerId} RETURNING id`;
+        console.log("Updated tier to pro via customerId (paid), event:", event.id, "matched:", result.length);
+      }
+    }
+  }
 
-    if (chairmanId && (isPaid || isSubscription)) {
-      await sql`UPDATE chairmen SET tier = 'pro' WHERE id = ${chairmanId}`;
-      console.log("Updated tier to pro via checkout.session.completed, event:", event.id);
-    } else if (customerId && (isPaid || isSubscription)) {
-      const result = await sql`UPDATE chairmen SET tier = 'pro' WHERE stripe_customer_id = ${customerId} RETURNING id`;
-      console.log("Updated tier to pro via customerId, event:", event.id, "matched:", result.length);
+  if (event.type === "invoice.paid") {
+    const invoice = event.data.object as Stripe.Invoice;
+    const customerId = invoice.customer as string;
+    if (customerId) {
+      await sql`UPDATE chairmen SET tier = 'pro' WHERE stripe_customer_id = ${customerId}`;
+      console.log("Updated tier to pro via invoice.paid, event:", event.id);
     }
   }
 
@@ -60,7 +67,7 @@ export async function POST(req: NextRequest) {
       if (status === "active" || status === "trialing" || status === "past_due") {
         await sql`UPDATE chairmen SET tier = 'pro' WHERE stripe_customer_id = ${customerId}`;
         console.log("Kept tier as pro (status:", status, "), event:", event.id);
-      } else if (status === "unpaid" || status === "canceled" || status === "incomplete_expired") {
+      } else if (status === "incomplete" || status === "unpaid" || status === "canceled" || status === "incomplete_expired") {
         await sql`UPDATE chairmen SET tier = 'free' WHERE stripe_customer_id = ${customerId}`;
         console.log("Downgraded to free (status:", status, "), event:", event.id);
       }

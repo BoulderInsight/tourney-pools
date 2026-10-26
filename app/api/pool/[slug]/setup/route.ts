@@ -30,10 +30,13 @@ export async function POST(
   const poolId = poolRows[0].id;
 
   const body = await req.json();
-  
+  const { poolName, players, golferEntries, golferNames, buyIn, settings, tournamentId, awaitingField } = body;
+
+  if (!Array.isArray(players)) {
+    return NextResponse.json({ error: "players must be an array" }, { status: 400 });
+  }
   const isPro = isProEffective(poolRows[0].tier, poolRows[0].pro_until);
   if (!isPro) {
-    const { players } = body;
     const nonDeclinedPlayers = players.filter((p: { rsvpStatus?: string }) => 
       p.rsvpStatus !== 'declined'
     );
@@ -44,7 +47,6 @@ export async function POST(
       );
     }
   }
-  const { poolName, players, golferEntries, golferNames, buyIn, settings, tournamentId, awaitingField } = body;
 
   // Support both new format (golferEntries with rankings) and legacy (golferNames)
   const entries: { name: string; ranking: number | null }[] = golferEntries
