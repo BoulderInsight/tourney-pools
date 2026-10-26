@@ -49,9 +49,10 @@ export async function POST(req: NextRequest) {
       VALUES (${event.id}, ${event.type}, now())
     `;
   } catch (err) {
-    // If table doesn't exist yet (migration not run), log and continue
-    // This allows the webhook to work during transition period
-    console.error("Idempotency check failed (table may not exist):", err);
+    console.error("❌ WEBHOOK IDEMPOTENCY FAILURE - stripe_webhook_events table missing or inaccessible!");
+    console.error("❌ Migration 002 must be run on production database immediately!");
+    console.error("❌ Duplicate events may be processed until migration is complete!");
+    console.error("Error details:", err);
   }
 
   if (event.type === "checkout.session.completed") {

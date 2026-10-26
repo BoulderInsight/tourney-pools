@@ -1,7 +1,7 @@
 # TourneyPools WTF
 
 ## Last
-2026-10-26 09:15 ET - Data and Front-end review fixes committed to PR #60
+2026-10-26 09:22 ET - Added loud error logging for missing idempotency table
 
 ## Now
 All blockers from Data/Front-end review resolved, tests passing
