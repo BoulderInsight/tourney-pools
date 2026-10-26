@@ -1,10 +1,10 @@
 # TourneyPools WTF
 
 ## Last
-2026-10-26 09:33 ET - Fixed webhook idempotency timing (Security Low)
+2026-10-26 09:39 ET - Fixed RSVP race condition with transaction locks
 
 ## Now
-Webhook records events AFTER successful processing, retry test added (50 total)
+RSVP cap check uses SELECT FOR UPDATE in transaction, race test added (51 total)
 
 ## Next
 - Owner review and approval of PR #60
@@ -30,6 +30,13 @@ Webhook records events AFTER successful processing, retry test added (50 total)
 - Blocked actions show "Free pools hold up to 8 players. Upgrade to Pro to add more." in role="alert" element (UI requirement for front-end)
 
 ## Log
+
+**2026-10-26 09:39 ET** - Fixed RSVP race condition (Security review)
+- RSVP cap check now uses transaction with SELECT FOR UPDATE on pools table
+- Prevents two concurrent accepts from both succeeding at cap (7→9 players)
+- Both public RSVP and chairman RSVP routes use row lock
+- Added race condition test: two concurrent accepts at 7 players, only one succeeds
+- 51 tests passing (up from 49)
 
 **2026-10-26 09:33 ET** - Fixed webhook idempotency timing (Security Low issue)
 - Event now recorded AFTER successful processing, not before

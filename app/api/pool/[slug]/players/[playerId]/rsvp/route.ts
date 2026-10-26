@@ -44,31 +44,70 @@ export async function PATCH(
   if (status === "pending" || status === "accepted") {
     const isPro = isProEffective(pool.tier, pool.pro_until);
     if (!isPro) {
-      // Get current player's status and total non-declined count
-      const [currentPlayer] = await sql`
-        SELECT rsvp_status FROM players WHERE id = ${params.playerId} AND pool_id = ${pool.id}
-      `;
-      if (!currentPlayer) {
-        return NextResponse.json({ error: "Player not found" }, { status: 404 });
-      }
-      
-      const playerCount = await sql`
-        SELECT COUNT(*) as count FROM players 
-        WHERE pool_id = ${pool.id} AND rsvp_status != 'declined'
-      `;
-      const currentCount = Number(playerCount[0]?.count || 0);
-      const cap = Math.max(8, currentCount);
-      
-      // Check if this change would increase the count above the cap
-      const currentStatus = currentPlayer.rsvp_status as string;
-      const currentlyCountedAsActive = (currentStatus !== "declined");
-      const willBeCountedAsActive = true; // status is pending or accepted
-      
-      if (!currentlyCountedAsActive && willBeCountedAsActive && currentCount >= cap) {
-        return NextResponse.json(
-          { error: "Free pools hold up to 8 players. Upgrade to Pro to add more." },
-          { status: 403 }
-        );
+      // Use transaction with row lock to prevent race condition
+      try {
+        const result = await sql.begin(async (tx) => {
+          // Lock the pool row to serialize concurrent updates
+          await tx`SELECT id FROM pools WHERE id = ${pool.id} FOR UPDATE`;
+          
+          // Get current player's status
+          const [currentPlayer] = await tx`
+            SELECT rsvp_status FROM players WHERE id = ${params.playerId} AND pool_id = ${pool.id}
+          `;
+          if (!currentPlayer) {
+            throw new Error("PLAYER_NOT_FOUND");
+          }
+          
+          // Count non-declined players
+          const playerCount = await tx`
+            SELECT COUNT(*) as count FROM players 
+            WHERE pool_id = ${pool.id} AND rsvp_status != 'declined'
+          `;
+          const currentCount = Number(playerCount[0]?.count || 0);
+          const cap = Math.max(8, currentCount);
+          
+          // Check if this change would increase the count above the cap
+          const currentStatus = currentPlayer.rsvp_status as string;
+          const currentlyCountedAsActive = (currentStatus !== "declined");
+          const willBeCountedAsActive = true; // status is pending or accepted
+          
+          if (!currentlyCountedAsActive && willBeCountedAsActive && currentCount >= cap) {
+            throw new Error("CAPACITY_EXCEEDED");
+          }
+          
+          // Update player status
+          return await tx`
+            UPDATE players
+            SET rsvp_status = ${status}
+            WHERE id = ${params.playerId} AND pool_id = ${pool.id}
+            RETURNING id, name, rsvp_status
+          `;
+        });
+        
+        if (result.length === 0) {
+          return NextResponse.json({ error: "Player not found" }, { status: 404 });
+        }
+        
+        return NextResponse.json({
+          player: {
+            id: result[0].id as string,
+            name: result[0].name as string,
+            rsvpStatus: result[0].rsvp_status as "pending" | "accepted" | "declined",
+          },
+        });
+      } catch (err) {
+        if (err instanceof Error) {
+          if (err.message === "CAPACITY_EXCEEDED") {
+            return NextResponse.json(
+              { error: "Free pools hold up to 8 players. Upgrade to Pro to add more." },
+              { status: 403 }
+            );
+          }
+          if (err.message === "PLAYER_NOT_FOUND") {
+            return NextResponse.json({ error: "Player not found" }, { status: 404 });
+          }
+        }
+        throw err;
       }
     }
   }

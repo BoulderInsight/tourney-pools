@@ -13,16 +13,10 @@ let mockCurrentStatus = "pending";
 
 vi.mock("@/lib/db", () => ({
   getDb: () => {
-    const mockSql = vi.fn((strings: TemplateStringsArray, ...values: unknown[]) => {
+    const mockSql: any = vi.fn((strings: TemplateStringsArray, ...values: unknown[]) => {
       const query = strings.join("");
       if (query.includes("SELECT p.id, p.draft_complete, c.tier, c.pro_until")) {
         return Promise.resolve([mockPool]);
-      }
-      if (query.includes("SELECT rsvp_status FROM players WHERE id")) {
-        return Promise.resolve([{ rsvp_status: mockCurrentStatus }]);
-      }
-      if (query.includes("SELECT COUNT(*) as count FROM players")) {
-        return Promise.resolve([{ count: mockPlayerCount }]);
       }
       if (query.includes("UPDATE players")) {
         return Promise.resolve([
@@ -35,6 +29,36 @@ vi.mock("@/lib/db", () => ({
       }
       return Promise.resolve([]);
     });
+    
+    // Add transaction support for free tier cap checks
+    mockSql.begin = vi.fn(async (fn: (tx: any) => Promise<any>) => {
+      const tx = vi.fn((strings: TemplateStringsArray, ...values: unknown[]) => {
+        const query = strings.join("");
+        
+        if (query.includes("SELECT id FROM pools") && query.includes("FOR UPDATE")) {
+          return Promise.resolve([{ id: mockPool.id }]);
+        }
+        if (query.includes("SELECT rsvp_status FROM players WHERE id")) {
+          return Promise.resolve([{ rsvp_status: mockCurrentStatus }]);
+        }
+        if (query.includes("SELECT COUNT(*) as count FROM players")) {
+          return Promise.resolve([{ count: mockPlayerCount }]);
+        }
+        if (query.includes("UPDATE players")) {
+          return Promise.resolve([
+            {
+              id: "player-123",
+              name: "Test Player",
+              rsvp_status: "accepted",
+            },
+          ]);
+        }
+        return Promise.resolve([]);
+      }) as any;
+      
+      return await fn(tx);
+    });
+    
     return mockSql;
   },
 }));
