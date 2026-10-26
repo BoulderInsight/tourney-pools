@@ -32,6 +32,28 @@ export async function POST(req: NextRequest) {
 
   const sql = getDb();
 
+  // Check for duplicate event delivery (idempotency)
+  try {
+    const existingEvent = await sql`
+      SELECT id FROM stripe_webhook_events 
+      WHERE event_id = ${event.id}
+    `;
+    if (existingEvent.length > 0) {
+      console.log("Duplicate event received, skipping:", event.id);
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+
+    // Record event before processing
+    await sql`
+      INSERT INTO stripe_webhook_events (event_id, event_type, received_at)
+      VALUES (${event.id}, ${event.type}, now())
+    `;
+  } catch (err) {
+    // If table doesn't exist yet (migration not run), log and continue
+    // This allows the webhook to work during transition period
+    console.error("Idempotency check failed (table may not exist):", err);
+  }
+
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const chairmanId = session.metadata?.chairmanId;
@@ -52,9 +74,19 @@ export async function POST(req: NextRequest) {
   if (event.type === "invoice.paid") {
     const invoice = event.data.object as Stripe.Invoice;
     const customerId = invoice.customer as string;
+    
     if (customerId) {
-      await sql`UPDATE chairmen SET tier = 'pro' WHERE stripe_customer_id = ${customerId}`;
-      console.log("Updated tier to pro via invoice.paid, event:", event.id);
+      const result = await sql`
+        UPDATE chairmen 
+        SET tier = 'pro' 
+        WHERE stripe_customer_id = ${customerId}
+        RETURNING id
+      `;
+      if (result.length > 0) {
+        console.log("Updated tier to pro via invoice.paid, event:", event.id);
+      } else {
+        console.log("No chairman found for customer:", customerId, "event:", event.id);
+      }
     }
   }
 
