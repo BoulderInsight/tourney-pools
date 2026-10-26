@@ -31,6 +31,12 @@ Webhook records events AFTER successful processing, retry test added (50 total)
 
 ## Log
 
+**2026-10-26 09:33 ET** - Fixed webhook idempotency timing (Security Low issue)
+- Event now recorded AFTER successful processing, not before
+- If Pro grant fails mid-way, Stripe's retry can process it (not skipped as duplicate)
+- Added test: handler throws mid-processing, retry succeeds, not marked as duplicate
+- 50 tests passing (up from 49)
+
 **2026-10-26 09:26 ET** - Implemented grandfather clause for over-8 legacy pools
 - Cap logic now uses max(8, current_count) to grandfather existing over-8 pools
 - Over-8 pools continue working fully (setup, RSVP, scoring) but cannot grow higher
