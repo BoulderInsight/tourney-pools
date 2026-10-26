@@ -12,14 +12,15 @@ const nextConfig = {
     // Base CSP policy with tourney-pools specific additions
     const cspValue = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline'", // 'unsafe-inline' required for Next.js bootstrap scripts
+      "script-src 'self' 'unsafe-inline' https://js.stripe.com", // Stripe for checkout
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://res.cloudinary.com", // Cloudinary for golf images
       "font-src 'self'",
-      "connect-src 'self'",
+      "connect-src 'self' https://api.stripe.com", // Stripe API calls
       "object-src 'none'",
       "base-uri 'self'",
-      "form-action 'self'",
+      "form-action 'self' https://checkout.stripe.com", // Stripe Checkout redirects
+      "frame-src https://js.stripe.com https://hooks.stripe.com", // Stripe embedded elements
       "frame-ancestors 'none'",
     ].join("; ");
 
