@@ -59,6 +59,6 @@ describe("Middleware - Auth with Forged Cookie", () => {
     });
 
     const response = await middleware(req);
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(503);
   });
 });

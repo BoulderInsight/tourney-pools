@@ -9,6 +9,7 @@ let mockPool = {
   pro_until: null,
 };
 let mockPlayerCount = 0;
+let mockCurrentStatus = "pending";
 
 vi.mock("@/lib/db", () => ({
   getDb: () => {
@@ -35,7 +36,7 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-describe("POST /api/join/[slug]/rsvp - RSVP Acceptance Limits", () => {
+describe("POST /api/join/[slug]/rsvp - RSVP Edge Cases", () => {
   beforeEach(() => {
     mockPool = {
       id: "pool-123",
@@ -44,9 +45,11 @@ describe("POST /api/join/[slug]/rsvp - RSVP Acceptance Limits", () => {
       pro_until: null,
     };
     mockPlayerCount = 0;
+    mockCurrentStatus = "pending";
   });
 
-  it("allows 8th player to accept in free pool", async () => {
+  it("allows player to accept at 7 non-declined players", async () => {
+    // Pool has 7 non-declined players (excluding this player)
     mockPlayerCount = 7;
 
     const req = new NextRequest("http://localhost:3000/api/join/test-slug/rsvp", {
@@ -58,7 +61,8 @@ describe("POST /api/join/[slug]/rsvp - RSVP Acceptance Limits", () => {
     expect(response.status).toBe(200);
   });
 
-  it("blocks 9th player from accepting in free pool", async () => {
+  it("blocks player from accepting at 8 non-declined players", async () => {
+    // Pool has 8 non-declined players (excluding this player), so accepting would make 9
     mockPlayerCount = 8;
 
     const req = new NextRequest("http://localhost:3000/api/join/test-slug/rsvp", {
@@ -72,8 +76,8 @@ describe("POST /api/join/[slug]/rsvp - RSVP Acceptance Limits", () => {
     expect(data.error).toContain("Free pools can have up to 8 players");
   });
 
-  it("allows declined player to decline again without limit check", async () => {
-    mockPlayerCount = 8;
+  it("allows player to decline regardless of count", async () => {
+    mockPlayerCount = 10;
 
     const req = new NextRequest("http://localhost:3000/api/join/test-slug/rsvp", {
       method: "POST",
@@ -83,9 +87,40 @@ describe("POST /api/join/[slug]/rsvp - RSVP Acceptance Limits", () => {
     const response = await POST(req, { params: { slug: "test-slug" } });
     expect(response.status).toBe(200);
   });
+});
 
-  it("allows Pro pool to accept 9th player", async () => {
-    mockPool.tier = "pro";
+describe("POST /api/join/[slug]/rsvp - Promo Expiry", () => {
+  it("enforces cap with expired promo", async () => {
+    const pastDate = new Date();
+    pastDate.setDate(pastDate.getDate() - 1);
+    
+    mockPool = {
+      id: "pool-123",
+      draft_complete: false,
+      tier: "free",
+      pro_until: pastDate.toISOString(),
+    };
+    mockPlayerCount = 8;
+
+    const req = new NextRequest("http://localhost:3000/api/join/test-slug/rsvp", {
+      method: "POST",
+      body: JSON.stringify({ playerId: "player-123", status: "accepted" }),
+    });
+
+    const response = await POST(req, { params: { slug: "test-slug" } });
+    expect(response.status).toBe(403);
+  });
+
+  it("allows with active promo", async () => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 1);
+    
+    mockPool = {
+      id: "pool-123",
+      draft_complete: false,
+      tier: "free",
+      pro_until: futureDate.toISOString(),
+    };
     mockPlayerCount = 8;
 
     const req = new NextRequest("http://localhost:3000/api/join/test-slug/rsvp", {

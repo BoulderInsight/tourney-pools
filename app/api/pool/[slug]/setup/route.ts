@@ -35,12 +35,21 @@ export async function POST(
   if (!Array.isArray(players)) {
     return NextResponse.json({ error: "players must be an array" }, { status: 400 });
   }
+  // Read existing player RSVP statuses from database, never trust request body
+  const existingPlayers = await sql`
+    SELECT id, rsvp_status FROM players WHERE pool_id = ${poolId}
+  `;
+  const statusMap = new Map(existingPlayers.map((p) => [p.id, p.rsvp_status]));
+
   const isPro = isProEffective(poolRows[0].tier, poolRows[0].pro_until);
   if (!isPro) {
-    const nonDeclinedPlayers = players.filter((p: { rsvpStatus?: string }) => 
-      p.rsvpStatus !== 'declined'
-    );
-    if (nonDeclinedPlayers.length > 8) {
+    // Count non-declined players using database statuses for existing, 'pending' for new
+    const nonDeclinedCount = players.filter((p: { id?: string }) => {
+      const dbStatus = p.id && statusMap.has(p.id) ? statusMap.get(p.id) : 'pending';
+      return dbStatus !== 'declined';
+    }).length;
+    
+    if (nonDeclinedCount > 8) {
       return NextResponse.json(
         { error: "Free pools can have up to 8 players. Upgrade to Pro to add more." },
         { status: 403 }

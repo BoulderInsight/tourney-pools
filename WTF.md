@@ -1,28 +1,45 @@
 # TourneyPools WTF
 
 ## Last
-2026-10-26 09:08 ET - Final webhook tests and idempotency added to PR #60
+2026-10-26 09:15 ET - Data and Front-end review fixes committed to PR #60
 
 ## Now
-Security fixes PR complete with real webhook tests and idempotency
+All blockers from Data/Front-end review resolved, tests passing
 
 ## Next
 - Owner review and approval of PR #60
+- Run migration 002 on Production database
 - Owner confirms JWT_SECRET, STRIPE_WEBHOOK_SECRET, and CRON_SECRET are set in Vercel Production and Preview
 - Owner decides whether to rotate JWT_SECRET at merge (recommended)
 - Merge to main (deploys to production)
 
 ## Blockers
-- None. PR is complete and all checks pass.
+- None. All review items addressed, 41 tests passing
 
 ## Decisions
-- Upgrade URL omitted from free tier refusal messages because /pricing does not exist yet (per review feedback)
-- Constant-time comparison implemented for CRON_SECRET using Buffer byte-by-byte check
+- Upgrade URL omitted from free tier refusal messages because /pricing does not exist yet
+- Constant-time comparison implemented for CRON_SECRET using crypto.timingSafeEqual
 - DATABASE_URL blanked in vitest.config.ts to prevent tests from reaching production
 - Legacy one-time paid accounts remain Pro (not downgraded)
 - No git history rewrite for removed data files (clean removal with .gitignore rules)
+- Admin routes re-check is_super_admin from database, never trust JWT claim alone
+- Chairman RSVP route enforces cap on ANY transition to pending or accepted
+- Setup route reads RSVP status from database, never trusts request body
+- Missing JWT_SECRET returns 503 (not 401) to indicate service misconfiguration
 
 ## Log
+
+**2026-10-26 09:15 ET** - Fixed all Data and Front-end review blockers
+- Chairman RSVP route enforces 8-player cap on transitions to pending or accepted (prevents bypass)
+- Cap check and update in one transaction (prevents race conditions)
+- Setup route reads RSVP status from database, ignores request body rsvpStatus field
+- Created lib/admin-auth.ts helper that re-checks is_super_admin from database
+- Updated all 7 admin routes to use isSuperAdmin helper (no longer trust JWT claim)
+- Middleware returns 503 for missing JWT_SECRET (was 401)
+- Removed ESLint config files (collides with #61)
+- Exact pins for vitest (4.1.12) and eslint-config-next (14.2.35)
+- Added tests: setup body validation, RSVP edge cases, expired promo
+- 41 tests passing (up from 37)
 
 **2026-10-26 09:08 ET** - Added real webhook tests and idempotency to PR #60
 - Replaced documented test scenarios with 37 real executable tests

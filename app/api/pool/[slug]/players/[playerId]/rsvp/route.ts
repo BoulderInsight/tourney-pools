@@ -39,9 +39,11 @@ export async function PATCH(
   }
   const pool = poolRows[0];
 
-  if (status === "accepted") {
+  // Enforce 8-player cap for free pools on any transition to pending or accepted
+  if (status === "pending" || status === "accepted") {
     const isPro = isProEffective(pool.tier, pool.pro_until);
     if (!isPro) {
+      // Check count first
       const playerCount = await sql`
         SELECT COUNT(*) as count FROM players 
         WHERE pool_id = ${pool.id} 

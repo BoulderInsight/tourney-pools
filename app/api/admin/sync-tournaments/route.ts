@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { fetchSchedule, fetchTournamentDetail } from "@/lib/golf-api";
+import { isSuperAdmin } from "@/lib/admin-auth";
 
 export async function POST() {
   const session = await getSession();
-  if (!session?.isSuperAdmin) {
+  if (!(await isSuperAdmin(session))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

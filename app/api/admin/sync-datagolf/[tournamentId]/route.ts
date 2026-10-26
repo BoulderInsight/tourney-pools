@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { syncTournamentPredictions } from "@/lib/datagolf-sync";
+import { isSuperAdmin } from "@/lib/admin-auth";
 
 /**
  * Super-admin manual trigger to refresh DataGolf pre-tournament predictions
@@ -19,7 +20,7 @@ export async function POST(
   { params }: { params: { tournamentId: string } },
 ) {
   const session = await getSession();
-  if (!session?.isSuperAdmin) {
+  if (!(await isSuperAdmin(session))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -9,8 +9,9 @@ export async function middleware(req: NextRequest) {
 
   const secret = getJwtSecret();
   if (!secret) {
+    console.error("JWT_SECRET not configured or too short");
     if (pathname.startsWith("/api/")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
     }
     return NextResponse.redirect(new URL("/login", req.url));
   }

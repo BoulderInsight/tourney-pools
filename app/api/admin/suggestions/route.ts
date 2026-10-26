@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { isSuperAdmin } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
 // GET: List all suggestions (super admin only)
 export async function GET() {
   const session = await getSession();
-  if (!session?.isSuperAdmin) {
+  if (!(await isSuperAdmin(session))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

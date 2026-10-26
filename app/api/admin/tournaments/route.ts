@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { isSuperAdmin } from "@/lib/admin-auth";
 
 async function requireSuperAdmin() {
   const session = await getSession();
-  if (!session?.isSuperAdmin) return null;
+  if (!(await isSuperAdmin(session))) return null;
   return session;
 }
 
