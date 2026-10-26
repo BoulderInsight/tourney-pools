@@ -1,7 +1,7 @@
 # WTF.md - TourneyPools Status
 
 ## Last
-- **2026-10-26 12:51 PM ET**: Completed Next.js 14.2.21 → 15.5.28 upgrade on branch `sec/tp-next-15`
+- **2026-10-26 8:51 AM ET**: Completed Next.js 14.2.21 → 15.5.28 upgrade on branch `sec/tp-next-15`
 - All async API conversions (cookies, headers, params) completed
 - Build passes with ESLint warnings only (no errors)
 - TypeScript type-checks clean
@@ -26,11 +26,11 @@
 - Preserved all existing behavior - this is a security upgrade, not a feature change
 
 ## Log
-- **2026-10-26 12:51 PM ET**: Agent started Next 15 upgrade
-- **2026-10-26 1:10 PM ET**: Upgraded packages: next@15.5.28, react@19.3.1, react-dom@19.3.1
-- **2026-10-26 1:15 PM ET**: Converted all cookies()/headers() calls to async in lib/auth.ts
-- **2026-10-26 1:20 PM ET**: Updated 4 auth route handlers to await session cookie functions
-- **2026-10-26 1:25 PM ET**: Fixed 23 route handlers with dynamic params (Promise-based)
-- **2026-10-26 1:30 PM ET**: Fixed collect page, join layout, manifest route for async params
-- **2026-10-26 1:35 PM ET**: Fixed ESLint errors (Link import, const declaration)
-- **2026-10-26 1:38 PM ET**: Build successful, committed changes to `sec/tp-next-15`
+- **2026-10-26 8:51 AM ET**: Agent started Next 15 upgrade
+- **2026-10-26 9:10 AM ET**: Upgraded packages: next@15.5.28, react@19.3.1, react-dom@19.3.1
+- **2026-10-26 9:15 AM ET**: Converted all cookies()/headers() calls to async in lib/auth.ts
+- **2026-10-26 9:20 AM ET**: Updated 4 auth route handlers to await session cookie functions
+- **2026-10-26 9:25 AM ET**: Fixed 23 route handlers with dynamic params (Promise-based)
+- **2026-10-26 9:30 AM ET**: Fixed collect page, join layout, manifest route for async params
+- **2026-10-26 9:35 AM ET**: Fixed ESLint errors (Link import, const declaration)
+- **2026-10-26 9:38 AM ET**: Build successful, committed changes to `sec/tp-next-15`
