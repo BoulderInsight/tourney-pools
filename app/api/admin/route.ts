@@ -3,12 +3,13 @@ import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { sendEarlyChairmanThankYou } from "@/lib/email";
 import { formatPromoExpiry } from "@/lib/tier";
+import { isSuperAdmin } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
 async function requireSuperAdmin() {
   const session = await getSession();
-  if (!session?.isSuperAdmin) {
+  if (!(await isSuperAdmin(session))) {
     return null;
   }
   return session;

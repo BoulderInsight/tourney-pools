@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { nanoid } from "nanoid";
+import { isProEffective } from "@/lib/tier";
 
 export async function GET() {
   const session = await getSession();
@@ -51,10 +52,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const sql = getDb();
+
+  const chairmanRows = await sql`
+    SELECT tier, pro_until FROM chairmen WHERE id = ${session.chairmanId}
+  `;
+  const chairman = chairmanRows[0];
+  const isPro = isProEffective(chairman?.tier, chairman?.pro_until);
+
+  if (!isPro) {
+    const existingPools = await sql`
+      SELECT COUNT(*) as count FROM pools WHERE chairman_id = ${session.chairmanId}
+    `;
+    const poolCount = Number(existingPools[0]?.count || 0);
+    
+    if (poolCount >= 1) {
+      return NextResponse.json(
+        { error: "Free plans include 1 pool. Upgrade to Pro to create more." },
+        { status: 403 }
+      );
+    }
+  }
+
   const { poolName } = await req.json();
   const slug = nanoid(10);
 
-  const sql = getDb();
   await sql`
     INSERT INTO pools (slug, chairman_id, pool_name)
     VALUES (${slug}, ${session.chairmanId}, ${poolName || 'My Golf Pool'})

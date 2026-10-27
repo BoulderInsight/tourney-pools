@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { sendVerificationEmail } from "@/lib/email";
+import { isSuperAdmin } from "@/lib/admin-auth";
 
 export async function POST() {
   const session = await getSession();
-  if (!session?.isSuperAdmin) {
+  if (!(await isSuperAdmin(session))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
-    const result = await sendVerificationEmail(session.email, "test-token-12345");
+    const result = await sendVerificationEmail(session!.email, "test-token-12345");
     return NextResponse.json({
       ok: true,
       messageId: result.messageId,

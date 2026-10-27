@@ -1,8 +1,8 @@
 import { compare, hash } from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { getJwtSecret } from "./jwt-secret";
 
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "dev-secret-change-me");
 const COOKIE_NAME = "tp_session";
 
 export interface SessionPayload {
@@ -21,15 +21,23 @@ export async function verifyPassword(password: string, hashed: string): Promise<
 }
 
 export async function createToken(payload: SessionPayload): Promise<string> {
+  const secret = getJwtSecret();
+  if (!secret) {
+    throw new Error("JWT_SECRET is not configured or too short");
+  }
   return new SignJWT(payload as unknown as Record<string, unknown>)
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("7d")
-    .sign(JWT_SECRET);
+    .sign(secret);
 }
 
 export async function verifyToken(token: string): Promise<SessionPayload | null> {
+  const secret = getJwtSecret();
+  if (!secret) {
+    return null;
+  }
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, secret);
     return payload as unknown as SessionPayload;
   } catch {
     return null;

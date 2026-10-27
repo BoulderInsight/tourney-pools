@@ -6,10 +6,30 @@ import {
   normalizeName,
 } from "@/lib/golf-api";
 import { importTournamentField, draftPoolFromField } from "@/lib/draft-pool";
+import crypto from "crypto";
 
 export async function GET(req: NextRequest) {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    console.error("CRON_SECRET is not configured");
+    return NextResponse.json({ error: "Cron not configured" }, { status: 503 });
+  }
+
   const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const expectedHeader = `Bearer ${cronSecret}`;
+  
+  if (!authHeader || authHeader.length !== expectedHeader.length) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const authBuffer = Buffer.from(authHeader, "utf8");
+    const expectedBuffer = Buffer.from(expectedHeader, "utf8");
+    
+    if (!crypto.timingSafeEqual(authBuffer, expectedBuffer)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
