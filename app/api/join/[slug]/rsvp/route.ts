@@ -46,70 +46,52 @@ export async function POST(
   if (status === "accepted") {
     const isPro = isProEffective(pool.tier, pool.pro_until);
     if (!isPro) {
-      // Use transaction with row lock to prevent race condition
-      try {
-        const result = await sql.begin(async (tx) => {
-          // Lock the pool row to serialize concurrent accepts
-          await tx`SELECT id FROM pools WHERE id = ${pool.id} FOR UPDATE`;
-          
-          // Get current player's status
-          const [currentPlayer] = await tx`
-            SELECT rsvp_status FROM players WHERE id = ${playerId} AND pool_id = ${pool.id}
-          `;
-          if (!currentPlayer) {
-            throw new Error("PLAYER_NOT_FOUND");
-          }
-          
-          // Count non-declined players
-          const playerCount = await tx`
-            SELECT COUNT(*) as count FROM players 
-            WHERE pool_id = ${pool.id} AND rsvp_status != 'declined'
-          `;
-          const currentCount = Number(playerCount[0]?.count || 0);
-          const cap = Math.max(8, currentCount);
-          
-          // Check if accepting would increase the count above the cap
-          const currentStatus = currentPlayer.rsvp_status as string;
-          const currentlyCountedAsActive = (currentStatus !== "declined");
-          
-          if (!currentlyCountedAsActive && currentCount >= cap) {
-            throw new Error("CAPACITY_EXCEEDED");
-          }
-          
-          // Update player status
-          return await tx`
-            UPDATE players
-            SET rsvp_status = ${status}
-            WHERE id = ${playerId} AND pool_id = ${pool.id}
-            RETURNING id, name, rsvp_status
-          `;
-        });
-        
-        if (result.length === 0) {
+      // Non-interactive HTTP transaction (the neon() driver has no .begin()).
+      // The FOR UPDATE lock serializes concurrent accepts on the pool row;
+      // the UPDATE's WHERE clause re-checks the cap inside the same
+      // transaction so the count it sees reflects any writes that just
+      // released the lock. A player already counted as active (pending or
+      // accepted) can always re-accept; a declined player can only become
+      // active if doing so keeps the active count under 8 (grandfathered
+      // pools already above 8 cannot grow further).
+      const result = await sql.transaction([
+        sql`SELECT id FROM pools WHERE id = ${pool.id} FOR UPDATE`,
+        sql`
+          UPDATE players
+          SET rsvp_status = ${status}
+          WHERE id = ${playerId} AND pool_id = ${pool.id}
+            AND (
+              rsvp_status <> 'declined'
+              OR (
+                SELECT count(*) FROM players
+                WHERE pool_id = ${pool.id} AND rsvp_status <> 'declined'
+              ) < 8
+            )
+          RETURNING id, name, rsvp_status
+        `,
+      ]);
+      const [updated] = result[1];
+
+      if (!updated) {
+        const [exists] = await sql`
+          SELECT 1 FROM players WHERE id = ${playerId} AND pool_id = ${pool.id}
+        `;
+        if (!exists) {
           return NextResponse.json({ error: "Player not found in this pool" }, { status: 404 });
         }
-        
-        return NextResponse.json({
-          player: {
-            id: result[0].id as string,
-            name: result[0].name as string,
-            rsvpStatus: result[0].rsvp_status as "pending" | "accepted" | "declined",
-          },
-        });
-      } catch (err) {
-        if (err instanceof Error) {
-          if (err.message === "CAPACITY_EXCEEDED") {
-            return NextResponse.json(
-              { error: "Free pools hold up to 8 players. Upgrade to Pro to add more." },
-              { status: 403 }
-            );
-          }
-          if (err.message === "PLAYER_NOT_FOUND") {
-            return NextResponse.json({ error: "Player not found in this pool" }, { status: 404 });
-          }
-        }
-        throw err;
+        return NextResponse.json(
+          { error: "Free pools hold up to 8 players. Upgrade to Pro to add more." },
+          { status: 403 },
+        );
       }
+
+      return NextResponse.json({
+        player: {
+          id: updated.id as string,
+          name: updated.name as string,
+          rsvpStatus: updated.rsvp_status as "pending" | "accepted" | "declined",
+        },
+      });
     }
   }
 

@@ -16,82 +16,82 @@ let transactionQueue: Array<() => void> = [];
 
 vi.mock("@/lib/db", () => ({
   getDb: () => {
+    // The real neon() HTTP driver has no .begin() -- only .transaction(),
+    // which batches an array of already-constructed queries as one
+    // non-interactive transaction. The lock and cap-gated update are
+    // "lazy" descriptors that are only evaluated inside .transaction(),
+    // which serializes concurrent calls the same way the real `FOR UPDATE`
+    // lock on the pool row would.
     const mockSql: any = vi.fn((strings: TemplateStringsArray, ...values: unknown[]) => {
       const query = strings.join("");
-      
+
       if (query.includes("SELECT p.id, p.draft_complete, c.tier, c.pro_until")) {
         return Promise.resolve([mockPool]);
       }
-      
-      // Handle non-transaction UPDATE for Pro pools
+
+      if (query.includes("SELECT id FROM pools") && query.includes("FOR UPDATE")) {
+        return { __lazy: "lock" };
+      }
+
+      if (query.includes("UPDATE players") && query.includes("rsvp_status <> 'declined'")) {
+        return {
+          __lazy: "cappedUpdate",
+          playerId: values[1] as string,
+          status: values[0] as string,
+        };
+      }
+
+      if (query.includes("SELECT 1 FROM players WHERE id")) {
+        const playerId = values[0] as string;
+        return Promise.resolve(mockPlayers.has(playerId) ? [{ "?column?": 1 }] : []);
+      }
+
+      // Plain UPDATE for Pro pools (no cap check)
       if (query.includes("UPDATE players")) {
+        const status = values[0] as string;
         const playerId = values[1] as string;
-        const newStatus = values[0] as string;
-        mockPlayers.set(playerId, newStatus);
+        mockPlayers.set(playerId, status);
         return Promise.resolve([
           {
             id: playerId,
             name: "Test Player",
-            rsvp_status: newStatus,
+            rsvp_status: status,
           },
         ]);
       }
-      
+
       return Promise.resolve([]);
     });
-    
-    // Add transaction support with locking
-    mockSql.begin = vi.fn(async (fn: (tx: any) => Promise<any>) => {
-      // Wait if another transaction is in progress
+
+    mockSql.transaction = vi.fn(async (queries: any[]) => {
+      // Wait if another transaction is in progress (simulates the FOR
+      // UPDATE lock serializing concurrent transactions on the pool row).
       if (transactionInProgress) {
         await new Promise<void>((resolve) => {
           transactionQueue.push(resolve);
         });
       }
-      
       transactionInProgress = true;
-      
-      const tx = vi.fn((strings: TemplateStringsArray, ...values: unknown[]) => {
-        const query = strings.join("");
-        
-        // Lock pool (this serializes transactions)
-        if (query.includes("SELECT id FROM pools") && query.includes("FOR UPDATE")) {
-          return Promise.resolve([{ id: mockPool.id }]);
-        }
-        
-        // Get player status
-        if (query.includes("SELECT rsvp_status FROM players WHERE id")) {
-          const playerId = values[0] as string;
-          const status = mockPlayers.get(playerId) || "declined";
-          return Promise.resolve([{ rsvp_status: status }]);
-        }
-        
-        // Count non-declined players
-        if (query.includes("SELECT COUNT(*) as count FROM players")) {
-          const count = Array.from(mockPlayers.values()).filter(s => s !== "declined").length;
-          return Promise.resolve([{ count }]);
-        }
-        
-        // Update player status
-        if (query.includes("UPDATE players")) {
-          const playerId = values[1] as string; // Second value is playerId
-          const newStatus = values[0] as string; // First value is status
-          mockPlayers.set(playerId, newStatus);
-          return Promise.resolve([
-            {
-              id: playerId,
-              name: "Test Player",
-              rsvp_status: newStatus,
-            },
-          ]);
-        }
-        
-        return Promise.resolve([]);
-      }) as any;
-      
+
       try {
-        const result = await fn(tx);
-        return result;
+        return queries.map((q) => {
+          if (q && q.__lazy === "lock") {
+            return [{ id: mockPool.id }];
+          }
+          if (q && q.__lazy === "cappedUpdate") {
+            const currentStatus = mockPlayers.get(q.playerId) || "declined";
+            const currentlyActive = currentStatus !== "declined";
+            const activeCount = Array.from(mockPlayers.values()).filter(
+              (s) => s !== "declined"
+            ).length;
+            if (!currentlyActive && activeCount >= 8) {
+              return [];
+            }
+            mockPlayers.set(q.playerId, q.status);
+            return [{ id: q.playerId, name: "Test Player", rsvp_status: q.status }];
+          }
+          return [];
+        });
       } finally {
         transactionInProgress = false;
         // Release next transaction from queue
@@ -99,7 +99,7 @@ vi.mock("@/lib/db", () => ({
         if (next) next();
       }
     });
-    
+
     return mockSql;
   },
 }));
@@ -115,7 +115,7 @@ describe("POST /api/join/[slug]/rsvp - Race Condition Prevention", () => {
     mockPlayers.clear();
     transactionInProgress = false;
     transactionQueue = [];
-    
+
     // Start with 7 accepted players
     for (let i = 1; i <= 7; i++) {
       mockPlayers.set(`player-${i}`, "accepted");
@@ -129,7 +129,7 @@ describe("POST /api/join/[slug]/rsvp - Race Condition Prevention", () => {
     // Pool has 7 accepted players
     // Two declined players try to accept simultaneously
     // Only one should succeed (bringing total to 8)
-    
+
     const request1 = POST(
       new NextRequest("http://localhost:3000/api/join/test-slug/rsvp", {
         method: "POST",
@@ -137,7 +137,7 @@ describe("POST /api/join/[slug]/rsvp - Race Condition Prevention", () => {
       }),
       { params: { slug: "test-slug" } }
     );
-    
+
     const request2 = POST(
       new NextRequest("http://localhost:3000/api/join/test-slug/rsvp", {
         method: "POST",
@@ -145,18 +145,18 @@ describe("POST /api/join/[slug]/rsvp - Race Condition Prevention", () => {
       }),
       { params: { slug: "test-slug" } }
     );
-    
+
     // Execute both requests concurrently
     const [response1, response2] = await Promise.all([request1, request2]);
-    
+
     // One should succeed (200), one should fail (403)
     const statuses = [response1.status, response2.status].sort();
     expect(statuses).toEqual([200, 403]);
-    
+
     // Verify final state: exactly 8 non-declined players
     const finalCount = Array.from(mockPlayers.values()).filter(s => s !== "declined").length;
     expect(finalCount).toBe(8);
-    
+
     // Verify one succeeded, one stayed declined
     const successCount = [
       mockPlayers.get("player-8") === "accepted" ? 1 : 0,
@@ -167,7 +167,7 @@ describe("POST /api/join/[slug]/rsvp - Race Condition Prevention", () => {
 
   it("allows concurrent accepts when pool is Pro", async () => {
     mockPool.tier = "pro";
-    
+
     const request1 = POST(
       new NextRequest("http://localhost:3000/api/join/test-slug/rsvp", {
         method: "POST",
@@ -175,7 +175,7 @@ describe("POST /api/join/[slug]/rsvp - Race Condition Prevention", () => {
       }),
       { params: { slug: "test-slug" } }
     );
-    
+
     const request2 = POST(
       new NextRequest("http://localhost:3000/api/join/test-slug/rsvp", {
         method: "POST",
@@ -183,13 +183,13 @@ describe("POST /api/join/[slug]/rsvp - Race Condition Prevention", () => {
       }),
       { params: { slug: "test-slug" } }
     );
-    
+
     const [response1, response2] = await Promise.all([request1, request2]);
-    
+
     // Both should succeed for Pro pool
     expect(response1.status).toBe(200);
     expect(response2.status).toBe(200);
-    
+
     // Verify final state: 9 non-declined players
     const finalCount = Array.from(mockPlayers.values()).filter(s => s !== "declined").length;
     expect(finalCount).toBe(9);
